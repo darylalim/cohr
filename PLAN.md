@@ -383,7 +383,8 @@ evals/                 quality evaluation (§18)
   data/                generated + downloaded eval data (gitignored)
   reports/             per-run reports (gitignored)
 scripts/
-  spike.py           Phase 0 exit check: runs every model once, prints memory and timings
+  spike.py           Phase 0 exit check: all models chained on fixtures, one cited note, memory
+                     and timings (§9)
 tests/
   fixtures/          generated, not committed if large (see §8)
   test_ingest.py  test_vad.py  test_fuse.py  test_align.py  test_ask_rank.py  test_pipeline.py  test_citations.py  test_render.py  test_storage.py  test_theme.py
@@ -827,8 +828,34 @@ decisions table)**
       If `torch` or `torchvision` is present, record which package pulls it in in `NOTES.md` and
       try to drop it (exclude the optional extra or pin a version). If it's unavoidable, confirm it is
       never imported at runtime (`python -X importtime … 2>&1 | grep torch` during a full run).
-- **Exit:** a single `scripts/spike.py` that runs all five pipeline models (VAD, Transcribe, Micro
-  Vision, Tiny Aya, R7B) once and prints memory use and timings.
+- **Exit:** `scripts/spike.py` runs all five pipeline models **chained**, each one's real output
+  feeding the next, on the §8 fixtures (2 min audio + 3 slide images):
+  VAD → chunks → Transcribe → transcript; Micro Vision → slide JSON; the whole fixture as **one
+  segment** (no Fuse logic yet) → Tiny Aya Map JSON → R7B `rag` with one document per segment and
+  slide → notes → citation parse (§5.6 regex, or the fallback format below).
+  It prints peak memory and seconds per stage, writes everything to a temp dir (never `runs/`),
+  and **passes only if the notes contain at least one citation that resolves** to the segment or
+  a slide. This is the first end-to-end result, three phases before Phase 4, so stages that don't
+  fit together show up now. Throwaway code: Phase 1+ rebuilds each stage properly.
+
+### Phase 0 go/no-go: fallbacks if a check fails
+
+The design rests on a few assumptions that only Phase 0 can test. If one fails, apply the
+fallbacks **in order**. **Auto** = stays within the design: apply it, record it in `NOTES.md` and
+§20, and continue. **Ask** = changes the design: stop, show the user the finding and the options,
+and wait. Any fallback that's applied is written into the affected plan sections in the Phase 0
+PR (§21).
+
+| If Phase 0 finds… | Fallbacks, in order | Who decides |
+|---|---|---|
+| **Transcribe:** neither `mlx-audio` nor `mlx-speech` loads the §2 repo, or WER on the fixture > 15% | (1) The other runtime. (2) The 4-bit `beshkenadze` repo. (3) Another MLX conversion of the same model on the Hub. No non-MLX fallback (§1 all-MLX rule) | 1–2 Auto, 3 Ask |
+| **R7B citations (D7):** the `rag` template through `mlx-lm` gives no parseable `<co>` citations in 3 tries on the spike | (1) Fix the kwargs or chat-template call (check the tokenizer config). (2) **Prompt-based citations:** documents numbered `[D1]…[Dn]` in a plain prompt, a required `[Dn]` marker after each claim, a new regex in `reduce.py`, the same §5.6 rules (drop invalid, flag uncited). Ask uses the same format | 1 Auto, 2 Ask |
+| **Micro Vision:** won't run on `mlx-vlm` main, or gives invalid JSON on 2 of 3 fixture slides after the retry | (1) The 4-bit repo. (2) An older `mlx-vlm` commit that supports it. (3) **No slide reading:** slides stay images, citable as `[slide N]` with title "Slide N" and no text; slide alignment (§5.4) and the slide eval variants are skipped until fixed | 1–2 Auto, 3 Ask |
+| **Tiny Aya JSON:** < 90% of outputs valid on the 3-language check | (1) Temperature 0 + one example in the prompt. (2) The 4-bit Global repo (rules out a conversion problem). (3) R7B does Map too (one fewer model resident, slower) | 1–2 Auto, 3 Ask |
+| **Memory:** all models together go over the GPU limit with a 32K R7B prompt | (1) Lower the R7B cap to 24K (two-pass reduce starts sooner, §4). (2) `sequential` becomes the default; Ask loads R7B on demand and says so. (3) 4-bit fallbacks (§2) | 1 Auto, 2–3 Ask |
+| **Speed (D10):** projected > 30 min per audio hour (1.5× the target) | (1) Fuse window 300 → 600 s (half the Map calls). (2) Skip Map when the R7B input fits without it (short meetings): Reduce reads transcripts + slides directly. (3) Relax the §9 target, with the reason recorded | 1 Auto, 2–3 Ask |
+| **VAD:** Silero won't load through `mlx_audio.vad` | The `silence` chunker (§5.1a) becomes the default; the made-up text results decide whether that's acceptable | Ask |
+| **Any blocker not listed** (Python 3.13 support, license problem, `torch` unavoidable) | Already covered in the checklist above: record and ask | Ask |
 
 **Phase 1: scaffold + ingest:** GitHub repo created and configured (§17), then tool config
 (ruff, ty, pytest) in the Phase 0 `pyproject.toml`, `schemas.py` with snapshot tests (§19), config (including `seed`, §3), prompts folder, pipeline runner
@@ -866,7 +893,8 @@ stays under the limit with the `resident` policy.
 |---|---|
 | `mlx-vlm` main changes or breaks Compass support | Pin the git commit that works in Phase 0 |
 | Small models produce malformed JSON | Low temperature, schema in the prompt, one retry, fall back to raw text |
-| R7B citation format differs from expected | Phase 0 check; parser isolated in `reduce.py` with tests |
+| R7B citation format differs from expected | Phase 0 check; parser isolated in `reduce.py` with tests; prompt-based citations as the fallback (§9 go/no-go) |
+| A Phase 0 assumption fails (runtime, vision, memory, speed) | §9 go/no-go table: ordered fallbacks, each marked Auto or Ask |
 | R7B ignores section markers or leaves claims uncited | Fixed markers + fallback to Summary; uncited claims flagged, counted and gated (§5.6, §18) |
 | Transcribe makes up text from music/noise/silence | VAD default (§5.1a) skips non-speech; Phase 0 made-up text check |
 | A runtime or package lacks Python 3.13 support | Phase 0 `uv sync` check; ask the user before pinning older versions |
@@ -1693,8 +1721,9 @@ Do Phase 0 (§9) in order:
 2. Create CLAUDE.md from §21 and NOTES.md (empty template: date, phase, findings, decisions).
 3. Create the Claude Code hooks (§14), run the pipe tests, then tell me to restart the session.
 After the restart, continue with the rest of Phase 0: the uv project, uv sync on 3.13, the model
-checks, pinning revisions, and scripts/spike.py. Record every finding in NOTES.md and every
-result in the §20 table. Ask me before downloading the models (~15 GB) and before anything that
+checks, pinning revisions, and scripts/spike.py (chained end to end). If a check fails, follow
+the §9 go/no-go table: apply "Auto" fallbacks, stop and ask me on "Ask" ones. Record every
+finding in NOTES.md and every result in the §20 table. Ask me before downloading the models (~15 GB) and before anything that
 pushes to GitHub. Stop at the end of Phase 0 and summarize what was decided and what changed in
 the plan.
 ```
