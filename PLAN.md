@@ -1716,6 +1716,7 @@ Keep it under ~80 lines; details belong in the plan.
 ### Kickoff prompt for the Phase 0 session (paste into a new session)
 ```text
 We're starting implementation of cohr. Read PLAN.md fully; it is the source of truth.
+First create branch phase-0-checks from plan/tier-a-meeting-notes (main doesn't have the plan yet).
 Do Phase 0 (§9) in order:
 1. Create .gitignore (§6) and run its git check-ignore check.
 2. Create CLAUDE.md from §21 and NOTES.md (empty template: date, phase, findings, decisions).
