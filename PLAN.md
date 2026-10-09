@@ -29,6 +29,8 @@ Status: draft. Hub metadata verified 2026-10-04; packages, licenses and Streamli
 
 **Non-goals (v1)**
 - Live or streaming transcription, and identifying who is speaking.
+- Meetings that switch language mid-conversation: Transcribe takes one source language per run,
+  so speech in another language is transcribed poorly. Known limitation; pick the main language.
 - Commercial use **with the default models** (Tiny Aya and R7B are CC-BY-NC; see §11). The code
   itself is Apache-2.0.
 - Tier B models (North Mini Code) and any model too large for 32 GB.
@@ -55,6 +57,25 @@ check it works with the chosen runtime in Phase 0), `mlx-community/North-Micro-V
 - Micro Vision: validated up to 8K multimodal tokens, so one image per call.
 - R7B: 128K context, so the final step sees the whole meeting.
 
+**Considered and not used** (all 55 repos in the `CohereLabs` Hub org checked 2026-10-09; don't
+re-check unless the org adds new models)
+- **No local weights:** `Cohere-embed-*-v3.0`, `rerank-*`, `multilingual-22-12`, `Command-nightly`.
+  These are 0 GB placeholders for Cohere's online API, so they break "offline". This is also why
+  §13 has no semantic search.
+- **Too big for 32 GB:** North-Small-Translate-1.0 (218B), the Command A family (A, A Plus,
+  A Reasoning, A Vision, A Translate), Command R / R+ (35B / 104B), Aya Expanse 32B, Aya 23 35B,
+  Aya Vision 32B.
+- **Replaced by newer, smaller models:** Aya Vision 8B (17 GB, CC-BY-NC; Micro Vision instead),
+  Aya 23 8B, Aya Expanse 8B, aya-101 (Tiny Aya instead).
+- **Wrong kind for Map:** `tiny-aya-base`, `tiny-aya-base-32K` (base models, not
+  instruction-tuned); `tiny-aya-en-thinker`, `tiny-aya-l2-thinker` (reasoning models: slower, and
+  their reasoning text gets in the way of JSON-only output).
+- **Arabic specialists:** `cohere-transcribe-arabic-07-2026` (Apache-2.0, MLX ports exist) and
+  `c4ai-command-r7b-arabic-02-2025`. Base Transcribe and R7B already cover Arabic. Reconsider only
+  if Arabic meetings become a main use case.
+- **Deferred (optional, Phase 6):** the regional Tiny Aya variants `tiny-aya-earth`, `-fire` and
+  `-water`, as per-language Map models (§5.5, D18).
+
 ---
 
 ## 3. Architecture
@@ -79,12 +100,12 @@ FUSE (no models)
   (the slide on screen at the window start, plus any shown during it) ─► segments.json
 
 MAP (Tiny Aya Global, once per segment, output in the target language)
-  segment ─► {summary, key_points[], decisions[], action_items[], terms[]} ─► map.json
+  segment ─► {summary, key_points[], decisions[], action_items[], open_questions[], terms[]} ─► map.json
 
 REDUCE (Command R7B, RAG template, citations on)
   documents = one per segment (time range + slide ids + map notes + raw transcript excerpt)
-  ─► final notes with <co>…</co: 0:[i,…]> spans ─► parse ─► notes.json ─► render ─► notes.md
-     (+ notes_raw.txt)
+  ─► final notes with <co>…</co: 0:[i,…]> spans ─► parse ─► refine citation times (no models)
+  ─► notes.json ─► render ─► notes.md (+ notes_raw.txt)
 
 ASK (Command R7B, same documents) ─► answer with citations
 ```
@@ -104,7 +125,8 @@ segments.json
 map.json
 notes_raw.txt        R7B output exactly as generated (keep it for debugging)
 notes.json           parsed notes with structured citations (§19); what Notes/Ask/evals read
-notes.md             rendered from notes.json
+notes.md             rendered from notes.json as a portable file (plain citations + Sources
+                     appendix, §5.6); this is what Download gives you
 log.txt              run log (INFO by default, DEBUG via config), §7 job lifecycle
 ```
 A stage is skipped when its output exists and its input and config hash match `manifest.json`.
@@ -112,6 +134,11 @@ A stage's config hash includes the hash of its prompt file (`src/cohr/prompts/`,
 one prompt re-runs only that stage and the ones after it. Every output is written to a temp file
 and then `os.replace`d, so a crash never leaves a half-written file that the skip logic would
 trust.
+
+**Reproducible generation:** `config.seed` (default 0) is passed to `mx.random.seed()` before
+every generating stage (Vision, Map, Reduce, Ask). It's part of the config (and so of each stage's
+config hash) and recorded in the manifest. Same inputs + config + seed give the same output, so eval
+run-to-run noise (D16) comes from real differences, not sampling luck.
 
 ---
 
@@ -229,9 +256,30 @@ If Option A wins, `mlx-speech` is dropped from the dependencies (one fewer runti
 
 ### 5.5 Map (Tiny Aya Global)
 - One call per segment, temperature ~0.3, output in the target language, JSON only:
-  `{"summary": str, "key_points": [str], "decisions": [str], "action_items": [{"owner": str|null, "task": str, "due": str|null}], "terms": [str]}`.
+  `{"summary": str, "key_points": [str], "decisions": [str], "action_items": [{"owner": str|null, "task": str, "due": str|null}], "open_questions": [str], "terms": [str]}`.
+  `open_questions` gives Reduce real material for its Open questions section, which the AMI
+  `problems` reference is scored against (§18).
 - The prompt says to use only the content in the segment and to prefer the slide text's spelling
   for names and numbers (speech recognition often gets these wrong).
+- **Invalid JSON:** same rule as §5.3. Retry once with "Return only valid JSON". If it still fails,
+  store the raw text as `summary`, leave the lists empty, set `raw: true` on that segment's entry,
+  and log a warning. One bad segment never fails the stage.
+- **Optional regional Map models (Phase 6, decision D18):** Cohere's regional Tiny Aya variants
+  have the same size (3.35B), chat template and license (CC-BY-NC) as Global. The release
+  describes their focus as Earth: Africa + West Asia, Fire: South Asia, Water: Asia-Pacific +
+  Europe. The model cards are gated, so confirm this when adopting one. `config.py` gets
+  `map_model_by_lang: dict[str, str]` (target language → repo), **empty by default**, so every
+  language uses Global. A matching variant **replaces** Global for Map and for "Other (beta)"
+  translation (§5.6), so memory use stays the same. Only languages where the variant wins the D18
+  eval get an entry. The model repo + revision are part of Map's config hash (§3, §19), so
+  switching a language's model re-runs only Map and the stages after it. MLX weights:
+  `mlx-community/tiny-aya-fire` exists. Earth and Water need `mlx_lm.convert` (8-bit) from the
+  pinned CohereLabs revision, uploaded to a personal Hub repo or converted locally on first use.
+  Decide this in Phase 6 and document it in `NOTES.md`.
+  **Access:** the CohereLabs originals are gated. Converting them needs the license accepted on
+  the Hub and an HF token from the `HF_TOKEN` environment variable or `.env` (never committed,
+  §6, §14 H2). The default models need no token: all six default MLX repos were ungated on
+  2026-10-09.
 
 ### 5.6 Reduce (Command R7B with citations)
 - Use the tokenizer's **`rag`** chat template, which is present in the MLX repo and supports
@@ -240,9 +288,35 @@ If Option A wins, `mlx-speech` is dropped from the dependencies (one fewer runti
   Unaligned slides become their own documents (`"title": "slide 7"`).
 - **Phase 0:** confirm the exact `apply_chat_template(..., documents=..., chat_template="rag", enable_citations=True)`
   arguments, and the citation format R7B produces (expected: `<co>span</co: 0:[i,j]>`).
-- The prompt asks for these sections: Summary · Key points · Decisions · Action items · Open questions.
-- Citation parsing: regex `<co>(.*?)</co:\s*([^>]+)>` → list of document indices → render as
-  `span [12:30](#seg-3) [slide 4](#slide-4)`.
+- **Fixed section markers:** the prompt asks for five sections under fixed English markers, whatever
+  the target language: `## SUMMARY`, `## KEY_POINTS`, `## DECISIONS`, `## ACTION_ITEMS`,
+  `## OPEN_QUESTIONS`. The parser splits on these exact markers, so German or Japanese notes
+  parse the same way as English ones. `render.py` shows each heading in the target language from
+  a static table (`SECTION_TITLES[lang][section]`; English if the language is missing). Missing or
+  unknown markers: log them, and put unmatched text in Summary rather than dropping it.
+- **Action item line format:** one item per line, `- [owner: <name or ?>] [due: <date or ?>] <task>`
+  (`?` = unknown). The parser fills `owner`/`due` (§19). If a line doesn't match, match the task
+  text against `map.json` action items from the cited segments (token overlap ≥ 0.6) and copy their
+  owner and due date; otherwise leave them null.
+- Citation parsing: regex `<co>(.*?)</co:\s*([^>]+)>` → list of document indices → `citations[]`.
+- **Citation rules (every claim cites):**
+  - A document index outside the documents sent is dropped and logged. It never becomes a link.
+  - A claim left with no valid citation is kept, with `citations: []`. The Notes page shows it
+    grayed out with an "uncited" badge (gray, §7), and the eval counts it (§18). Never invent a
+    citation.
+- **Citation time refinement** (pure Python, after parsing): a segment citation points at a window
+  of up to 5 minutes, which is too coarse to play from. For each segment citation, score the cited
+  span against every transcript chunk in that segment (the token overlap from §5.4) and store the
+  best chunk's `t0` as the citation's `t`. If no chunk scores ≥ 0.1 (D19), use the segment's `t0`.
+  Slide citations need no refinement. Two-pass citations (§4) are refined after marker resolution,
+  against the resolved segments.
+- **Rendering**, two modes from the same `notes.json`:
+  - *In app* (Notes page, §7): `span [12:47](#seg-3) [slide 4](#slide-4)`, where the label is the
+    refined `t` and the anchor is the segment.
+  - *Portable* (`notes.md`, the Download button): citations as plain text `[12:47]` / `[slide 4]`
+    (no in-app anchors, which are dead links outside the app), plus a **Sources** appendix with one
+    entry per cited segment (time range, slide ids, first ~200 characters of its transcript) and per
+    cited slide (number and title).
 - **Two-pass reduce** for inputs over the 32K cap: see §4. Pass 2 uses `prompts/reduce_pass2.md`;
   the marker resolution is pure Python and unit tested (§8); the `long-en` eval checks it (§18).
 - **Target languages:** the UI lists **R7B's 23 languages** (exact list from the model card,
@@ -253,7 +327,14 @@ If Option A wins, `mlx-speech` is dropped from the dependencies (one fewer runti
 
 ### 5.7 Ask
 - Same documents as Reduce, the user's question, and the `rag` template with citations. Answer
-  rendered with the same citation links. No re-processing needed.
+  rendered with the same citation links, using the same citation rules and time refinement as
+  §5.6. No re-processing needed.
+- **Follow-ups:** the last 3 question/answer turns are sent as chat history (answers with
+  citation markup removed, to save tokens), so "and who owns that?" works. History counts toward
+  the ~32K cap and is dropped oldest-first if needed.
+- **Answer language:** the language of the question, detected with `lingua-language-detector`
+  (moved from the eval group to runtime deps for this). If detection is unsure, use the run's target
+  language. The documents stay as they are; R7B answers across languages.
 - **Long meetings:** if the documents exceed the ~32K cap, rank them for the question with an
   in-memory SQLite FTS5 table (BM25, stdlib; `trigram` tokenizer for zh/ja/ko) and send the
   top-ranked ones that fit. The Ask page then says "Answer based on the N most relevant
@@ -318,7 +399,8 @@ imported on 3.13; `mlx-lm`, `mlx-vlm` and the rest are confirmed by `uv sync` in
 
 **Dependencies:** `mlx`, `mlx-audio` (Silero VAD; possibly Transcribe, §5.2), `mlx-lm`, `mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm.git@<commit sha pinned in Phase 0>`,
 `mlx-speech>=0.5.3`, `streamlit>=1.65` (theme and layout keys were checked on 1.65), `huggingface_hub`, `soundfile`, `numpy`, `pillow`,
-`imagehash`, `pydantic`, `pypdfium2` (PDF pages; Apache-2.0/BSD-3. **Not PyMuPDF**, which is AGPL-3.0; see §11).
+`imagehash`, `pydantic`, `pypdfium2` (PDF pages; Apache-2.0/BSD-3. **Not PyMuPDF**, which is AGPL-3.0; see §11),
+`lingua-language-detector` (Ask answer language, §5.7, and the eval language check; Apache-2.0).
 **System:** `ffmpeg` (already at `/opt/homebrew/bin/ffmpeg`) and `uv` (already installed).
 
 ### Development tooling
@@ -332,7 +414,8 @@ imported on 3.13; `mlx-lm`, `mlx-vlm` and the rest are confirmed by `uv sync` in
 
 - Dev tools go in a dependency group, not in runtime deps:
   `uv add --dev ruff ty pytest`, which writes `[dependency-groups] dev = [...]`.
-- Eval tools go in a separate group: `uv add --group eval jiwer lingua-language-detector pyyaml`
+- Eval tools go in a separate group: `uv add --group eval jiwer pyyaml` (`lingua-language-detector`
+  is a runtime dependency, above)
   (§18). CI installs every group (`uv sync --locked --all-groups`) so `ty check` can resolve
   `evals.py`'s imports; the eval *tests* still need no models.
 - Everyday commands, all through uv (never a bare `pip` or the global `python`):
@@ -445,8 +528,11 @@ rule for each; `git check-ignore uv.lock .claude/settings.json NOTES.md` prints 
   real work. The app uses `st.navigation` with one file per page in `app_pages/` (see Layout below).
   1. **New run:** upload audio or video and slides, or give a local path; pick source language,
      target language, window length and memory policy; Run.
-  2. **Notes:** rendered `notes.md` next to a Sources panel. Clicking a citation jumps to its
-     segment in Sources, which has an `st.audio` player starting at `t0` plus the slide images.
+  2. **Notes:** notes rendered from `notes.json` (in-app mode, §5.6) next to a Sources panel.
+     Clicking a citation jumps to its segment in Sources, which has an `st.audio` player plus the
+     slide images. The player starts at the segment's earliest cited moment (refined `t`, §5.6).
+     The block also lists every cited moment in that segment, and the drawer (Ask and the D14
+     fallback) plays from the exact `t` of the clicked citation.
   3. **Ask:** chat over the selected run, with citations.
   4. **Runs:** list of previous runs with size, per-stage re-run buttons ("re-reduce with new
      prompt"), Delete and Prune media (§12), and the peak-memory chart for the selected run.
@@ -499,7 +585,8 @@ app_pages/
 
 *Notes* (`wide`)
 - Header: run title, then an `st.container(horizontal=True)` with Download `notes.md`
-  (`st.download_button`), Re-reduce and Open in Ask. The buttons wrap when narrow.
+  (`st.download_button`; the portable version, §5.6), Re-reduce and Open in Ask. The buttons wrap
+  when narrow. If any claim is uncited, a gray caption says how many.
 - Body: `st.columns([3, 2], gap="large")`.
   - Left, **notes**: the rendered notes inside `st.container(width=880)`, so lines stay readable
     on very wide monitors (~75–90 characters). Phase 5 check: at window widths below 880 px the
@@ -641,6 +728,7 @@ are all ≥4.5:1 (AA) in both modes.
 | Open questions | violet | `st.badge` |
 | Errors, memory over limit | red | `st.error`, sidebar |
 | Stage status / secondary text | gray | `st.caption` |
+| Uncited claims (§5.6) | gray text + gray "uncited" badge | Notes, Ask |
 | Peak memory per stage (4 models) | chart colors 1–4 | Runs page chart |
 
 Icons use Material Symbols (`:material/...:`), and labels use sentence case.
@@ -667,6 +755,13 @@ dataframes, code blocks, the Runs memory chart, badges, and a Notes page full of
   splitting, pipeline atomic writes / cancel / interrupted-stage recovery, VAD chunk packing from synthetic speech runs (merge gaps, max length,
   long-run split, gaps recorded), relative silence threshold, silence-cut selection, frame dedupe, segment windowing and token
   budget split, citation regex and index mapping, render anchors, manifest skip logic, storage (link vs. copy, prune keeps notes usable, disk-space refusal).
+- **Reduce output parsing (`test_citations.py`, `test_render.py`):** section markers in a
+  non-English output (German fixture) land in the right sections, and unknown markers go to Summary;
+  out-of-range document indices are dropped; uncited claims are kept with `citations: []`;
+  citation time refinement picks the best-matching chunk and falls back to segment `t0` below
+  the threshold; action item lines parse owner/due, with the `map.json` fallback; the portable
+  `notes.md` has no `#seg-` links and has a Sources entry for every cited segment and slide;
+  Map invalid-JSON fallback; Ask history trimming under the cap.
 - **Unit tests must not need Metal or model weights:** they run on CI runners without a usable
   GPU (§15). Import `mlx`, `mlx_lm`, `mlx_vlm`, `mlx_audio` and `mlx_speech` lazily inside the model wrappers
   (`vad.py`, `asr.py`, `vision.py`, `mapper.py`, `reduce.py`, `models.py`), never at module top level in code
@@ -736,19 +831,24 @@ decisions table)**
   Vision, Tiny Aya, R7B) once and prints memory use and timings.
 
 **Phase 1: scaffold + ingest:** GitHub repo created and configured (§17), then tool config
-(ruff, ty, pytest) in the Phase 0 `pyproject.toml`, `schemas.py` with snapshot tests (§19), config, prompts folder, pipeline runner
+(ruff, ty, pytest) in the Phase 0 `pyproject.toml`, `schemas.py` with snapshot tests (§19), config (including `seed`, §3), prompts folder, pipeline runner
 (atomic writes, cancel, recovery, log), ingest functions; the §6 gate passes; CI workflow (§15) green on a PR.
 **Phase 2: perception:** `vad.py` (chunks.json) and `asr.py` (slices `audio.wav` by offsets), `vision.py`, ModelManager with
 pinned revisions and a free-disk check before downloads, `transcript.json` and `slides.json`, plus skip logic.
-**Phase 3: fuse + map:** slide text alignment, `segments.json` and `map.json`; token budget enforced.
-**Phase 4: reduce + render:** `notes.md` with working citations; CLI end to end on fixtures;
-planted-facts generator and `cohr eval --set quick` (§18) running, first numbers recorded.
+**Phase 3: fuse + map:** slide text alignment, `segments.json` and `map.json` (with `open_questions` and the
+invalid-JSON fallback, §5.5); token budget enforced.
+**Phase 4: reduce + render:** `notes.json` and portable `notes.md` with working citations (fixed section
+markers, citation rules, time refinement, action item owner/due, §5.6); CLI end to end on fixtures;
+planted-facts generator and `cohr eval --set quick` (§18) running, including cross-language scoring
+and the uncited-claims metric, first numbers recorded.
 **Phase 5: Streamlit UI:** "Paper & Ink" theme and adaptive layout (§7) with `test_theme.py`,
-`test_app.py` and the window-width check, all four pages, background job, progress, Ask; upload limit and local
+`test_app.py` and the window-width check, all four pages, background job, progress, Ask (follow-ups and answer language, §5.7); upload limit and local
 path input (§12); Runs page shows each run's size, with Delete and Prune media.
 **Phase 6: hardening:** sequential memory policy, inputs over 2 h (two-pass reduce with
 marker-based citations), Ask ranking for long meetings, "Other (beta)" target languages, error
-messages for missing ffmpeg or models, a cache size note for the README; `full` eval set and the
+messages for missing ffmpeg or models, a cache size note for the README; optional regional Map
+models (§5.5): `map_model_by_lang` filled only for languages that pass D18 (may stay empty);
+`full` eval set and the
 committed `evals/baseline.json` with release gate (§18); bump to `1.0.0` to release v1 (§16).
 **Phase 7 (after v1): cross-meeting search:** SQLite + FTS5 index and Search page per §13.
 
@@ -767,6 +867,7 @@ stays under the limit with the `resident` policy.
 | `mlx-vlm` main changes or breaks Compass support | Pin the git commit that works in Phase 0 |
 | Small models produce malformed JSON | Low temperature, schema in the prompt, one retry, fall back to raw text |
 | R7B citation format differs from expected | Phase 0 check; parser isolated in `reduce.py` with tests |
+| R7B ignores section markers or leaves claims uncited | Fixed markers + fallback to Summary; uncited claims flagged, counted and gated (§5.6, §18) |
 | Transcribe makes up text from music/noise/silence | VAD default (§5.1a) skips non-speech; Phase 0 made-up text check |
 | A runtime or package lacks Python 3.13 support | Phase 0 `uv sync` check; ask the user before pinning older versions |
 | Speech recognition mangles names and numbers | Map prompt prefers slide spelling; terms list passed to Reduce |
@@ -799,6 +900,7 @@ Two layers with separate licenses.
 | Command R7B | **CC-BY-NC-4.0** |
 | Silero VAD v6 | MIT |
 | Qwen3-4B-Instruct (eval judge only, §18; not used by the app) | Apache-2.0 |
+| Tiny Aya Earth / Fire / Water (optional Map models, §5.5; off by default) | **CC-BY-NC-4.0** |
 
 - Weights are downloaded at runtime by `snapshot_download` onto the user's machine. They are
   **never committed, never attached to releases (§16), never bundled**. That keeps the project from
@@ -888,7 +990,8 @@ stage outputs are the source of truth. A rebuildable search index comes later (�
   - **Delete run**: removes the whole run directory (confirm first).
   - **Prune media**: removes `source/` copies, `audio.wav` and `frames/`, keeping all JSON,
     `notes_raw.txt` and `notes.md`. Notes, Ask and re-Reduce still work, because Reduce/Ask
-    only read `segments.json`, `slides.json` and `map.json`. The audio player and slide thumbnails
+    only read `segments.json`, `slides.json`, `map.json` and `transcript.json` (citation time
+    refinement, §5.6). The audio player and slide thumbnails
     are disabled, and re-running Ingest/Perceive needs the source again. The manifest marks the
     run `pruned`.
   - `cohr runs` lists runs with size; `cohr prune <run>` / `cohr rm <run>`.
@@ -1350,14 +1453,24 @@ exact checks with no human labels and no LLM judge.
 | VAD (§5.1a) | Speech-frame F1 vs. `speech_spans`; **text produced per minute of gap** | Exact |
 | Transcribe | WER (CER for zh/ja/ko) on synthetic items and **FLEURS** test clips | `jiwer` |
 | Slides | Title exact match, table-cell accuracy, number recall | Exact |
-| Notes: **fact recall** | Share of planted facts found in the right section (decisions → Decisions, …) | Normalized match: numbers exact, owners exact, text via token overlap ≥ 0.6 |
-| Notes: **citation accuracy** | Share of matched facts whose citation's time range overlaps the fact's `[t0, t1]` (or cites its slide) | Exact |
+| Notes: **fact recall** | Share of planted facts found in the right section (decisions → Decisions, …) | Normalized match: numbers exact, owners exact, text via token overlap ≥ 0.6. **Cross-language** (notes language ≠ script language): see below |
+| Notes: **citation accuracy** | Share of matched facts whose citation's refined jump time `t` (§5.6) is within ±15 s of the fact's `t0` (D19), or that cite its slide. A time-range overlap test would pass almost any citation, since segments span up to 5 min | Exact |
+| Notes: **uncited claims** | Claims with `citations: []` (§5.6) | Exact (count) |
 | Notes: **made-up items** | Decisions/action items in the notes that match no planted fact | Exact (count) |
 | Notes: **support rate** | Share of claims whose cited segments support them | LLM judge (secondary) |
 | Output language | Notes are in the target language | `lingua-language-detector` |
 | Ask | Planted-fact questions: answer contains the fact *and* cites the right segment | Exact |
 | Realism (`full` only) | Coverage of the **AMI** reference decisions/actions | LLM judge |
 | Cost | Seconds per audio hour per stage; peak memory per stage | Measured |
+
+**Cross-language fact matching** (`xling-*`, `en → de/ar`, D18): token overlap against the
+script's text can't work when the notes are in another language. For these items:
+- Numbers, owners and due dates are matched exactly (names and digits survive translation;
+  numbers are normalized to digits first).
+- A fact with no such field (a pure-text decision) counts as found if the judge says a claim in the
+  right section covers it (prompt: fact text + section claims → `{"covered": bool}`).
+- The report shows the exact-field recall and the judge recall separately. Only exact-field recall
+  counts toward the gate until D15 passes.
 
 ### Judge (secondary metrics only)
 - **Not a model the pipeline uses**, to avoid self-preference: `mlx-community/Qwen3-4B-Instruct-2507-4bit`
@@ -1404,15 +1517,15 @@ committed or redistributed.
   FLEURS (Google, CC BY 4.0). Data was not modified or redistributed." The same line goes in
   `evals/README.md`. Synthetic-only `quick` reports don't need it.
 - It compares with the committed `evals/baseline.json` and **fails (exit 1)** if:
-  fact recall drops > 5 points, citation accuracy drops > 3 points, made-up items increase, VAD gap
-  text rate increases, or any stage gets > 25% slower.
+  fact recall drops > 5 points, citation accuracy drops > 3 points, made-up items or uncited
+  claims increase, VAD gap text rate increases, or any stage gets > 25% slower.
 - `cohr eval --update-baseline` rewrites the baseline. Only commit it with the reason in the commit
   message (e.g. "new reduce prompt: recall +4, accuracy −1").
 - **Release gate:** before `uv version --bump` (§16), run `full` and attach the report summary to
   the PR. This is manual: CI has no GPU (§15).
 
-**v1 targets (`quick` set):** fact recall ≥ 85%, citation accuracy ≥ 90%, made-up decisions/action
-items = 0, VAD gap text = 0 words, notes in the target language 100%, processing ≤ 20 min per
+**v1 targets (`quick` set):** fact recall ≥ 85%, citation accuracy ≥ 90% (±15 s), made-up decisions/action
+items = 0, uncited claims = 0, VAD gap text = 0 words, notes in the target language 100%, processing ≤ 20 min per
 audio hour (§9), slide alignment ≥ 80% (`pdf-slides-en`).
 
 ### Human review (your own recordings; never committed)
@@ -1422,8 +1535,8 @@ readable? right language? Comparing these with the automatic metrics shows wheth
 scores track real quality.
 
 ### Tests (no models, CI)
-`tests/test_evals.py`: fact matching (number normalization, owner match, token overlap),
-citation overlap math, baseline comparison thresholds, and generator determinism (same seed → same
+`tests/test_evals.py`: fact matching (number normalization, owner match, token overlap,
+cross-language exact-field matching), citation jump-time tolerance, baseline comparison thresholds, and generator determinism (same seed → same
 `truth.json`).
 
 ---
@@ -1446,8 +1559,8 @@ Pydantic models for every run file. Stages read and write **only** through them
 | `transcript.json` | `Transcript` | `language`, `runtime`, `items[{chunk_id, t0, t1, text}]` |
 | `slides.json` | `SlidesFile` | `slides[{slide_id, frame_id, t?, t_source, align_score?, title, text_md, tables_md[], chart_notes, visual_notes, raw?}]` |
 | `segments.json` | `SegmentsFile` | `segments[{seg_id, t0, t1, chunk_ids[], transcript_text, slide_ids[]}]`, `unaligned_slide_ids[]` |
-| `map.json` | `MapFile` | `target_language`, `notes[{seg_id, summary, key_points[], decisions[], action_items[{owner?, task, due?}], terms[]}]` |
-| `notes.json` | `NotesDoc` | `sections{summary, key_points, decisions, action_items, open_questions}` as lists of `{text, citations[{kind: seg|slide, id}]}`, `passes: 1|2`, `language` |
+| `map.json` | `MapFile` | `target_language`, `notes[{seg_id, summary, key_points[], decisions[], action_items[{owner?, task, due?}], open_questions[], terms[], raw}]` |
+| `notes.json` | `NotesDoc` | `sections{summary, key_points, decisions, action_items, open_questions}` as lists of `{text, citations[{kind: seg|slide, id, t?}]}` (`t` = refined jump time, seg only; `citations: []` = uncited, §5.6); action items also have `owner?`, `due?`; `passes: 1|2`, `language` |
 
 `notes.json` is new: the **parsed** reduce output. `notes.md` is rendered from it, and Notes, Ask,
 Search and the evals read `notes.json`, never by re-parsing Markdown.
@@ -1505,6 +1618,8 @@ section.
 | D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4 | |
 | D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 repeated `quick` runs: threshold ≥ 2× noise | Phase 6 | |
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 7 | |
+| D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6 | |
+| D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4 | |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).
@@ -1550,6 +1665,8 @@ uv run pytest (no models) · uv run streamlit run app.py · uv run cohr run … 
 - Every output file is written atomically (temp file + os.replace).
 - Prompts live in src/cohr/prompts/; don't inline prompt text in code.
 - Citations must survive every transformation (two-pass reduce, translation). Test it.
+- Reduce output uses fixed English section markers (## SUMMARY …); never parse localized
+  headings. Uncited claims are kept and flagged, never given invented citations (PLAN §5.6).
 - Streamlit: theme only via .streamlit/config.toml, no custom CSS; pages in app_pages/;
   never use_container_width; no telemetry (gatherUsageStats=false).
 - Never commit recordings, frames, model weights or runs/. Never send user recordings anywhere.
