@@ -1,0 +1,55 @@
+[project]
+name = "cohr"
+version = "0.1.0"
+description = "Local Streamlit app: recording + slides to multilingual notes where every claim cites its timestamp or slide"
+readme = "README.md"
+authors = [
+    { name = "Daryl Lim", email = "73304404+darylalim@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "huggingface-hub>=1.33.0",
+    "imagehash>=4.3.2",
+    "lingua-language-detector>=2.2.0",
+    "mlx>=0.32.3",
+    "mlx-audio>=0.5.8",
+    "mlx-lm>=0.32.0",
+    "mlx-speech>=0.5.3",
+    "mlx-vlm",
+    "numpy>=2.5.4",
+    "pillow>=12.3.0",
+    "pydantic>=2.14.0",
+    "pypdfium2>=5.14.0",
+    "soundfile>=0.14.0",
+    "streamlit>=1.65",
+]
+
+[project.scripts]
+cohr = "cohr:main"
+
+[build-system]
+requires = ["uv_build>=0.12.22,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+mlx-vlm = { git = "https://github.com/Blaizzy/mlx-vlm.git", rev = "952d4f6bc65bd5095e74abe71c78038764ee08aa" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17.0",
+    "ty>=0.0.86",
+]
+eval = [
+    "jiwer>=4.0.0",
+    "pyyaml>=6.0.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+# Markdown (PLAN.md, NOTES.md) holds design snippets, not code to format.
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

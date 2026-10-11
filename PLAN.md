@@ -5,8 +5,9 @@ A local Streamlit app that turns a **recording plus slides** (or a screen-record
 models plus a small voice-detection model, all on MLX and all fitting in memory together on an
 **M2 Max with 32 GB**.
 
-Status: draft. Hub metadata verified 2026-10-04; packages, licenses and Streamlit config checked
-2026-10-05. Nothing is implemented yet.
+Status: Phase 0 done 2026-10-10 (all checks passed; findings in `NOTES.md`, results in §20).
+Hub metadata verified 2026-10-04 and 2026-10-10; packages, licenses and Streamlit config checked
+2026-10-05.
 
 ---
 
@@ -41,16 +42,18 @@ Status: draft. Hub metadata verified 2026-10-04; packages, licenses and Streamli
 
 | Stage | Model | MLX repo | Weights | Runtime | License |
 |---|---|---|---|---|---|
-| Speech → text | Cohere Transcribe 2B | `mlx-community/cohere-transcribe-03-2026-mlx-8bit` (files in `mlx-int8/`) | 4.13 GB | `mlx-audio` or `mlx-speech` (≥0.5.3), chosen in Phase 0 (§5.2) | Apache 2.0 |
+| Speech → text | Cohere Transcribe 2B | `mlx-community/cohere-transcribe-03-2026-mlx-8bit` (files in `mlx-int8/`) | 4.13 GB | `mlx-speech` (≥0.5.3), chosen in Phase 0 (§5.2, D1) | Apache 2.0 |
 | Slides → text | North Micro Vision Instruct 2.4B | `mlx-community/North-Micro-Vision-Instruct-8bit` | 3.15 GB | `mlx-vlm` **from git main** (Cohere Compass support isn't released yet) | Apache 2.0 |
 | Map (per segment) | Tiny Aya Global 3.35B | `mlx-community/tiny-aya-global-8bit-mlx` | 3.56 GB | `mlx-lm` | CC-BY-NC |
 | Reduce + Ask | Command R7B | `mlx-community/c4ai-command-r7b-12-2024-4bit` | 4.52 GB | `mlx-lm` | CC-BY-NC |
 | Speech detection | Silero VAD v6 | `mlx-community/silero-vad-v6` | ~2 MB | `mlx-audio` (`mlx_audio.vad`) | MIT |
 | **Total** | | | **~15.4 GB** | | |
 
-**Smaller fallbacks** if memory is tight: `beshkenadze/cohere-transcribe-03-2026-mlx-4bit` (1.51 GB;
-check it works with the chosen runtime in Phase 0), `mlx-community/North-Micro-Vision-Instruct-4bit`
-(2.17 GB), `Siarhei/tiny-aya-global-4bit` (1.88 GB).
+**Smaller fallbacks** if memory is tight: `mlx-community/North-Micro-Vision-Instruct-4bit`
+(2.17 GB), `Siarhei/tiny-aya-global-4bit` (1.88 GB); untested, and not needed so far (Phase 0
+measured 8.6 GB headroom, §4). There is **no usable 4-bit Transcribe**:
+`beshkenadze/cohere-transcribe-03-2026-mlx-4bit` was converted for `mlx-audio-swift` and loads
+in neither Python runtime (D4).
 
 **Context limits that shape the design**
 - Tiny Aya: 8K tokens in and 8K out, so it gets one segment per call.
@@ -145,7 +148,9 @@ run-to-run noise (D16) comes from real differences, not sampling luck.
 ## 4. Memory policy
 
 - **Default `resident`:** keep the four Cohere models loaded (~15.4 GB weights + ~3–5 GB of KV and
-  working memory, about 19–20 GB). That's under the ~21.5 GB default GPU limit and makes the Ask
+  working memory, about 19–20 GB). That's under the default GPU limit (**26.8 GB measured** on the
+  M2 Max 32 GB in Phase 0; Phase 0 peak with all five models and a 34K-token R7B prompt was
+  18.2 GB) and makes the Ask
   page and re-runs instant. Silero VAD (~2 MB) is loaded only for its step and then released.
 - **`sequential`:** the stages run one after another anyway, so you can unload each model when its
   stage finishes (`del`, `gc.collect()`, `mx.clear_cache()`). Peak memory is then the largest
@@ -212,10 +217,13 @@ tested without the model (§8).
 
 ### 5.2 Transcribe (runtime chosen in Phase 0)
 
-Two MLX runtimes can run Cohere Transcribe. Phase 0 compares them on the same weights; the code
-supports whichever wins behind one `asr.py` interface (`transcribe(chunk_f32_16k, lang) -> str`).
+Two MLX runtimes can run Cohere Transcribe. **Phase 0 chose `mlx-speech` (Option B, D1):** on the
+§2 8-bit repo it gave WER 0.11 on the fixture, 1.96 s per audio minute and 5.5 GB peak, while
+`mlx-audio` loads the `mlx-int8/` checkpoint non-strictly and outputs the same gibberish for any
+input. `mlx-audio` stays a dependency for Silero VAD only. `asr.py` keeps one interface
+(`transcribe(chunk_f32_16k, lang) -> str`) and loads with strict weight checks.
 
-**Option A: `mlx-audio`** (preferred if results are about equal, since it already provides VAD)
+**Option A: `mlx-audio`** (not chosen; kept for the record)
 - `mlx_audio/stt/models/cohere_asr/`: batched transcription, language check, `max_audio_clip_s = 35`.
 - It has its own optional Silero segmentation (`_segment_with_vad`). We **don't** use it; we pass
   our own chunks from §5.1a, so chunk offsets stay under our control for citations.
@@ -228,7 +236,7 @@ from mlx_speech.generation import CohereAsrModel
 model = CohereAsrModel.from_path(local_dir / "mlx-int8")   # local_dir from snapshot_download
 result = model.transcribe(audio_f32_16k, sample_rate=16000, language=lang)
 ```
-If Option A wins, `mlx-speech` is dropped from the dependencies (one fewer runtime).
+Neither runtime auto-detects the language (D3); the decoder prompt always carries a language token.
 - The user picks the source language in the UI. **Phase 0:** check whether `language` can be
   left out for auto-detection, and find the maximum input length.
 - Supported languages: ar de el en es fr it ja ko nl pl pt vi zh.
@@ -255,7 +263,9 @@ If Option A wins, `mlx-speech` is dropped from the dependencies (one fewer runti
   Split the window in half if it's over.
 
 ### 5.5 Map (Tiny Aya Global)
-- One call per segment, temperature ~0.3, output in the target language, JSON only:
+- One call per segment, temperature ~0.3, output in the target language, JSON only. The prompt
+  repeats the target-language instruction as its **last line**: with it only at the top, Phase 0
+  got English output for de (2/4) and ja (4/4), because the transcript at the end wins:
   `{"summary": str, "key_points": [str], "decisions": [str], "action_items": [{"owner": str|null, "task": str, "due": str|null}], "open_questions": [str], "terms": [str]}`.
   `open_questions` gives Reduce real material for its Open questions section, which the AMI
   `problems` reference is scored against (§18).
@@ -409,7 +419,7 @@ imported on 3.13; `mlx-lm`, `mlx-vlm` and the rest are confirmed by `uv sync` in
 | Tool | Role | Setup |
 |---|---|---|
 | **uv** | Python 3.13, venv, lockfile, running commands | `uv init --package`, `.python-version` = 3.13, `requires-python = ">=3.13"`, commit `uv.lock` |
-| **ruff** | lint + format | `[tool.ruff]` in `pyproject.toml`: `line-length = 100`, `target-version = "py313"`, rules `E,F,I,UP,B,SIM` |
+| **ruff** | lint + format | `[tool.ruff]` in `pyproject.toml`: `line-length = 100`, `target-version = "py313"`, rules `E,F,I,UP,B,SIM`, `extend-exclude = ["*.md"]` (ruff ≥0.17 formats code blocks in Markdown) |
 | **ty** | type check | `[tool.ty]` in `pyproject.toml`; untyped MLX packages are fine, don't add stubs |
 | **pytest** | tests | `[tool.pytest.ini_options]`: `testpaths = ["tests"]`, marker `models`, default `-m "not models"` |
 
@@ -783,40 +793,40 @@ dataframes, code blocks, the Runs memory chart, badges, and a Notes page full of
 
 **Phase 0: checks before building (do first; record findings in `NOTES.md` and results in the §20
 decisions table)**
-- [ ] `.gitignore` from §6 created and its `git check-ignore` check passes. This is the very first step,
+- [x] `.gitignore` from §6 created and its `git check-ignore` check passes. This is the very first step,
       before any other file is created.
-- [ ] `CLAUDE.md` from §21 created and committed (right after `.gitignore`).
-- [ ] Claude Code hooks from §14 are in place, pass their pipe tests, and show in `/hooks`
+- [x] `CLAUDE.md` from §21 created and committed (right after `.gitignore`).
+- [x] Claude Code hooks from §14 are in place, pass their pipe tests, and show in `/hooks`
       (restart the session after creating them). Do this before any other code.
-- [ ] **Minimal uv project:** `uv init --package --name cohr` with Python 3.13, then `uv add` the
+- [x] **Minimal uv project:** `uv init --package --name cohr` with Python 3.13, then `uv add` the
       runtime dependencies (§6) and `uv add --dev` / `--group eval` the tool groups. Commit
       `pyproject.toml`, `.python-version` and `uv.lock`. The checks below need this; Phase 1
       builds the modules on top of it.
-- [ ] `uv sync` on Python 3.13 resolves every dependency (`mlx-lm`, `mlx-vlm` git, `mlx-audio`,
+- [x] `uv sync` on Python 3.13 resolves every dependency (`mlx-lm`, `mlx-vlm` git, `mlx-audio`,
       `mlx-speech`, `streamlit`, …). If one doesn't support 3.13, record it and ask the user.
-- [ ] Each model loads and runs alone; record load time and peak memory.
-- [ ] **Pin revisions:** record the commit SHA of all six model repos (Transcribe, Micro Vision,
+- [x] Each model loads and runs alone; record load time and peak memory.
+- [x] **Pin revisions:** record the commit SHA of all six model repos (Transcribe, Micro Vision,
       Tiny Aya, R7B, Silero VAD, Qwen3 judge) as `revision=` in `config.py`, and pin `mlx-vlm` to
       the working git commit in `pyproject.toml`.
-- [ ] **Transcribe runtime comparison (§5.2):** run `mlx-audio` and `mlx-speech` on the same
+- [x] **Transcribe runtime comparison (§5.2):** run `mlx-audio` and `mlx-speech` on the same
       weights and the same fixture chunks. Record: loads the §2 repo or not, transcript accuracy
       (word error rate against the fixture script text), seconds per audio minute, peak memory.
       Pick `mlx-audio` unless `mlx-speech` is clearly better; record the decision and drop the loser.
-- [ ] Transcribe (chosen runtime): maximum input length, whether language auto-detection works,
+- [x] Transcribe (chosen runtime): maximum input length, whether language auto-detection works,
       and whether the 4-bit `beshkenadze` repo works.
-- [ ] **Made-up text check:** transcribe 30 s of music, 30 s of room noise and 30 s of silence
+- [x] **Made-up text check:** transcribe 30 s of music, 30 s of room noise and 30 s of silence
       without VAD. Record any text produced; this is the evidence for the VAD default.
-- [ ] **VAD (§5.1a):** `mlx-community/silero-vad-v6` loads via `mlx_audio.vad` and its license on
+- [x] **VAD (§5.1a):** `mlx-community/silero-vad-v6` loads via `mlx_audio.vad` and its license on
       the Hub card is MIT. On a fixture with speech + music + silence: speech is kept, the
       non-speech parts land in `gaps`, and no chunk exceeds `max_chunk_s`. Compare with the
       silence fallback on the same file.
-- [ ] Micro Vision through mlx-vlm main: a slide image produces valid JSON with the prompt in §5.3.
-- [ ] R7B `rag` template: exact kwargs; citations appear in the output in the expected format.
+- [x] Micro Vision through mlx-vlm main: a slide image produces valid JSON with the prompt in §5.3.
+- [x] R7B `rag` template: exact kwargs; citations appear in the output in the expected format.
       Record R7B's 23 supported languages (model card) for the target-language list (§5.6).
-- [ ] Tiny Aya: the JSON-only prompt follows the schema reliably in 3 languages.
-- [ ] All pipeline models loaded together: peak memory is under the GPU limit with a 32K R7B prompt.
-- [ ] Record seconds per audio minute for each stage, to check the §9 speed target.
-- [ ] License audit: record every runtime dependency's license in `NOTES.md` (from `uv pip show`
+- [x] Tiny Aya: the JSON-only prompt follows the schema reliably in 3 languages.
+- [x] All pipeline models loaded together: peak memory is under the GPU limit with a 32K R7B prompt.
+- [x] Record seconds per audio minute for each stage, to check the §9 speed target.
+- [x] License audit: record every runtime dependency's license in `NOTES.md` (from `uv pip show`
       / package metadata, or the repo when metadata is missing), including `mlx-speech` (MIT,
       checked 2026-10-05), `mlx-audio` (MIT) and the `mlx-vlm` git commit. Also confirm each model repo's license on its Hub card. Already resolved (2026-10-05):
       FLEURS and AMI are CC BY 4.0 (Hub cards; AMI annotations' `LICENCE.txt`), the judge model
@@ -824,11 +834,11 @@ decisions table)**
       `LICENSE.txt`; the PyPI license field is just empty).
       Pass: no AGPL/GPL Python packages imported in-process (subprocess tools like ffmpeg are fine)
       and no dependency forbids Apache-2.0 distribution. Anything else goes to the user before Phase 1.
-- [ ] No PyTorch: after `uv sync`, run `uv tree --invert --package torch` (or `grep -n '^name = "torch' uv.lock`).
+- [x] No PyTorch: after `uv sync`, run `uv tree --invert --package torch` (or `grep -n '^name = "torch' uv.lock`).
       If `torch` or `torchvision` is present, record which package pulls it in in `NOTES.md` and
       try to drop it (exclude the optional extra or pin a version). If it's unavoidable, confirm it is
       never imported at runtime (`python -X importtime … 2>&1 | grep torch` during a full run).
-- **Exit:** `scripts/spike.py` runs all five pipeline models **chained**, each one's real output
+- [x] **Exit:** `scripts/spike.py` runs all five pipeline models **chained**, each one's real output
   feeding the next, on the §8 fixtures (2 min audio + 3 slide images):
   VAD → chunks → Transcribe → transcript; Micro Vision → slide JSON; the whole fixture as **one
   segment** (no Fuse logic yet) → Tiny Aya Map JSON → R7B `rag` with one document per segment and
@@ -848,7 +858,7 @@ PR (§21).
 
 | If Phase 0 finds… | Fallbacks, in order | Who decides |
 |---|---|---|
-| **Transcribe:** neither `mlx-audio` nor `mlx-speech` loads the §2 repo, or WER on the fixture > 15% | (1) The other runtime. (2) The 4-bit `beshkenadze` repo. (3) Another MLX conversion of the same model on the Hub. No non-MLX fallback (§1 all-MLX rule) | 1–2 Auto, 3 Ask |
+| **Transcribe:** neither `mlx-audio` nor `mlx-speech` loads the §2 repo, or WER on the fixture > 15% | (1) The other runtime. (2) The 4-bit `beshkenadze` repo (**Phase 0: unusable**, mlx-audio-swift format; skip). (3) Another MLX conversion of the same model on the Hub. No non-MLX fallback (§1 all-MLX rule) | 1–2 Auto, 3 Ask |
 | **R7B citations (D7):** the `rag` template through `mlx-lm` gives no parseable `<co>` citations in 3 tries on the spike | (1) Fix the kwargs or chat-template call (check the tokenizer config). (2) **Prompt-based citations:** documents numbered `[D1]…[Dn]` in a plain prompt, a required `[Dn]` marker after each claim, a new regex in `reduce.py`, the same §5.6 rules (drop invalid, flag uncited). Ask uses the same format | 1 Auto, 2 Ask |
 | **Micro Vision:** won't run on `mlx-vlm` main, or gives invalid JSON on 2 of 3 fixture slides after the retry | (1) The 4-bit repo. (2) An older `mlx-vlm` commit that supports it. (3) **No slide reading:** slides stay images, citable as `[slide N]` with title "Slide N" and no text; slide alignment (§5.4) and the slide eval variants are skipped until fixed | 1–2 Auto, 3 Ask |
 | **Tiny Aya JSON:** < 90% of outputs valid on the 3-language check | (1) Temperature 0 + one example in the prompt. (2) The 4-bit Global repo (rules out a conversion problem). (3) R7B does Map too (one fewer model resident, slower) | 1–2 Auto, 3 Ask |
@@ -969,7 +979,8 @@ brand colors or wording like "official" or "by Cohere". The repo name stays `coh
 covers the resemblance.
 
 **Dependency rule:** in-process Python dependencies must be permissive (MIT, BSD, Apache-2.0,
-ISC, PSF, LGPL). AGPL/GPL tools are allowed only as separate programs called via subprocess (e.g.
+ISC, PSF, LGPL), or MPL-2.0 when transitive and used unmodified (user-approved in Phase 0 for
+`certifi` and `tqdm`; MPL's copyleft covers only its own files). AGPL/GPL tools are allowed only as separate programs called via subprocess (e.g.
 ffmpeg). That's why PDFs use `pypdfium2`, not PyMuPDF (AGPL-3.0). Phase 0 checks this (§9);
 new dependencies added later need the same check.
 
@@ -1629,16 +1640,16 @@ section.
 
 | # | Decision | Default until decided | How it's decided | When | Result |
 |---|---|---|---|---|---|
-| D1 | Transcribe runtime: `mlx-audio` vs `mlx-speech` (§5.2) | `mlx-audio` | Same-weights comparison: loads, WER, speed, memory | Phase 0 | |
-| D2 | Transcribe max input length → `max_chunk_s` (§5.1a) | 30 s | Longest clip transcribed without truncation | Phase 0 | |
-| D3 | Source-language auto-detection (§5.2) | User picks the language | Try `language` omitted on 3 languages | Phase 0 | |
-| D4 | 4-bit fallbacks work with chosen runtimes (§2) | 8-bit only | Load + one run each | Phase 0 | |
-| D5 | VAD parameters (§5.1a) | threshold 0.5, 250/100/30 ms, merge < 0.5 s | Speech/gap F1 on the VAD fixture | Phase 0, re-check on eval | |
-| D6 | Model revisions + `mlx-vlm` commit (§12) | — | Record SHAs that pass Phase 0 | Phase 0 | |
-| D7 | R7B `rag` kwargs, citation format, 23 languages (§5.6) | `<co>…</co: 0:[i]>` | Run the template | Phase 0 | |
-| D8 | Which of the 14 languages have macOS `say` voices (§18) | en, es, ja, de | `say -v '?'` | Phase 0 | |
-| D9 | `torch` in the lockfile (§1, §15) | Must be absent | `uv tree --invert --package torch` | Phase 0 | |
-| D10 | Speed target realistic (§9) | ≤ 20 min per audio hour | Phase 0 per-stage timings | Phase 0 | |
+| D1 | Transcribe runtime: `mlx-audio` vs `mlx-speech` (§5.2) | `mlx-audio` | Same-weights comparison: loads, WER, speed, memory | Phase 0 || **mlx-speech**: WER 0.11, 1.96 s/audio min, 5.5 GB; mlx-audio can't load the int8 checkpoint (gibberish) |
+| D2 | Transcribe max input length → `max_chunk_s` (§5.1a) | 30 s | Longest clip transcribed without truncation | Phase 0 || 30 s kept; no truncation up to 60 s (mlx-speech chunks long input internally) |
+| D3 | Source-language auto-detection (§5.2) | User picks the language | Try `language` omitted on 3 languages | Phase 0 || No auto-detection in either runtime: user picks the language |
+| D4 | 4-bit fallbacks work with chosen runtimes (§2) | 8-bit only | Load + one run each | Phase 0 || Not usable: the 4-bit Transcribe repo is mlx-audio-swift format; not needed (8.6 GB headroom) |
+| D5 | VAD parameters (§5.1a) | threshold 0.5, 250/100/30 ms, merge < 0.5 s | Speech/gap F1 on the VAD fixture | Phase 0, re-check on eval || Defaults kept: speech F1 0.979, 0 s detected in the noise/music gap |
+| D6 | Model revisions + `mlx-vlm` commit (§12) | — | Record SHAs that pass Phase 0 | Phase 0 || 7 repo SHAs + mlx-vlm `952d4f6` (NOTES.md 2026-10-10) |
+| D7 | R7B `rag` kwargs, citation format, 23 languages (§5.6) | `<co>…</co: 0:[i]>` | Run the template | Phase 0 || Works as planned: `rag` + `documents` + `enable_citations=True`; `<co>…</co: 0:[i,j]>`; 23 languages (NOTES.md) |
+| D8 | Which of the 14 languages have macOS `say` voices (§18) | en, es, ja, de | `say -v '?'` | Phase 0 || All 14 have a voice; ar, el, pl, vi only one each |
+| D9 | `torch` in the lockfile (§1, §15) | Must be absent | `uv tree --invert --package torch` | Phase 0 || Absent from `uv.lock`; never imported |
+| D10 | Speed target realistic (§9) | ≤ 20 min per audio hour | Phase 0 per-stage timings | Phase 0 || Realistic: ≈ 9–10 min per audio hour projected |
 | D11 | Slide alignment threshold (§5.4) | 0.15 | Maximize `pdf-slides-en` accuracy | Phase 3, re-check Phase 4 | |
 | D12 | Fuse window length (§5.4) | 300 s | Fact recall vs. speed on `quick` | Phase 4 | |
 | D13 | Notes column `width=880` shrinks below 880 px (§7) | 880 | Resize check | Phase 5 | |
