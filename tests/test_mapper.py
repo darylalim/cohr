@@ -1,10 +1,21 @@
-"""PLAN §5.5: Map prompt filling, JSON coercion, one retry, invalid-JSON fallback."""
+"""PLAN §5.5: Map prompt filling, JSON coercion, one retry, invalid-JSON fallback, number guard."""
 
 from pathlib import Path
 
+import pytest
+
 from cohr import mapper, schemas
-from cohr.config import Config, load_prompt
-from cohr.schemas import MapFile, Segment, SegmentsFile, Slide, SlidesFile
+from cohr.config import Config, MapConfig, load_prompt
+from cohr.schemas import (
+    MapActionItem,
+    MapFile,
+    NumberRepair,
+    Segment,
+    SegmentNotes,
+    SegmentsFile,
+    Slide,
+    SlidesFile,
+)
 from tests.conftest import ctx_for, fake_manager, make_run
 
 GOOD = (
@@ -147,3 +158,131 @@ def test_stage_with_no_segments_loads_no_model(tmp_path: Path) -> None:
     mapper.run_stage(ctx_for(run_dir, "map", manager))
     assert schemas.load(run_dir, MapFile).notes == []
     assert manager.loaded() == []
+
+
+# --- number guard ---------------------------------------------------------------------------
+
+
+def _check(text: str, source: str) -> tuple[str, list[NumberRepair], list[str]]:
+    return mapper.check_numbers(text, mapper.source_numbers(source, []))
+
+
+@pytest.mark.parametrize(
+    ("text", "source", "fixed"),
+    [  # the 4b-1 cases: the transcript was right, Map changed one digit or a factor of 10
+        ("Budget of $420,500 approved.", "a budget of $42,500", "Budget of $42,500 approved."),
+        ("570,000 monthly users", "57,000 monthly users", "57,000 monthly users"),
+        ("3,360 open tickets", "336 open tickets", "336 open tickets"),
+        ("Due Nov 2nd.", "by the 22nd of November", "Due Nov 22nd."),
+        ("Spend $595,000", "$59,500", "Spend $59,500"),
+        ("Cap at $1,180", "$11,800", "Cap at $11,800"),
+        ("Churn fell to 340%", "churn fell to 34%", "Churn fell to 34%"),
+        ("Budget 420.500 €", "42.500 Euro", "Budget 42.500 €"),  # thousands dot stays a dot
+        ("4,6500 signups", "4,650 signups", "4650 signups"),  # malformed: decimal comma ×1000
+        ("vs. 4,246 last week", "336 now, 426 last week", "vs. 426 last week"),
+    ],
+)
+def test_guard_repairs_one_close_source_number(text: str, source: str, fixed: str) -> None:
+    out, repairs, unverified = _check(text, source)
+    assert out == fixed
+    assert len(repairs) == 1 and unverified == []
+
+
+def test_guard_records_the_repair_as_written() -> None:
+    _, repairs, _ = _check("$420,500", "$42,500")
+    assert repairs == [NumberRepair(original="420,500", repaired="42,500")]
+
+
+def test_guard_keeps_numbers_in_the_sources() -> None:
+    text = "$42,500 for 57,000 users (42.5k), up 34% on the 22nd, 1.5 million"
+    assert _check(text, "42,500 dollars, 57000 users, 34%, the 22nd, 1.5 million") == (
+        text,
+        [],
+        [],
+    )
+    assert _check("forty-two items", "") == ("forty-two items", [], [])  # words aren't checked
+
+
+def test_guard_flags_a_number_two_edits_away() -> None:
+    assert _check("$43,600 approved", "$42,500 approved") == ("$43,600 approved", [], ["43,600"])
+
+
+def test_guard_flags_two_equally_close_candidates() -> None:
+    assert _check("450 seats", "45 or 451 seats") == ("450 seats", [], ["450"])
+    assert _check("by the 2nd", "the 22nd, one item") == ("by the 2nd", [], ["2nd"])  # 22 or 1
+
+
+def test_guard_flags_an_invented_iso_year() -> None:
+    text, repairs, unverified = _check("Due 2024-11-22", "by the 22nd of November")
+    assert text == "Due 2024-11-22" and repairs == []
+    assert "2024" in unverified
+
+
+def test_guard_only_flags_suffixed_and_space_grouped_numbers() -> None:
+    assert _check("42.6k users", "42,500 users") == ("42.6k users", [], ["42.6k"])
+    assert _check("4 250 €", "42500 Euro") == ("4 250 €", [], ["4 250"])
+    assert _check("2 300 users", "2 teams of 300 users")[2] == []  # two source numbers
+
+
+def test_guard_numbers_walks_every_field_but_terms() -> None:
+    notes = SegmentNotes(
+        seg_id=0,
+        summary="Budget $420,500.",
+        key_points=["3,360 tickets", "Q3 plan"],
+        decisions=["Cap at 3,360"],
+        action_items=[MapActionItem(owner="Elena", task="Close 3,360 tickets", due="Nov 2nd")],
+        open_questions=["Why 999?"],
+        terms=["R2 3,360"],
+    )
+    out = mapper.guard_numbers(notes, mapper.source_numbers("$42,500, 336 tickets, the 22nd", []))
+    assert out.summary == "Budget $42,500."
+    assert out.key_points == ["336 tickets", "Q3 plan"]
+    assert out.decisions == ["Cap at 336"]
+    assert out.action_items == [
+        MapActionItem(owner="Elena", task="Close 336 tickets", due="Nov 22nd")
+    ]
+    assert out.open_questions == ["Why 999?"]
+    assert out.terms == ["R2 3,360"]
+    assert [(r.original, r.repaired) for r in out.number_repairs] == [
+        ("420,500", "42,500"),
+        ("3,360", "336"),
+        ("3,360", "336"),
+        ("3,360", "336"),
+        ("2", "22"),
+    ]
+    assert out.unverified_numbers == ["999"]
+
+
+def test_guard_leaves_raw_segments_alone() -> None:
+    raw = mapper.make_notes(0, None, "Budget $420,500, not JSON")
+    assert mapper.guard_numbers(raw, {42500.0}) == raw
+
+
+GUARDED = (
+    '{"summary": "Budget $420,500 approved.", "key_points": ["14,500 on the slide"], '
+    '"decisions": [], "action_items": [], "open_questions": ["What about 2024?"], "terms": []}'
+)
+
+
+def _guard_run(tmp_path: Path, config: Config) -> MapFile:
+    run_dir = make_run(tmp_path, config=config)
+    schemas.save(run_dir, SlidesFile(slides=[_slide(0, "Budget")]))
+    seg = _seg(0, [0]).model_copy(update={"transcript_text": "We approved $42,500 today."})
+    schemas.save(run_dir, SegmentsFile(segments=[seg], unaligned_slide_ids=[]))
+    lm = FakeLm([GUARDED])
+    mapper.run_stage(ctx_for(run_dir, "map", fake_manager(config, tmp_path, map=lm)))
+    return schemas.load(run_dir, MapFile)
+
+
+def test_stage_applies_the_guard_with_transcript_and_slides(tmp_path: Path) -> None:
+    notes = _guard_run(tmp_path, Config()).notes[0]
+    assert notes.summary == "Budget $42,500 approved."
+    assert notes.key_points == ["14,500 on the slide"]  # from the attached slide's text
+    assert notes.number_repairs == [NumberRepair(original="420,500", repaired="42,500")]
+    assert notes.unverified_numbers == ["2024"]
+
+
+def test_stage_guard_can_be_switched_off(tmp_path: Path) -> None:
+    notes = _guard_run(tmp_path, Config(map=MapConfig(number_guard=False))).notes[0]
+    assert notes.summary == "Budget $420,500 approved."
+    assert notes.number_repairs == [] and notes.unverified_numbers == []

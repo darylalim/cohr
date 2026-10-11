@@ -3,6 +3,9 @@
 The prompt ends with the target-language instruction (Phase 0: with it only at the top, de and ja
 notes came back in English). Invalid JSON is retried once; after that the raw text becomes the
 summary with `raw: true`, so one bad segment never fails the stage.
+
+The number guard then checks every number Map wrote with digits against the segment's own
+transcript and slide text, and repairs or flags the ones that aren't there (§5.5, D20).
 """
 
 import json
@@ -13,8 +16,17 @@ from typing import Any
 from cohr import schemas
 from cohr.config import language_name, load_prompt
 from cohr.fuse import slide_text
+from cohr.numbers import SCALE, WRITTEN, Reading, near, numbers_in, readings, write_like
 from cohr.pipeline import Stage, StageContext
-from cohr.schemas import MapActionItem, MapFile, Segment, SegmentNotes, SegmentsFile, SlidesFile
+from cohr.schemas import (
+    MapActionItem,
+    MapFile,
+    NumberRepair,
+    Segment,
+    SegmentNotes,
+    SegmentsFile,
+    SlidesFile,
+)
 
 KEYS = ("summary", "key_points", "decisions", "action_items", "open_questions", "terms")
 _EMPTY = {"", "none", "null", "n/a", "na", "-", "?", "unknown"}
@@ -112,6 +124,79 @@ def make_notes(seg_id: int, obj: dict[str, Any] | None, raw: str) -> SegmentNote
     )
 
 
+# --- number guard (pure, §5.5) -------------------------------------------------------------
+
+
+def source_numbers(transcript: str, slides: list[str]) -> set[float]:
+    return set().union(numbers_in(transcript), *(numbers_in(s) for s in slides))
+
+
+def check_numbers(text: str, sources: set[float]) -> tuple[str, list[NumberRepair], list[str]]:
+    """Keep a number found in the sources; repair it when exactly one source number is near it
+    (one digit edit, or a factor of 10/100/1000), in the written style; otherwise keep it as
+    written and flag it. A number with a scale suffix ("42.5k") or grouped with plain spaces
+    ("42 500", which could also be two numbers) is only kept or flagged."""
+    repairs: list[NumberRepair] = []
+    unverified: list[str] = []
+
+    def check(m: re.Match[str]) -> str:
+        body, written = m.group("body"), m.group(0)
+        reads = readings(body)
+        scale = SCALE.get(m.group("scale") or "", 1.0)
+        if not reads or any(r.value * scale in sources for r in reads):
+            return written
+        if " " in body and all(p.isdigit() and float(p) in sources for p in body.split(" ")):
+            return written
+        near_by: dict[float, Reading] = {}
+        if scale == 1.0 and " " not in body:
+            for r in reads:
+                for s in sources:
+                    if near(r.value, s):
+                        near_by.setdefault(s, r)
+        if len(near_by) != 1:
+            unverified.append(written)
+            return written
+        [(value, reading)] = near_by.items()
+        fixed = write_like(value, reading)
+        repairs.append(NumberRepair(original=body, repaired=fixed))
+        return fixed + written[len(body) :]
+
+    return WRITTEN.sub(check, text), repairs, unverified
+
+
+def guard_numbers(notes: SegmentNotes, sources: set[float]) -> SegmentNotes:
+    """Run `check_numbers` on every Map string except `terms`. Raw (non-JSON) segments are
+    left alone: their text isn't notes, so there is nothing to keep consistent."""
+    if notes.raw:
+        return notes
+    repairs: list[NumberRepair] = []
+    unverified: list[str] = []
+
+    def fix(text: str) -> str:
+        fixed, r, u = check_numbers(text, sources)
+        repairs.extend(r)
+        unverified.extend(u)
+        return fixed
+
+    def fix_all(texts: list[str]) -> list[str]:
+        return [fix(t) for t in texts]
+
+    return notes.model_copy(
+        update={
+            "summary": fix(notes.summary),
+            "key_points": fix_all(notes.key_points),
+            "decisions": fix_all(notes.decisions),
+            "action_items": [
+                a.model_copy(update={"task": fix(a.task), "due": a.due and fix(a.due)})
+                for a in notes.action_items
+            ],
+            "open_questions": fix_all(notes.open_questions),
+            "number_repairs": repairs,
+            "unverified_numbers": list(dict.fromkeys(unverified)),
+        }
+    )
+
+
 # --- model (MLX) ---------------------------------------------------------------------------
 
 
@@ -184,7 +269,19 @@ def run_stage(ctx: StageContext) -> None:
                 if obj is None:
                     failed += 1
                     ctx.log.warning("map: segment %d kept as raw text: %r", k, raw[:200])
-                notes.append(make_notes(seg.seg_id, obj, raw))
+                seg_notes = make_notes(seg.seg_id, obj, raw)
+                if cfg.number_guard:
+                    sources = source_numbers(seg.transcript_text, seg_slides)
+                    seg_notes = guard_numbers(seg_notes, sources)
+                    for fix in seg_notes.number_repairs:
+                        ctx.log.info("map: segment %d %s → %s", k, fix.original, fix.repaired)
+                    if seg_notes.unverified_numbers:
+                        ctx.log.warning(
+                            "map: segment %d numbers in no source: %s",
+                            k,
+                            ", ".join(seg_notes.unverified_numbers),
+                        )
+                notes.append(seg_notes)
     ctx.log.info("map: %d segments, %d retried, %d kept as raw text", len(notes), retried, failed)
     schemas.save(ctx.run_dir, MapFile(target_language=ctx.config.target_language, notes=notes))
 

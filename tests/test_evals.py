@@ -20,11 +20,10 @@ from cohr.evals import (
     citation_check,
     compare,
     coverage,
-    digits,
-    numbers_in,
     same_due,
     wer_text,
 )
+from cohr.numbers import digits, numbers_in
 from cohr.schemas import (
     ActionItem,
     Chunk,
@@ -32,8 +31,11 @@ from cohr.schemas import (
     Citation,
     Claim,
     Manifest,
+    MapFile,
     NotesDoc,
     NotesSections,
+    NumberRepair,
+    SegmentNotes,
     Slide,
     SlidesFile,
     Span,
@@ -437,8 +439,30 @@ def test_score_item_end_to_end(tmp_path: Path) -> None:
     )
     schemas.save(
         run_dir,
+        MapFile(
+            target_language="en",
+            notes=[
+                SegmentNotes(
+                    seg_id=0,
+                    summary="409 open tickets.",
+                    key_points=[],
+                    decisions=[],
+                    action_items=[],
+                    open_questions=[],
+                    terms=[],
+                    number_repairs=[NumberRepair(original="4,090", repaired="409")],
+                    unverified_numbers=["2024"],
+                )
+            ],
+        ),
+    )
+    schemas.save(
+        run_dir,
         notes(
-            key_points=[Claim(text="There are 409 open tickets.", citations=cite(0.0))],
+            key_points=[
+                Claim(text="There are 409 open tickets.", citations=cite(0.0)),
+                Claim(text="Up from 3,100 in 2024, 1.61 million users.", citations=cite(0.0)),
+            ],
             action_items=[item("Update the pricing page", "Priya", "Friday", citations=cite(0.0))],
         ),
     )
@@ -458,6 +482,10 @@ def test_score_item_end_to_end(tmp_path: Path) -> None:
     assert m["made_up_items"] == 0 and m["uncited_claims"] == 0
     assert m["wer"] == 0.0 and m["gap_words"] == 0 and m["output_language_ok"] == 1
     assert m["slide_alignment"] == 1.0
+    assert m["map_numbers_repaired"] == 1 and m["map_numbers_unverified"] == 1
+    assert rep.number_repairs == ["4,090 → 409"] and rep.unverified_numbers == ["2024"]
+    assert m["unsupported_numbers"] == 3
+    assert rep.unsupported_numbers == ["2024", "3100", "1610000"]  # plain digits, no 1.61e+06
     assert rep.stages["map"] == evals.StageCost(
         seconds=6.0, s_per_audio_hour=360.0, peak_mem_gb=9.0, reused=False
     )
@@ -474,8 +502,11 @@ def test_score_item_end_to_end(tmp_path: Path) -> None:
         citation_errors=[-20.0, -2.0],
     )
     assert full.summary["fact_recall"] == 1.0
+    assert full.summary["recall_number"] == 1.0 and full.summary["recall_decision"] is None
+    assert full.summary["map_numbers_repaired"] == 1 and full.summary["unsupported_numbers"] == 3
     md = evals.render_markdown(full)
     assert "citation off by -20 s" in md and "| map | 360 | 9 |" in md
+    assert "Map number repaired: 4,090 → 409" in md and "number in no source: 3100" in md
     path = evals.write_report(full, tmp_path)
     assert evals.load_report(path) == full
     assert json.loads(path.read_text())["summary"]["facts"] == 2

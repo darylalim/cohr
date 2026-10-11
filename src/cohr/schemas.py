@@ -185,6 +185,11 @@ class MapActionItem(_Model):
     due: str | None = None
 
 
+class NumberRepair(_Model):
+    original: str  # the number as Map wrote it, e.g. "420,500"
+    repaired: str  # the source number in the same style, e.g. "42,500"
+
+
 class SegmentNotes(_Model):
     seg_id: int
     summary: str
@@ -194,10 +199,15 @@ class SegmentNotes(_Model):
     open_questions: list[str]
     terms: list[str]
     raw: bool = False  # the reply was never valid JSON: summary holds the raw text (§5.5)
+    # Number guard (§5.5, D20): digits Map changed and the guard put back, and numbers in no
+    # source with no single close source number (kept as written, never dropped or guessed).
+    number_repairs: list[NumberRepair] = []
+    unverified_numbers: list[str] = []
 
 
 class MapFile(RunFile):
-    FORMAT_VERSION: ClassVar[int] = 2
+    # v3: number guard (number_repairs, unverified_numbers), so older runs re-run Map.
+    FORMAT_VERSION: ClassVar[int] = 3
     FILENAME: ClassVar[str] = "map.json"
 
     target_language: str
