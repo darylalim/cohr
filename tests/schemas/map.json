@@ -1,5 +1,5 @@
 {
-  "format_version": 1,
+  "format_version": 2,
   "schema": {
     "$defs": {
       "MapActionItem": {
@@ -72,8 +72,9 @@
             "type": "array"
           },
           "raw": {
+            "default": false,
             "title": "Raw",
-            "type": "string"
+            "type": "boolean"
           },
           "seg_id": {
             "title": "Seg Id",
@@ -98,8 +99,7 @@
           "decisions",
           "action_items",
           "open_questions",
-          "terms",
-          "raw"
+          "terms"
         ],
         "title": "SegmentNotes",
         "type": "object"

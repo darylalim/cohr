@@ -305,3 +305,54 @@ None due this phase (D11 is Phase 3).
 ### Next
 - Open the Phase 2 PR (ask before pushing). Then Phase 3 (fuse + map: slide alignment, D11,
   `segments.json`, `map.json`, token budget).
+
+## 2026-10-11 · Phase 3 (fuse + map)
+
+### Findings
+- **Fuse (`fuse.py`, no models):** slides without `pts` are text-aligned to transcript chunks
+  with a monotonic DP (`best[i][j]` = best total for the first i slides on chunks < j; skips
+  allowed, two slides may share a chunk, ties go to the earliest chunk). Score = shared tokens
+  / max(min(|slide|, |chunk|), 8): plain slide coverage punished long slides (a 50-token slide
+  rarely reaches 0.15 against one 30 s chunk), plain overlap coefficient let a two-word chunk
+  score 0.5. English stopwords plus a document-frequency filter (≥ 4 chunks: drop tokens in
+  more than half of them) so function words in the other 13 languages and the project name
+  don't count. CJK runs → character bigrams.
+- Fuse **rewrites `slides.json`** (`t`, `t_source="aligned"`, `align_score`) as §5.4 says, and
+  recomputes every non-`pts` slide on each run, so a threshold change gives the same result as
+  a first run (tested). Vision's skip check only looks at existence, so this is safe.
+- Slides per segment: timed slides in (previous segment end, this end], first/last open-ended,
+  plus the slide on screen at the start. A slide flipped during a silence lands in the next
+  segment instead of nowhere.
+- **Token budget** is estimated (1 per CJK char, 1 per 3 other chars), because Fuse loads no
+  model; a 5 min window of speech is ~1.5K estimated tokens, so splits only happen with heavy
+  slides. Map counts real tokens with Tiny Aya's tokenizer and warns when over.
+- **Map (`mapper.py`):** `fill()` substitutes the four placeholders in one regex pass (the
+  prompt has literal JSON braces; a transcript containing `{slides}` is never re-substituted).
+  Retry = prompt + `map_retry.md`, which repeats the target language so the last line still
+  names it. Coercion: list `summary` joined, string `terms` → list, string action items →
+  `task`, `"null"`/`"?"`/`"unknown"` owners and dues → null, empty tasks dropped.
+- `mlx_lm.load` is typed as returning 2 or 3 values, so the loader indexes `[0]`, `[1]`.
+- **D11 probe (no models, fixture script text as chunks):** 1 line per chunk: correct chunks
+  score 0.33–0.56, best wrong 0.11–0.31 (the recap line, ruled out by monotonicity); 2 lines
+  per chunk: right 0.23–0.38. An undiscussed "Hiring" slide: 0.125. Thresholds 0.10–0.20 all
+  place 3/3; 0.25 drops one. **0.15 kept, provisional** until `pdf-slides-en` (Phase 4).
+- **Tests:** 137 pass without models in ~4 s (new: fuse 17, mapper 9; pipeline order updated).
+  Smoke test extended to fuse + map (slides must align in order onto the chunks that discuss
+  them; Map JSON valid with decisions, action items and 14,500): **passes in 34.3 s** offline
+  (Phase 2: 26.8 s, so fuse + map add ~7.5 s), run by the user.
+
+### Decisions (PLAN §20)
+- D11: 0.15 provisional (above). Re-check on `pdf-slides-en` in Phase 4.
+
+### Plan changes
+- §19: `SegmentNotes.raw` is `bool` (was `str`), `MapFile` FORMAT_VERSION 2, snapshot regenerated.
+- §5.4: score formula, DF filter, CJK bigrams, `t_source` values `pts|aligned|none` (the schema's,
+  not the plan's old `video|text|null`), slide-per-segment rule, estimated token budget
+  (`fuse.max_segment_tokens = 5000`).
+- §5.5: `map_retry.md`; due dates copied as spoken (Phase 0 candidate rule adopted).
+- `config.py`: `MapConfig` (temperature 0.3, max_tokens 1024) and `TARGET_LANGUAGES` (R7B's
+  23, §5.6 said Phase 0 would record them there; it hadn't).
+
+### Next
+- Open the Phase 3 PR. Then Phase 4
+  (reduce + render, eval generator, D11 re-check, D12, D15, D19).

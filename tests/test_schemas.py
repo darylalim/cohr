@@ -123,7 +123,7 @@ SAMPLES: list[RunFile] = [
                 action_items=[MapActionItem(owner="Priya", task="screenshots", due="20 October")],
                 open_questions=[],
                 terms=[],
-                raw="{}",
+                raw=False,
             )
         ],
     ),

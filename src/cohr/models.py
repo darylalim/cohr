@@ -157,9 +157,9 @@ class MlxMemory:
 
 
 def default_loaders() -> dict[str, Loader]:
-    from cohr import asr, vad, vision
+    from cohr import asr, mapper, vad, vision
 
-    return {"vad": vad.load, "transcribe": asr.load, "vision": vision.load}
+    return {"vad": vad.load, "transcribe": asr.load, "vision": vision.load, "map": mapper.load}
 
 
 class ModelManager:

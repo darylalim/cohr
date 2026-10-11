@@ -8,6 +8,7 @@ models plus a small voice-detection model, all on MLX and all fitting in memory 
 Status: Phase 0 done 2026-10-10 (all checks passed; findings in `NOTES.md`, results in §20).
 Phase 1 done 2026-10-11 (scaffold + ingest; §17 GitHub setup complete, CI green).
 Phase 2 done 2026-10-11 (perception: VAD, Transcribe, Vision, ModelManager; smoke test passes offline).
+Phase 3 done 2026-10-11 (fuse + map: slide text alignment, segments, Tiny Aya Map).
 Hub metadata verified 2026-10-04 and 2026-10-10; packages, licenses and Streamlit config checked
 2026-10-05.
 
@@ -254,17 +255,24 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
 ### 5.4 Fuse
 - **Slide text alignment** (for PDF/image slides, the common "audio + deck" input): score every
   slide against every transcript chunk by token overlap (casefolded, numbers kept, stopwords
-  dropped, using `title + text_md + tables_md` from `slides.json`). Choose a **monotonic**
+  dropped, using `title + text_md + tables_md` from `slides.json`). Score = shared tokens over
+  the smaller token set, never dividing by fewer than 8; Chinese/Japanese runs become character
+  bigrams; with ≥ 4 chunks, tokens in more than half the chunks are dropped (any language). Choose a **monotonic**
   assignment (slides are usually presented in order) with dynamic programming that maximizes the
   total score, allowing slides to be skipped. A slide whose best score is below a threshold
   (default 0.15, tuned on the eval) stays unaligned.
-  Store `t`, `t_source: "video" | "text" | null` and `align_score` in `slides.json`. The UI marks
+  Store `t`, `t_source: "pts" | "aligned" | "none"` and `align_score` in `slides.json` (Fuse
+  rewrites it; re-running Fuse recomputes every non-`pts` slide, so it's idempotent). The UI marks
   text-aligned slides with "≈" before the time. Pure Python, unit tested (§8), evaluated by the
   `pdf-slides-en` variant (§18).
 - Window length is configurable (default 300 s). Each segment holds `{seg_id, t0, t1,
   transcript_text, slide_ids[]}`.
-- Budget check: `len(tokenize(transcript_text + slide text))` must stay ≤ ~5K tokens for Tiny Aya.
-  Split the window in half if it's over.
+- Slides per segment: every timed slide shown from the end of the previous segment to the end of
+  this one (the first and last are open-ended), plus the slide on screen when it starts.
+- Budget check: `transcript_text + slide text` must stay ≤ `max_segment_tokens` (5K) for Tiny
+  Aya, estimated without a tokenizer (1 token per CJK character, per 3 other characters; Fuse
+  loads no model). Split the window in half (by chunks) until it fits; a single chunk over budget
+  is kept with a warning. Map logs the real token count and warns if it's over.
 
 ### 5.5 Map (Tiny Aya Global)
 - One call per segment, temperature ~0.3, output in the target language, JSON only. The prompt
@@ -277,7 +285,8 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   for names and numbers (speech recognition often gets these wrong).
 - **Invalid JSON:** same rule as §5.3. Retry once with "Return only valid JSON". If it still fails,
   store the raw text as `summary`, leave the lists empty, set `raw: true` on that segment's entry,
-  and log a warning. One bad segment never fails the stage.
+  and log a warning. The retry prompt (`prompts/map_retry.md`) also ends with the target language.
+- Due dates are copied as spoken, never computed (Phase 0 saw "end of next week" → "10月27日"). One bad segment never fails the stage.
 - **Optional regional Map models (Phase 6, decision D18):** Cohere's regional Tiny Aya variants
   have the same size (3.35B), chat template and license (CC-BY-NC) as Global. The release
   describes their focus as Earth: Africa + West Asia, Fire: South Asia, Water: Asia-Pacific +
@@ -877,7 +886,7 @@ PR (§21).
 (atomic writes, cancel, recovery, log), ingest functions; the §6 gate passes; CI workflow (§15) green on a PR.
 **Phase 2: perception** (done 2026-10-11, NOTES.md): `vad.py` (chunks.json) and `asr.py` (slices `audio.wav` by offsets), `vision.py`, ModelManager with
 pinned revisions and a free-disk check before downloads, `transcript.json` and `slides.json`, plus skip logic.
-**Phase 3: fuse + map:** slide text alignment, `segments.json` and `map.json` (with `open_questions` and the
+**Phase 3: fuse + map** (done 2026-10-11, NOTES.md): slide text alignment, `segments.json` and `map.json` (with `open_questions` and the
 invalid-JSON fallback, §5.5); token budget enforced.
 **Phase 4: reduce + render:** `notes.json` and portable `notes.md` with working citations (fixed section
 markers, citation rules, time refinement, action item owner/due, §5.6); CLI end to end on fixtures;
@@ -1605,7 +1614,7 @@ Pydantic models for every run file. Stages read and write **only** through them
 | `transcript.json` | `Transcript` | `language`, `runtime`, `items[{chunk_id, t0, t1, text}]` |
 | `slides.json` | `SlidesFile` | `slides[{slide_id, frame_id, t?, t_source, align_score?, title, text_md, tables_md[], chart_notes, visual_notes, raw?}]` |
 | `segments.json` | `SegmentsFile` | `segments[{seg_id, t0, t1, chunk_ids[], transcript_text, slide_ids[]}]`, `unaligned_slide_ids[]` |
-| `map.json` | `MapFile` | `target_language`, `notes[{seg_id, summary, key_points[], decisions[], action_items[{owner?, task, due?}], open_questions[], terms[], raw}]` |
+| `map.json` | `MapFile` | `target_language`, `notes[{seg_id, summary, key_points[], decisions[], action_items[{owner?, task, due?}], open_questions[], terms[], raw: bool}]` (v2) |
 | `notes.json` | `NotesDoc` | `sections{summary, key_points, decisions, action_items, open_questions}` as lists of `{text, citations[{kind: seg|slide, id, t?}]}` (`t` = refined jump time, seg only; `citations: []` = uncited, §5.6); action items also have `owner?`, `due?`; `passes: 1|2`, `language` |
 
 `notes.json` is new: the **parsed** reduce output. `notes.md` is rendered from it, and Notes, Ask,
@@ -1657,7 +1666,7 @@ section.
 | D8 | Which of the 14 languages have macOS `say` voices (§18) | en, es, ja, de | `say -v '?'` | Phase 0 || All 14 have a voice; ar, el, pl, vi only one each |
 | D9 | `torch` in the lockfile (§1, §15) | Must be absent | `uv tree --invert --package torch` | Phase 0 || Absent from `uv.lock`; never imported |
 | D10 | Speed target realistic (§9) | ≤ 20 min per audio hour | Phase 0 per-stage timings | Phase 0 || Realistic: ≈ 9–10 min per audio hour projected |
-| D11 | Slide alignment threshold (§5.4) | 0.15 | Maximize `pdf-slides-en` accuracy | Phase 3, re-check Phase 4 | |
+| D11 | Slide alignment threshold (§5.4) | 0.15 | Maximize `pdf-slides-en` accuracy | Phase 3, re-check Phase 4 | **0.15 provisional**: on fixture text, discussed slides score 0.23–0.56, an undiscussed slide 0.125; 0.25 drops one. Final on `pdf-slides-en` (Phase 4) |
 | D12 | Fuse window length (§5.4) | 300 s | Fact recall vs. speed on `quick` | Phase 4 | |
 | D13 | Notes column `width=880` shrinks below 880 px (§7) | 880 | Resize check | Phase 5 | |
 | D14 | Anchors scroll the Sources panel (§7) | Anchors | Click check; fallback = drawer buttons | Phase 5 | |
