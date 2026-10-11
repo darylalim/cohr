@@ -295,12 +295,22 @@ def report(**summary: float) -> Report:
 
 def test_baseline_thresholds() -> None:
     old = report()
-    assert compare(report(fact_recall=0.86), old) == []  # −4 points: within −5
-    assert compare(report(fact_recall=0.85), old) == []  # exactly −5
+    assert compare(report(fact_recall=0.85), old) == []  # −5 points: within −5.9 (D16)
+    assert compare(report(fact_recall=0.841), old) == []  # exactly −5.9
     assert "fact_recall" in compare(report(fact_recall=0.84), old)[0]
     assert compare(report(citation_accuracy=0.92), old) == []
     assert "citation_accuracy" in compare(report(citation_accuracy=0.91), old)[0]
-    assert "made_up_items" in compare(report(made_up_items=1), old)[0]
+    assert compare(report(made_up_items=2), old) == []  # D16: +2 allowed (noise 1)
+    assert "made_up_items" in compare(report(made_up_items=3), old)[0]
+    ask = report(ask_accuracy=0.98, ask_citation_accuracy=1.0, ask_near_miss=1.0)
+    assert (
+        compare(report(ask_accuracy=0.93, ask_citation_accuracy=0.97, ask_near_miss=0.0), ask) == []
+    )
+    regressions = compare(report(ask_accuracy=0.92, ask_citation_accuracy=0.96), ask)
+    assert ["ask_accuracy" in regressions[0], "ask_citation_accuracy" in regressions[1]] == [
+        True,
+        True,
+    ]
     assert "uncited_claims" in compare(report(uncited_claims=2), old)[0]
     assert "gap_words_per_min" in compare(report(gap_words_per_min=0.5), old)[0]
     slow = report()
@@ -511,3 +521,22 @@ def test_score_item_end_to_end(tmp_path: Path) -> None:
     assert evals.load_report(path) == full
     assert json.loads(path.read_text())["summary"]["facts"] == 2
     assert isinstance(full.items[0], ItemReport)
+
+
+def test_noise_over_seeds() -> None:
+    runs = [report(fact_recall=r, made_up_items=m) for r, m in ((0.9, 3), (0.86, 5), (0.88, 4))]
+    runs[1].stages["map"]["s_per_audio_hour"] = 110.0
+    n = evals.noise(runs)
+    assert n["fact_recall"] == 0.04 and n["made_up_items"] == 2.0
+    assert n["citation_accuracy"] == 0.0 and n["stage:map"] == 0.1
+    runs[2].summary["ask_accuracy"] = 0.5  # missing from some runs: no noise figure
+    assert "ask_accuracy" not in evals.noise(runs)
+
+
+def test_gate_tables_drive_compare(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(evals.MAX_DROP, "ask_accuracy", 0.1)
+    monkeypatch.setitem(evals.MAX_RISE, "made_up_items", 2)
+    old = report(ask_accuracy=0.8, made_up_items=3)
+    assert compare(report(ask_accuracy=0.7, made_up_items=5), old) == []
+    out = compare(report(ask_accuracy=0.69, made_up_items=6), old)
+    assert len(out) == 2 and "ask_accuracy" in out[0] and "made_up_items" in out[1]

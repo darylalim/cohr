@@ -63,10 +63,23 @@ TEXT_MATCH_MIN = 0.6  # share of a fact's content tokens found in a claim
 SLIDE_TITLE_MATCH_MIN = 0.5
 FRAME_S = 0.01  # VAD F1 frame size
 
-# Release-gate thresholds (§18; D16 revisits them in Phase 6).
-MAX_RECALL_DROP = 0.05
-MAX_CITATION_DROP = 0.03
-MAX_STAGE_SLOWDOWN = 0.25
+# Release-gate thresholds (§18, D16): each is max(PLAN default, 2 × the run-to-run noise of
+# 3 quick runs with pipeline seeds 1–3, same media; NOTES.md 6a). Rates: the largest drop
+# allowed (points); counts: the largest rise allowed; stages: the largest slowdown (share).
+# Report-only (not here): the one-question-per-item Ask rates (follow-up, German alone and
+# after history, near-miss: 25-point steps on quick) and the judge metrics (D15, no margin).
+MAX_DROP: dict[str, float] = {
+    "fact_recall": 0.059,  # noise 2.94 points
+    "citation_accuracy": 0.03,  # noise 0
+    "ask_accuracy": 0.05,  # noise 0; Ask has no PLAN default: fact recall's
+    "ask_citation_accuracy": 0.03,  # noise 0; citation accuracy's default
+}
+MAX_RISE: dict[str, float] = {
+    "made_up_items": 2,  # noise 1 (4, 3, 3)
+    "uncited_claims": 0,  # noise 0
+    "gap_words_per_min": 0.0,  # noise 0
+}
+MAX_STAGE_SLOWDOWN = 0.25  # noisiest stage: reduce, 10.5%
 
 GEN_DIR = Path("evals") / "gen"
 SETS_DIR = Path("evals") / "sets"
@@ -1330,20 +1343,35 @@ def compare(report: Report, baseline: Report) -> list[str]:
         if new is not None and old is not None and float(old) - float(new) > limit + 1e-9:
             out.append(f"{key} dropped {float(old) - float(new):.1%} ({old} → {new})")
 
-    def rise(key: str) -> None:
+    def rise(key: str, limit: float) -> None:
         new, old = s.get(key), b.get(key)
-        if new is not None and old is not None and float(new) > float(old) + 1e-9:
+        if new is not None and old is not None and float(new) - float(old) > limit + 1e-9:
             out.append(f"{key} increased ({old} → {new})")
 
-    drop("fact_recall", MAX_RECALL_DROP)
-    drop("citation_accuracy", MAX_CITATION_DROP)
-    for key in ("made_up_items", "uncited_claims", "gap_words_per_min"):
-        rise(key)
+    for key, limit in MAX_DROP.items():
+        drop(key, limit)
+    for key, limit in MAX_RISE.items():
+        rise(key, limit)
     for stage, cost in report.stages.items():
         new = cost.get("s_per_audio_hour")
         old = baseline.stages.get(stage, {}).get("s_per_audio_hour")
         if new and old and new > old * (1 + MAX_STAGE_SLOWDOWN):
             out.append(f"stage {stage} {new / old - 1:.0%} slower ({old} → {new} s/audio h)")
+    return out
+
+
+def noise(reports: Sequence[Report]) -> dict[str, float]:
+    """Run-to-run noise for D16: per summary metric, max − min over the reports; per stage,
+    the slowest over the fastest s/audio h minus 1 (key "stage:<name>")."""
+    out: dict[str, float] = {}
+    for key in reports[0].summary if reports else ():
+        vals = [float(v) for r in reports if (v := r.summary.get(key)) is not None]
+        if len(vals) == len(reports):
+            out[key] = round(max(vals) - min(vals), 4)
+    for stage in reports[0].stages if reports else ():
+        vals = [v for r in reports if (v := r.stages.get(stage, {}).get("s_per_audio_hour"))]
+        if len(vals) == len(reports):
+            out[f"stage:{stage}"] = round(max(vals) / min(vals) - 1, 4)
     return out
 
 
