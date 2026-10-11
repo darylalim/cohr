@@ -234,12 +234,14 @@ Entry template:
   `actions/checkout` v7.0.1 and `astral-sh/setup-uv` v10.3.0. setup-uv publishes only full
   version tags (no moving `v10`), so `@v10` failed the first run with "unable to find version".
 - **§17 topics:** the §17 list has 17 topics, not 18; all 17 applied.
-- **GitHub (§17), state before this PR:** repo public, default branch `main`, description set,
-  Actions token read-only. Not yet: topics, merge settings (squash only, delete branch on merge,
-  no wiki/projects), branch protection.
+- **GitHub (§17), done 2026-10-11 with the user's OK:** topics (step 2), squash-only merges +
+  delete branch on merge + wiki/projects off (step 3), Actions token read-only (step 4, already
+  the default), branch protection on `main` requiring `check`, strict, no force pushes (step 5,
+  after CI's first green run). Verified (step 6): CI ran 76 tests with none skipped (ffmpeg
+  present on the runner), PR #3 shows `CLEAN` with `check` passing.
 - **Not in Phase 1 (by plan):** release job (§16), ModelManager and download disk check (Phase
   2), upload streaming (Phase 5).
 
 ### Next
-- §17 steps 2, 3, 5 and 6 after confirmation; first CI run on the Phase 1 PR. Then Phase 2
-  (perception: `vad.py`, `asr.py`, `vision.py`, ModelManager).
+- Merge PR #3 (squash). Then Phase 2 (perception: `vad.py`, `asr.py`, `vision.py`,
+  ModelManager with pinned revisions, offline mode once cached, free-disk check).

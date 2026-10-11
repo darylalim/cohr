@@ -6,7 +6,7 @@ models plus a small voice-detection model, all on MLX and all fitting in memory 
 **M2 Max with 32 GB**.
 
 Status: Phase 0 done 2026-10-10 (all checks passed; findings in `NOTES.md`, results in §20).
-Phase 1 code done 2026-10-11 (scaffold + ingest; §17 GitHub settings and the first CI run pending).
+Phase 1 done 2026-10-11 (scaffold + ingest; §17 GitHub setup complete, CI green).
 Hub metadata verified 2026-10-04 and 2026-10-10; packages, licenses and Streamlit config checked
 2026-10-05.
 
@@ -869,7 +869,7 @@ PR (§21).
 | **VAD:** Silero won't load through `mlx_audio.vad` | The `silence` chunker (§5.1a) becomes the default; the made-up text results decide whether that's acceptable | Ask |
 | **Any blocker not listed** (Python 3.13 support, license problem, `torch` unavoidable) | Already covered in the checklist above: record and ask | Ask |
 
-**Phase 1: scaffold + ingest** (code done 2026-10-11; §17 steps 2–6 pending, NOTES.md): GitHub repo created and configured (§17), then tool config
+**Phase 1: scaffold + ingest** (done 2026-10-11, NOTES.md): GitHub repo created and configured (§17), then tool config
 (ruff, ty, pytest) in the Phase 0 `pyproject.toml`, `schemas.py` with snapshot tests (§19), config (including `seed`, §3), prompts folder, pipeline runner
 (atomic writes, cancel, recovery, log), ingest functions; the §6 gate passes; CI workflow (§15) green on a PR.
 **Phase 2: perception:** `vad.py` (chunks.json) and `asr.py` (slices `audio.wav` by offsets), `vision.py`, ModelManager with
@@ -1416,7 +1416,7 @@ gh repo edit darylalim/cohr \
   --add-topic mlx,apple-silicon,local-llm,offline,macos \
   --add-topic cohere,command-r,aya,rag,multilingual,vision-language-model,streamlit
 ```
-18 topics (limit 20). If trimming, drop `macos` and `summarization` first. Avoid `whisper`,
+17 topics (limit 20). If trimming, drop `macos` and `summarization` first. Avoid `whisper`,
 `ollama` (not used) and broad ones like `ai`, `llm`, `python`.
 
 **3. Merge settings** (squash merges keep `main` linear and make the generated release notes in
