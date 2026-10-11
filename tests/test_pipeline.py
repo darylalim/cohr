@@ -299,4 +299,4 @@ def test_preflight_requires_models_only_for_stages_that_will_run(
 
 def test_default_stages_order() -> None:
     names = [s.name for s in pipeline.default_stages()]
-    assert names == ["ingest", "vad", "transcribe", "vision"]
+    assert names == ["ingest", "vad", "transcribe", "vision", "fuse", "map"]

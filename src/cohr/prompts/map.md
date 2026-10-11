@@ -8,6 +8,7 @@ Return only a JSON object, with no other text, using exactly these keys:
 
 - "decisions": things the participants agreed or decided.
 - "action_items": tasks someone will do; "owner" and "due" are null when not stated.
+- Copy a due date as it was said (for example "end of next week"). Never work out a calendar date.
 - "open_questions": questions raised and not resolved.
 - "terms": names, products and technical terms mentioned.
 - Use [] for any list with nothing in it.

@@ -193,11 +193,11 @@ class SegmentNotes(_Model):
     action_items: list[MapActionItem]
     open_questions: list[str]
     terms: list[str]
-    raw: str
+    raw: bool = False  # the reply was never valid JSON: summary holds the raw text (§5.5)
 
 
 class MapFile(RunFile):
-    FORMAT_VERSION: ClassVar[int] = 1
+    FORMAT_VERSION: ClassVar[int] = 2
     FILENAME: ClassVar[str] = "map.json"
 
     target_language: str

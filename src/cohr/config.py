@@ -53,6 +53,39 @@ DEFAULT_MODELS: dict[str, ModelSpec] = {
 }
 
 
+# Target languages: Command R7B's 23 (model card, Phase 0, D7). Prompts name the language in
+# English; "Other (beta)" languages (Phase 6) fall back to the code itself.
+TARGET_LANGUAGES: dict[str, str] = {
+    "ar": "Arabic",
+    "cs": "Czech",
+    "de": "German",
+    "el": "Greek",
+    "en": "English",
+    "es": "Spanish",
+    "fa": "Persian",
+    "fr": "French",
+    "he": "Hebrew",
+    "hi": "Hindi",
+    "id": "Indonesian",
+    "it": "Italian",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "nl": "Dutch",
+    "pl": "Polish",
+    "pt": "Portuguese",
+    "ro": "Romanian",
+    "ru": "Russian",
+    "tr": "Turkish",
+    "uk": "Ukrainian",
+    "vi": "Vietnamese",
+    "zh": "Chinese",
+}
+
+
+def language_name(code: str) -> str:
+    return TARGET_LANGUAGES.get(code, code)
+
+
 class IngestConfig(_Section):
     scene_threshold: float = 0.3  # ffmpeg select='gt(scene,…)'
     max_edge_px: int = 1600  # frames and slide pages, long edge
@@ -81,6 +114,12 @@ class VisionConfig(_Section):
 class FuseConfig(_Section):
     window_s: float = 300.0  # D12
     align_threshold: float = 0.15  # D11
+    max_segment_tokens: int = 5000  # transcript + slide text per segment, for Tiny Aya (§5.4)
+
+
+class MapConfig(_Section):
+    max_tokens: int = 1024
+    temperature: float = 0.3
 
 
 class ReduceConfig(_Section):
@@ -99,6 +138,7 @@ class Config(_Section):
     vad: VadConfig = VadConfig()
     vision: VisionConfig = VisionConfig()
     fuse: FuseConfig = FuseConfig()
+    map: MapConfig = MapConfig()
     reduce: ReduceConfig = ReduceConfig()
     models: dict[str, ModelSpec] = Field(default_factory=lambda: dict(DEFAULT_MODELS))
 
