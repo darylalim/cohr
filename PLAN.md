@@ -1021,12 +1021,28 @@ invalid-JSON fallback, §5.5); token budget enforced.
   "Open in Ask" button; tests for history trimming, language fallback and citations in answers.
   Notes' Sources Beside/Below toggle for medium windows (D21, §7).
   Long-meeting ranking (FTS5) stays in Phase 6. Kickoff prompt in §21.
-**Phase 6: hardening:** sequential memory policy, inputs over 2 h (two-pass reduce with
-marker-based citations), Ask ranking for long meetings, "Other (beta)" target languages, error
-messages for missing ffmpeg or models, a cache size note for the README; optional regional Map
-models (§5.5): `map_model_by_lang` filled only for languages that pass D18 (may stay empty);
-`full` eval set and the
-committed `evals/baseline.json` with release gate (§18); bump to `1.0.0` to release v1 (§16).
+**Phase 6: hardening**, split in five PRs. Measurement comes first, so every later change is
+compared with a committed baseline:
+- **6a: baseline + Ask eval.** Measurement only: no prompt or pipeline behavior changes. The
+  Ask eval (§18 Ask row) on `quick` uses template questions from `truth.json`: number and
+  action questions, a follow-up, German questions alone and after English history, and one
+  near-miss per item. Answers are cached like the judge's. D16 comes from 3 `quick` runs on the
+  same media with pipeline seeds 1–3 (`-c seed=N`; `--seed` changes the generated meetings).
+  Then commit `evals/baseline.json`, with `compare()` using the D16 thresholds. Kickoff prompt
+  in §21.
+- **6b: quality fixes**, each checked against the baseline, which is updated with the reason:
+  Reduce turning filler into open questions (4b-2), Reduce dropping facts Map has right
+  (4b-1b: 4650, $57,000), and Ask's near-miss and cross-language limits (§5.7, 5b).
+- **6c: long meetings.** Inputs over 2 h: two-pass reduce with marker-based citations (§4) and
+  the `long-en` item; Ask ranking with FTS5 (§5.7) and "Answer based on the N most relevant
+  segments".
+- **6d: languages.** "Other (beta)" target languages with translation that keeps citations
+  (§5.6); the `xling-{es,ja}` and `en → {de,ar}` items; optional regional Map models (§5.5):
+  `map_model_by_lang` filled only for languages that pass D18 (may stay empty).
+- **6e: full set + v1.** FLEURS and AMI in `full` (§18); error messages for missing ffmpeg or
+  models; an end-to-end check of the sequential memory policy; a cache size note for the README;
+  the `full` release gate; bump to `1.0.0` to release v1 (§16, only when asked).
+Kickoff prompts for 6b–6e are written after the previous sub-phase, using its findings.
 **Phase 7 (after v1): cross-meeting search:** SQLite + FTS5 index and Search page per §13.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
@@ -1812,9 +1828,9 @@ section.
 | D13 | Notes column `width=880` shrinks below 880 px (§7) | 880 | Resize check | Phase 5 | **Shrinks, 880 kept**: 377 px at a 420 px window, 422 at 800 (sidebar closed), 559 at 1512, capped at 880 at 2560. But at 800 px with the sidebar open the columns get 209 / 128 px (they only stack at ≤ 640) |
 | D14 | Anchors scroll the Sources panel (§7) | Anchors | Click check; fallback = drawer buttons | Phase 5 | **Anchors work**: clicking `[5:41](#seg-1)` scrolled the Sources container 0 → 2358 px and brought its block to the top; no drawer needed |
 | D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4b-2 | **Pass, no margin**: 3-way 80.0% (24/30), yes vs not-yes 96.7% (29/30). All 12 "yes" right; 4 of 8 "partial" judged "no" (an added detail read as a contradiction), 1 "partial" judged "yes", 1 "no" judged "partial". Support rate counts only "yes", so the partial/no confusion barely moves it. Judge metrics stay out of the gate until D16 (Phase 6) |
-| D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 repeated `quick` runs: threshold ≥ 2× noise | Phase 6 | |
+| D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 `quick` runs, same media, pipeline seeds 1–3 (`-c seed=N`): threshold = max(default, 2× noise), Ask metrics included | Phase 6a | |
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 7 | |
-| D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6 | |
+| D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6d | |
 | D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | **0.1 and ±15 s, plus a sentence offset inside the chunk**: chunk `t0` alone was a median 12.5 s early (61% within 15 s); with the offset 98% (53 of 54 errors ≤ 5 s, so 15 s hides nothing). Min score 0.0 = 0.1 > 0.2 (94.6%) > 0.3 (91.1%) |
 | D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | **Default rule kept**: 8 repairs on `quick`, all to the transcript's value (0 wrong); number recall 81.2% → 87.5%, fact recall 82.3% → 85.3%, made-up 3 → 3, citation accuracy 98.2% → 100%; numbers in no source 6 → 1 (a flagged `3,360` with two candidates). Short numbers are weak evidence (any one-digit number is one edit from the next): watch on `full` |
 | D21 | Notes layout in medium windows (§7) | Two columns; close the sidebar | Options within the no-CSS rule (NOTES.md 2026-10-11 5a finding) | Before 5b | **Beside/Below toggle** in the Notes header, default Beside, per session. Rejected: Sources always in the drawer (undoes D14, loses side-by-side on wide screens), a "close the sidebar" hint only, `initial_sidebar_state="collapsed"` on Notes (localStorage overrides it). Built in 5b |
@@ -2102,4 +2118,38 @@ Rules from CLAUDE.md apply. Ask me before the opt-in model tests (the `models` p
 marker), anything in `cohr eval --set full`, new model downloads or new dependencies.
 When done: tick the checklist, update §20 if anything was decided, add a NOTES.md entry, make
 sure the gate passes, and open a PR (ask before pushing). Stop there; Phase 6 is separate.
+```
+
+### Kickoff prompt for Phase 6a (baseline + Ask eval)
+```text
+Continue cohr: Phase 6a (baseline + Ask eval). Read CLAUDE.md, then PLAN.md §9 (the 6a
+bullet), §18 (metrics, Ask row, reports and the release gate), §20 (D16), §5.7 (Ask, known
+limits) and the latest NOTES.md entry (Phase 5b). Work on branch phase-6a-baseline.
+This phase measures; it changes no prompt and no pipeline behavior.
+1. Ask eval (src/cohr/evals.py, no new dependency): per quick item, questions built from
+   truth.json with templates (no LLM): one per number fact ("What is the <label>?"), one
+   per action ("What does <owner> need to do?"), one follow-up after an action ("Who owns
+   that, and by when?"), two German questions (one alone, one after English history), and
+   one near-miss per item (a number's label with another period or team). Score: correct =
+   the answer states the fact (numbers and owners exact, task via token overlap ≥ 0.6, as in
+   fact recall) and cites its segment within ±15 s (D19) or its slide; near-miss = correct
+   when no claim states a planted value as the answer (define the exact rule and record it
+   in NOTES.md before the first run). Report Ask accuracy, Ask citation accuracy, follow-up,
+   cross-language (alone / after history) and near-miss rates. Questions go through ask.ask
+   with the run's config; cache answers per item like the judge (keyed by question, ask
+   prompt hashes and the R7B revision), so re-scoring loads no model.
+2. D16: run quick 3 times with the same media and pipeline seeds 1, 2, 3 (-c seed=N;
+   --seed changes the generated meetings, not the noise). Per metric, noise = max − min;
+   threshold = max(PLAN default, 2 × noise), Ask metrics included. Record in §20 and NOTES.
+   Ask me before deciding whether a noisy metric stays report-only.
+3. Commit evals/baseline.json from the seed-1 run with the reason in the commit message,
+   and make compare() use the D16 thresholds. Count open questions in made-up items only
+   if D16 shows it's measurable (the 4b-2 finding is fixed in 6b, not here).
+4. Tests without models: question templates (deterministic, every kind covered), Ask scoring
+   (right fact + right citation, wrong owner, near-miss pass and fail, German), the cache key,
+   and compare() with D16 thresholds.
+Rules from CLAUDE.md apply. Ask me before `cohr eval --set full`, the opt-in model tests,
+new model downloads or new dependencies. quick runs are fine (~5 min each plus Ask).
+When done: tick the checklist, fill D16 in §20, add a NOTES.md entry, make sure the gate
+passes, and open a PR (ask before pushing). Stop there; 6b is separate.
 ```
