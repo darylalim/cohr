@@ -15,6 +15,8 @@ from cohr.schemas import FramesFile
 from cohr.storage import Source
 from tests.conftest import needs_ffmpeg
 
+INGEST = [ingest.STAGE]
+
 SHOWINFO = """\
 [Parsed_showinfo_2 @ 0x6000] config in time_base: 1/10, frame_rate: 10/1
 [Parsed_showinfo_2 @ 0x6000] n:   0 pts:      0 pts_time:0       duration:1 fmt:rgb24
@@ -107,7 +109,7 @@ def test_ingest_stage_video_and_slides(
 ) -> None:
     sources = [Source(video, "video"), Source(slide_pdf, "slides"), Source(slide_png, "slides")]
     run_dir = storage.create_run(tmp_path / "runs", sources, Config())
-    assert pipeline.run(run_dir) == {"ingest": "done"}
+    assert pipeline.run(run_dir, stages=INGEST) == {"ingest": "done"}
 
     assert sf.info(run_dir / "audio.wav").samplerate == 16000
     frames = schemas.load(run_dir, FramesFile).frames
@@ -136,14 +138,14 @@ def test_ingest_stage_video_and_slides(
         "005.png",
         "frames.json",
     ]
-    assert pipeline.run(run_dir) == {"ingest": "skipped"}
+    assert pipeline.run(run_dir, stages=INGEST) == {"ingest": "skipped"}
 
 
 @needs_ffmpeg
 def test_ingest_dedupes_repeated_scene(tmp_path: Path, video: Path) -> None:
     """A huge dedupe distance treats every scene as a duplicate of the first frame."""
     run_dir = storage.create_run(tmp_path / "runs", [Source(video, "video")], Config())
-    pipeline.run(run_dir, config=Config(ingest=IngestConfig(dedupe_max_distance=64)))
+    pipeline.run(run_dir, stages=INGEST, config=Config(ingest=IngestConfig(dedupe_max_distance=64)))
     frames = schemas.load(run_dir, FramesFile).frames
     assert [f.pts for f in frames] == [0.0]
 
@@ -151,7 +153,7 @@ def test_ingest_dedupes_repeated_scene(tmp_path: Path, video: Path) -> None:
 @needs_ffmpeg
 def test_ingest_audio_only(tmp_path: Path, tone: Path) -> None:
     run_dir = storage.create_run(tmp_path / "runs", [Source(tone, "audio")], Config())
-    pipeline.run(run_dir)
+    pipeline.run(run_dir, stages=INGEST)
     assert schemas.load(run_dir, FramesFile).frames == []
     assert (run_dir / "audio.wav").exists()
 
@@ -161,4 +163,4 @@ def test_ingest_missing_source(tmp_path: Path, tone: Path) -> None:
     run_dir = storage.create_run(tmp_path / "runs", [Source(tone, "audio")], Config())
     tone.unlink()
     with pytest.raises(pipeline.StageFailed, match="source missing"):
-        pipeline.run(run_dir)
+        pipeline.run(run_dir, stages=INGEST)

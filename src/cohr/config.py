@@ -67,6 +67,15 @@ class VadConfig(_Section):
     pad_ms: int = 30
     merge_gap_s: float = 0.5
     max_chunk_s: float = 30.0  # D2
+    # Runs further apart than this never share a chunk, so long non-speech stretches between
+    # nearby runs are never sent to Transcribe (it makes up text from them, Phase 0).
+    max_inner_gap_s: float = 2.0
+    split_search_s: float = 5.0  # a run over max_chunk_s is cut at its least-speechy frame here
+
+
+class VisionConfig(_Section):
+    max_tokens: int = 1024
+    temperature: float = 0.0
 
 
 class FuseConfig(_Section):
@@ -88,6 +97,7 @@ class Config(_Section):
     log_level: Literal["INFO", "DEBUG"] = "INFO"
     ingest: IngestConfig = IngestConfig()
     vad: VadConfig = VadConfig()
+    vision: VisionConfig = VisionConfig()
     fuse: FuseConfig = FuseConfig()
     reduce: ReduceConfig = ReduceConfig()
     models: dict[str, ModelSpec] = Field(default_factory=lambda: dict(DEFAULT_MODELS))

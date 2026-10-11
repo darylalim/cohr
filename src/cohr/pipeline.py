@@ -17,11 +17,14 @@ from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from cohr import schemas
 from cohr.config import Config, prompt_hash
 from cohr.schemas import Manifest, StageState
+
+if TYPE_CHECKING:
+    from cohr.models import ModelManager
 
 log = logging.getLogger("cohr")
 
@@ -58,6 +61,7 @@ class StageContext:
     stage: str
     cancel: threading.Event
     progress: ProgressFn
+    models: "ModelManager | None" = None
     log: logging.Logger = log
 
     def check_cancel(self) -> None:
@@ -69,6 +73,12 @@ class StageContext:
         self.check_cancel()
         self.progress(ProgressEvent(self.stage, "progress", fraction, message))
 
+    def model(self, name: str) -> contextlib.AbstractContextManager[Any]:
+        """`with ctx.model("transcribe") as asr:` (ModelManager.use, memory policy applies)."""
+        if self.models is None:
+            raise RuntimeError(f"stage {self.stage!r} needs a ModelManager")
+        return self.models.use(name)
+
 
 @dataclass(frozen=True)
 class Stage:
@@ -77,13 +87,14 @@ class Stage:
     outputs: tuple[str, ...]  # paths relative to the run dir
     format_version: int
     config_keys: tuple[str, ...] = ()  # dotted paths into Config, e.g. "vad", "models.vad"
-    prompt: str | None = None  # src/cohr/prompts/<prompt>.md
+    prompts: tuple[str, ...] = ()  # src/cohr/prompts/<name>.md
+    models: tuple[str, ...] = ()  # config.models keys; checked as downloaded before a run
 
 
 def default_stages() -> list[Stage]:
-    from cohr import ingest  # stage modules import this one for StageContext
+    from cohr import asr, ingest, vad, vision  # stage modules import this one
 
-    return [ingest.STAGE]
+    return [ingest.STAGE, vad.STAGE, asr.STAGE, vision.STAGE]
 
 
 # --- hashing -------------------------------------------------------------------------------
@@ -106,7 +117,7 @@ def config_hash(stage: Stage, config: Config) -> str:
         {
             "format_version": stage.format_version,
             "config": {k: _lookup(dumped, k) for k in stage.config_keys},
-            "prompt": prompt_hash(stage.prompt) if stage.prompt else None,
+            "prompt": _sha([prompt_hash(p) for p in stage.prompts]) if stage.prompts else None,
         }
     )
 
@@ -146,22 +157,29 @@ def stale_reason(
     return None
 
 
-def plan(
-    run_dir: Path, stages: list[Stage] | None = None, config: Config | None = None
-) -> list[tuple[str, StaleReason]]:
-    """Stages that would run, in order. Once one is stale, every later one is too."""
-    stages = stages if stages is not None else default_stages()
-    manifest = schemas.load(run_dir, Manifest)
-    config = config or Config.model_validate(manifest.config)
+def _todo(
+    stages: list[Stage], config: Config, manifest: Manifest, run_dir: Path
+) -> dict[str, StaleReason]:
+    """{stage: reason} for the stages that must run. Once one is stale, every later one is too."""
     hashes = stage_hashes(stages, config, manifest)
-    todo: list[tuple[str, StaleReason]] = []
+    todo: dict[str, StaleReason] = {}
     for stage in stages:
         reason = stale_reason(stage, manifest.stages.get(stage.name), hashes[stage.name], run_dir)
         if todo and reason is None:
             reason = "input"
         if reason is not None:
-            todo.append((stage.name, reason))
+            todo[stage.name] = reason
     return todo
+
+
+def plan(
+    run_dir: Path, stages: list[Stage] | None = None, config: Config | None = None
+) -> list[tuple[str, StaleReason]]:
+    """Stages that would run, in order, with the reason."""
+    stages = stages if stages is not None else default_stages()
+    manifest = schemas.load(run_dir, Manifest)
+    config = config or Config.model_validate(manifest.config)
+    return list(_todo(stages, config, manifest, run_dir).items())
 
 
 # --- manifest state shared with the heartbeat thread ----------------------------------------
@@ -228,10 +246,12 @@ def run(
     config: Config | None = None,
     cancel: threading.Event | None = None,
     progress: ProgressFn | None = None,
+    models: "ModelManager | None" = None,
     peak_memory: Callable[[], int | None] | None = None,
     heartbeat_s: float = HEARTBEAT_S,
 ) -> dict[str, Literal["skipped", "done"]]:
-    """Run every stale stage in order. Raises Cancelled or StageFailed."""
+    """Run every stale stage in order. Raises Cancelled, StageFailed, or ModelsMissing (before
+    any stage starts) when a stage that will run needs a model that isn't downloaded."""
     stages = stages if stages is not None else default_stages()
     cancel = cancel or threading.Event()
     progress = progress or (lambda _event: None)
@@ -242,14 +262,21 @@ def run(
         manifest.config = config.model_dump(mode="json")
     state = _RunState(run_dir, manifest)
     hashes = stage_hashes(stages, config, manifest)
+    todo = _todo(stages, config, manifest, run_dir)
+    needed = [m for s in stages if s.name in todo for m in s.models]
+    if needed:
+        if models is None:
+            raise RuntimeError(f"stages {list(todo)} need a ModelManager")
+        models.require(dict.fromkeys(needed))
+    if peak_memory is None and models is not None:
+        peak_memory = models.peak_memory
     results: dict[str, Literal["skipped", "done"]] = {}
-    upstream_ran = False
 
     with run_log(run_dir, config.log_level):
         for stage in stages:
             ch, ih = hashes[stage.name]
-            reason = stale_reason(stage, manifest.stages.get(stage.name), (ch, ih), run_dir)
-            if reason is None and not upstream_ran:
+            reason = todo.get(stage.name)
+            if reason is None:
                 results[stage.name] = "skipped"
                 progress(ProgressEvent(stage.name, "skipped", 1.0))
                 continue
@@ -258,8 +285,7 @@ def run(
                 progress(ProgressEvent(stage.name, "cancelled"))
                 raise Cancelled(stage.name)
 
-            upstream_ran = True
-            log.info("stage %s: start (%s)", stage.name, reason or "upstream re-ran")
+            log.info("stage %s: start (%s)", stage.name, reason)
             started = _now()
             state.update(
                 stage.name,
@@ -273,7 +299,9 @@ def run(
                 error=None,
             )
             progress(ProgressEvent(stage.name, "started"))
-            ctx = StageContext(run_dir, config, manifest, stage.name, cancel, progress)
+            ctx = StageContext(run_dir, config, manifest, stage.name, cancel, progress, models)
+            if models is not None:
+                models.reset_peak()
             t0 = time.perf_counter()
             try:
                 with _heartbeat(state, stage.name, heartbeat_s):
