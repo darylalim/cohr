@@ -16,6 +16,7 @@ Phase 4b-2 done 2026-10-11 (judge: support rate, judge recall, D15 passed at 80.
 Phase 5a done 2026-10-11 (UI without Ask: theme, job layer, New run / Notes / Runs; D13, D14 pass).
 Phase 5b done 2026-10-11 (Ask page and drawer, Notes Beside/Below toggle; D22, D23; browser
 checks passed).
+Phase 6a done 2026-10-11 (Ask eval, D16 thresholds, first committed `evals/baseline.json`).
 Hub metadata verified 2026-10-04 and 2026-10-10; packages, licenses and Streamlit config checked
 2026-10-05.
 
@@ -1023,7 +1024,7 @@ invalid-JSON fallback, §5.5); token budget enforced.
   Long-meeting ranking (FTS5) stays in Phase 6. Kickoff prompt in §21.
 **Phase 6: hardening**, split in five PRs. Measurement comes first, so every later change is
 compared with a committed baseline:
-- **6a: baseline + Ask eval.** Measurement only: no prompt or pipeline behavior changes. The
+- **6a: baseline + Ask eval** (done 2026-10-11, NOTES.md). Measurement only: no prompt or pipeline behavior changes. The
   Ask eval (§18 Ask row) on `quick` uses template questions from `truth.json`: number and
   action questions, a follow-up, German questions alone and after English history, and one
   near-miss per item. Answers are cached like the judge's. D16 comes from 3 `quick` runs on the
@@ -1656,7 +1657,7 @@ exact checks with no human labels and no LLM judge.
 | Notes: **made-up items** | Decisions/action items in the notes that match no planted fact. An action item with the right task but another owner or due date counts (it states something not said); a real task with no owner stated doesn't (incomplete, not made up) | Exact (count) |
 | Notes: **support rate** | Share of claims whose cited segments support them | LLM judge (secondary) |
 | Output language | Notes are in the target language | `lingua-language-detector` |
-| Ask | Planted-fact questions: answer contains the fact *and* cites the right segment | Exact |
+| Ask | Planted-fact questions from templates (`evals.ask_questions`): answer contains the fact *and* cites its segment (±15 s) or slide; plus follow-up, German alone / after history and near-miss rates (rule in NOTES.md, 6a) | Exact |
 | Realism (`full` only) | Coverage of the **AMI** reference decisions/actions | LLM judge |
 | Cost | Seconds per audio hour per stage; peak memory per stage | Measured |
 
@@ -1729,8 +1730,11 @@ committed or redistributed.
   FLEURS (Google, CC BY 4.0). Data was not modified or redistributed." The same line goes in
   `evals/README.md`. Synthetic-only `quick` reports don't need it.
 - It compares with the committed `evals/baseline.json` and **fails (exit 1)** if:
-  fact recall drops > 5 points, citation accuracy drops > 3 points, made-up items or uncited
-  claims increase, VAD gap text rate increases, or any stage gets > 25% slower.
+  fact recall drops > 5.9 points, citation accuracy drops > 3 points, Ask accuracy drops > 5
+  points, Ask citation accuracy drops > 3 points, made-up items rise by > 2, uncited claims
+  or the VAD gap text rate increase, or any stage gets > 25% slower (D16; tables `MAX_DROP` /
+  `MAX_RISE` in `evals.py`). Report-only: the judge metrics and the one-question-per-item Ask
+  rates (follow-up, German, near-miss).
 - `cohr eval --update-baseline` rewrites the baseline. Only commit it with the reason in the commit
   message (e.g. "new reduce prompt: recall +4, accuracy −1").
 - **Release gate:** before `uv version --bump` (§16), run `full` and attach the report summary to
@@ -1828,7 +1832,7 @@ section.
 | D13 | Notes column `width=880` shrinks below 880 px (§7) | 880 | Resize check | Phase 5 | **Shrinks, 880 kept**: 377 px at a 420 px window, 422 at 800 (sidebar closed), 559 at 1512, capped at 880 at 2560. But at 800 px with the sidebar open the columns get 209 / 128 px (they only stack at ≤ 640) |
 | D14 | Anchors scroll the Sources panel (§7) | Anchors | Click check; fallback = drawer buttons | Phase 5 | **Anchors work**: clicking `[5:41](#seg-1)` scrolled the Sources container 0 → 2358 px and brought its block to the top; no drawer needed |
 | D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4b-2 | **Pass, no margin**: 3-way 80.0% (24/30), yes vs not-yes 96.7% (29/30). All 12 "yes" right; 4 of 8 "partial" judged "no" (an added detail read as a contradiction), 1 "partial" judged "yes", 1 "no" judged "partial". Support rate counts only "yes", so the partial/no confusion barely moves it. Judge metrics stay out of the gate until D16 (Phase 6) |
-| D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 `quick` runs, same media, pipeline seeds 1–3 (`-c seed=N`): threshold = max(default, 2× noise), Ask metrics included | Phase 6a | |
+| D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 `quick` runs, same media, pipeline seeds 1–3 (`-c seed=N`): threshold = max(default, 2× noise), Ask metrics included | Phase 6a | **Recall −5.9 (noise 2.9), made-up +2 (noise 1), rest at defaults** (citation −3, uncited and gap text no rise, stages +25%: noisiest Reduce 10.5%); Ask accuracy −5 and Ask citation −3 (noise 0, defaults borrowed from recall/citation). Report-only (user, 6a): follow-up and German after history (noise 25 points: one question per item), German alone and near-miss (25-point steps), support rate (noise 9.1, D15 no margin). Open questions not counted as made up: 13 / 11 / 4 over the seeds. Baseline = seed 1 |
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 7 | |
 | D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6d | |
 | D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | **0.1 and ±15 s, plus a sentence offset inside the chunk**: chunk `t0` alone was a median 12.5 s early (61% within 15 s); with the offset 98% (53 of 54 errors ≤ 5 s, so 15 s hides nothing). Min score 0.0 = 0.1 > 0.2 (94.6%) > 0.3 (91.1%) |

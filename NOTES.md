@@ -1031,3 +1031,65 @@ Six questions in one conversation (`ask.run`, history carried like the page), ~9
 - Answers cached in `evals/data/ask/<item>.json`, keyed by question, history, the ask prompt
   hashes, the R7B revision, a hash of the run's documents and the seed / target language /
   Reduce config.
+
+### Built
+- `evals.py` Ask eval: `ask_questions` (templates above), `score_answer` / `ask_metrics`,
+  `answer_numbers` (German thousands separators, eval-only; `numbers.py` unchanged),
+  `due_in`, `meeting_numbers`, `near_miss_ok`; `CachedAsk` + `ask_session` (misses go through
+  `ask.run` on the shared ModelManager while R7B is still resident from Reduce, before the judge
+  releases the pipeline models); `ask_item` adds `ask` results and metrics to each item.
+  Report: Ask metrics in the summary, an `ask_accuracy` column, every wrong answer listed per
+  item, Ask cost line. `cohr eval --no-ask`.
+- D16: `MAX_DROP` / `MAX_RISE` tables drive `compare()`; `evals.noise(reports)` (max − min per
+  summary metric, slowest/fastest − 1 per stage).
+- Tests: `test_eval_ask.py` (13: templates deterministic with every kind, labels cover the
+  generator, right fact + citation, wrong owner, follow-up, German numbers, near-miss pass/fail,
+  metrics, cache key incl. prompt hash, end to end through `ask.run` with a rule-based R7B,
+  cache hit with no model, seed change = miss, report); `test_evals.py` +2 (noise, gate tables).
+  363 tests.
+
+### D16 runs (quick, same media, `-c seed=1|2|3`; ~15 min each incl. 68 Ask questions ~2.5 min/item and the judge)
+| Metric | seed 1 | seed 2 | seed 3 | noise | gate |
+|---|---|---|---|---|---|
+| fact recall | 83.8% | 85.3% | 86.8% | 2.9 | −5.9 |
+| citation accuracy | 100% | 100% | 100% | 0 | −3 |
+| made-up items | 4 | 3 | 3 | 1 | +2 |
+| uncited / gap words | 0 / 0 | 0 / 0 | 0 / 0 | 0 | no rise |
+| recall decision / action | 81 / 70% | 88 / 70% | 81 / 80% | 6 / 10 | report |
+| support rate (judge) | 79.3% | 86.5% | 88.4% | 9.1 | report |
+| Ask accuracy | 98.1% | 98.1% | 98.1% | 0 | −5 |
+| Ask citation accuracy | 100% | 100% | 100% | 0 | −3 |
+| follow-up | 3/4 | 4/4 | 4/4 | 25 | report |
+| German alone / after history | 4/4, 3/4 | 4/4, 4/4 | 4/4, 4/4 | 0 / 25 | report |
+| near-miss | 0/4 | 0/4 | 0/4 | 0 | report |
+| reduce s/audio h | 274 | 293 | 303 | 10.5% | +25% |
+Ingest, VAD and Transcribe don't read `seed`, so they were reused (no noise measured: 25%
+default kept). Seeds 2 and 3 pass `compare()` against the seed-1 baseline.
+
+### Findings
+- **Near-miss is 0 of 12** over the seeds: R7B answers the off-period/off-team question with a
+  meeting number every time, despite the `ask.md` rule ("The approved budget two years ago was
+  $54,000": that's last quarter's value; "MRR for the marketing team is $248,000"). The 5b
+  limit, now measured. 6b.
+- Ask on English facts is near perfect (51 of 52 per seed, all cited right). The one miss is
+  `slide-conflict-en`'s budget: Ask gives the misspoken $80,000, not the slide's $18,000, against
+  the `ask.md` slide rule.
+- Cross-language after history: 1 of 12 wrong (seed 1), and it stated the right value but cited
+  the segment start (German answer, no token overlap for refinement, as in 5b). German alone:
+  12 of 12. The 5b fragility shows much less on the eval's history layout (action + follow-up).
+- Follow-up seed 1: R7B answered a different task's owner/date ("book the venue … by 3
+  October" instead of the contract by November 18).
+- Open questions (all filler on quick, nothing planted): 13 / 11 / 4 claims over the seeds:
+  too noisy to count as made up (kickoff item 3), left to 6b's fix.
+- Ask answers are deterministic per seed (98.1% on all three) while Reduce output varies;
+  most Reduce noise is in recall of decisions/actions, not numbers.
+
+### Decisions (PLAN §20)
+- D16 as in the table; report-only choices confirmed by the user.
+
+### Plan changes
+- Status line; §9 6a done; §18 Ask row and gate thresholds; §20 D16.
+
+### Next
+- 6b kickoff prompt: near-miss (0/4), slide-conflict in Ask, filler → open questions, Reduce
+  dropping facts Map has right; each change compared with `evals/baseline.json`.
