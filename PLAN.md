@@ -290,6 +290,25 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   `problems` reference is scored against (§18).
 - The prompt says to use only the content in the segment and to prefer the slide text's spelling
   for names and numbers (speech recognition often gets these wrong).
+- **Number guard** (pure Python, after parsing; `map.number_guard`, default on; Phase 4b-1b, D20): Tiny Aya changes digits even
+  when the transcript is right ($42,500 → "$420,500", 336 → "3,360", "22nd" → "2nd"), and neither
+  the prompt nor temperature 0 stops it (4b-1). Every number written as digits in a Map string
+  (summary, key points, decisions, action tasks and due dates, open questions) is checked against
+  the segment's **source numbers**: its transcript plus the text of its attached slides, both
+  normalized to digits (`numbers.py`: number words, separators, `k`/`thousand`, ordinals).
+  - In the sources: kept.
+  - Not in the sources, and **exactly one** source number is one digit edit away (one digit
+    inserted, dropped or changed, on the digit string without separators) or a factor of 10, 100
+    or 1000 away: **repaired**. The digits are replaced in place, keeping the surrounding text
+    and the output's separator style ("$420,500" → "$42,500").
+  - Otherwise (no candidate, or more than one): **kept and flagged**, never dropped and never
+    guessed. The segment's `unverified_numbers` lists them (`MapFile` v3, §19) and the run log
+    warns. An invented year such as `2024` in `2024-11-24` lands here.
+  - Numbers inside `terms` and numbers written as words are not checked. Non-English number
+    words in the source are not normalized (English only, like the eval), so a target language
+    whose transcript spells numbers out may flag more; the eval's cross-language items show it.
+  - The guard does not resolve a speech/slide conflict (§18 `slide-conflict-en`): both values
+    are in the sources, so both pass. That stays a prompt problem.
 - **Invalid JSON:** same rule as §5.3. Retry once with "Return only valid JSON". If it still fails,
   store the raw text as `summary`, leave the lists empty, set `raw: true` on that segment's entry,
   and log a warning. The retry prompt (`prompts/map_retry.md`) also ends with the target language.
@@ -422,6 +441,8 @@ src/cohr/
   prompts/           vision.md  map.md  reduce.md  reduce_pass2.md  ask.md  translate.md  judge.md
                      (plain files; each hash feeds its stage's config hash, §3)
   cli.py             `cohr run <audio> [--slides …] [--video …] --lang en --target en`, `cohr eval`
+  numbers.py         number normalization (words, separators, ordinals → digits) shared by
+                     the Map number guard and the evals (Phase 4b-1b)
   evals.py           eval runner: stage metrics, planted-fact matching, judge, baseline compare
 app.py               Streamlit entry: page config, st.navigation, sidebar (§7)
 app_pages/           new_run.py  notes.py  ask.py  runs.py  (search.py in Phase 7)
@@ -926,6 +947,17 @@ invalid-JSON fallback, §5.5); token budget enforced.
   Phase 6); `tests/test_evals.py`. First `quick` numbers recorded; D11 re-check, D12 (a second `quick`
   run with another window), D19. Fix the 4a Map error (owner's due date given to another action item,
   `prompts/map.md`) with the made-up-items count before and after.
+- **4b-1b: Map number guard** (before 4b-2, so the judge's calibration pairs come from cleaner
+  output). Move `digits`/`numbers_in` from `evals.py` into `numbers.py` (no behaviour change; the
+  eval tests stay green). Guard in `mapper.py` per §5.5, `MapFile` v3 (`unverified_numbers` per
+  segment, snapshot regenerated). Unit tests from the 4b-1 cases: 42500/420500, 57000/570000,
+  336/3360, 22/2 repaired; a value two edits away flagged; two equally close candidates flagged;
+  separator and `$`/`%` style kept; numbers in the sources untouched; ISO year flagged; a JSON
+  fallback (`raw: true`) segment is not touched. Eval: per item, `map_numbers_repaired` and
+  `map_numbers_unverified` (from `map.json`), and `unsupported_numbers` (numbers in `notes.json`
+  claims found in no transcript or slide, to see whether Reduce also changes digits). `quick`
+  before/after on the same seeds: number recall, fact recall, made-up items; no other metric
+  worse (D20). Record a wrong repair if the eval shows one.
 - **4b-2: judge.** Qwen3 judge wrapper (§18), support rate, judge recall for cross-language text facts,
   `evals/gen/judge_calibration.json` (30 pairs: Claude drafts labels from 4b-1 outputs, the user reviews
   them), D15.
@@ -1651,7 +1683,7 @@ Pydantic models for every run file. Stages read and write **only** through them
 | `transcript.json` | `Transcript` | `language`, `runtime`, `items[{chunk_id, t0, t1, text}]` |
 | `slides.json` | `SlidesFile` | `slides[{slide_id, frame_id, t?, t_source, align_score?, title, text_md, tables_md[], chart_notes, visual_notes, raw?}]` |
 | `segments.json` | `SegmentsFile` | `segments[{seg_id, t0, t1, chunk_ids[], transcript_text, slide_ids[]}]`, `unaligned_slide_ids[]` |
-| `map.json` | `MapFile` | `target_language`, `notes[{seg_id, summary, key_points[], decisions[], action_items[{owner?, task, due?}], open_questions[], terms[], raw: bool}]` (v2) |
+| `map.json` | `MapFile` | `target_language`, `notes[{seg_id, summary, key_points[], decisions[], action_items[{owner?, task, due?}], open_questions[], terms[], raw: bool, unverified_numbers[]}]` (v3: number guard, D20) |
 | `notes.json` | `NotesDoc` | `sections{summary, key_points, decisions, action_items, open_questions}` as lists of `{text, citations[{kind: seg|slide, id, t?}]}` (`t` = refined jump time, seg only; `citations: []` = uncited, §5.6); action items also have `owner?`, `due?`; `passes: 1|2`, `language`, `raw` (R7B reply) (v3: `t` placed at the cited sentence, D19) |
 
 `notes.json` is new: the **parsed** reduce output. `notes.md` is rendered from it, and Notes, Ask,
@@ -1712,6 +1744,7 @@ section.
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 7 | |
 | D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6 | |
 | D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | **0.1 and ±15 s, plus a sentence offset inside the chunk**: chunk `t0` alone was a median 12.5 s early (61% within 15 s); with the offset 98% (53 of 54 errors ≤ 5 s, so 15 s hides nothing). Min score 0.0 = 0.1 > 0.2 (94.6%) > 0.3 (91.1%) |
+| D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).
@@ -1827,6 +1860,33 @@ Work on branch phase-4b-1-evals. Follow the 4b-1 acceptance criteria in §9:
 Running `cohr eval --set quick` is fine. Ask me before anything in `full`, before `pytest -m
 models`, and before new model downloads. Eval deps (jiwer, pyyaml, lingua) are already installed.
 Check the license of any new dependency (§11).
+When done: tick the checklist, update §20 and NOTES.md, make sure the gate passes, and open a PR
+(ask before pushing). Stop there; 4b-2 (the judge) is a separate session.
+```
+
+### Kickoff prompt for Phase 4b-1b (Map number guard)
+```text
+Continue cohr: Phase 4b-1b (Map number guard). Read CLAUDE.md, then PLAN.md sections §9 (the
+4b-1b bullet), §5.5 (Number guard), §19 (MapFile), §20 (D20) and §18 Metrics. Then read the
+latest NOTES.md entry (4b-1: "Open: Map changes digits" has the observed cases).
+Work on branch phase-4b-1b-number-guard. Follow the 4b-1b acceptance criteria in §9:
+1. Move digits/numbers_in from src/cohr/evals.py into src/cohr/numbers.py. No behaviour change:
+   tests/test_evals.py must pass unchanged (only its imports may move).
+2. The guard in mapper.py: pure function, applied to each parsed segment before saving. Repair
+   only when exactly one source number qualifies; otherwise keep the text and list the number
+   in unverified_numbers. Never drop a claim, never guess. Skip raw (JSON fallback) segments.
+3. MapFile v3 with unverified_numbers; regenerate the schema snapshots.
+4. Unit tests from the §9 list (no models).
+5. Eval: add map_numbers_repaired, map_numbers_unverified and unsupported_numbers per item and
+   in the summary.
+6. Record the "before" first: run `cohr eval --set quick` on main's code with the eval metrics
+   from step 5 in place but the guard switched off (`-c map.number_guard=false`), then
+   with the guard on, same seeds. Compare number recall, fact recall and made-up items, and
+   check every repair in map.json against truth.json: a wrong repair is a finding, not noise.
+   Decide D20 from that.
+Running `cohr eval --set quick` is fine. Ask me before anything in `full`, before `pytest -m
+models`, and before new model downloads. No new dependencies are expected; if one is needed,
+check its license (§11) and ask.
 When done: tick the checklist, update §20 and NOTES.md, make sure the gate passes, and open a PR
 (ask before pushing). Stop there; 4b-2 (the judge) is a separate session.
 ```
