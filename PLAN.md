@@ -973,9 +973,23 @@ invalid-JSON fallback, §5.5); token budget enforced.
   `evals/gen/judge_calibration.json` (30 pairs: Claude drafts labels from 4b-1b outputs, the user reviews
   them before the judge runs on them), D15. `cohr eval --calibrate-judge`, `--no-judge`; answers cached
   per item in `evals/data/judge/`. Kickoff prompt in §21.
-**Phase 5: Streamlit UI:** "Paper & Ink" theme and adaptive layout (§7) with `test_theme.py`,
-`test_app.py` and the window-width check, all four pages, background job, progress, Ask (follow-ups and answer language, §5.7); upload limit and local
-path input (§12); Runs page shows each run's size, with Delete and Prune media.
+**Phase 5: Streamlit UI**, split in two PRs:
+- **5a: UI without Ask.** "Paper & Ink" theme (`.streamlit/config.toml` exactly as §7) with
+  `test_theme.py`; a Streamlit-free job layer (`src/cohr/jobs.py`: pipeline in a background thread,
+  progress queue, cancel, one job at a time, `recover_interrupted` on app start) with unit tests;
+  `pipeline.run(force=…)` so Runs/Notes can re-run a stage on demand ("Re-reduce"); `app.py`
+  (navigation, sidebar run picker, model/memory status with the GPU limit warning, §11 footer);
+  pages New run (upload or local path, §12 limits, Advanced options, per-stage `st.status`,
+  Cancel), Notes (in-app render, Sources panel with audio and slides, download `notes.md`,
+  Re-reduce, uncited caption) and Runs (table, Resume, re-run stage, Prune/Delete with
+  confirmation, peak-memory chart); `test_app.py` (AppTest, fake ModelManager, fixture run);
+  the window-width and light/dark checks; D13, D14. Kickoff prompt in §21.
+- **5b: Ask.** `src/cohr/ask.py` + `prompts/ask.md` (§5.7: same `rag` documents as Reduce, the
+  last 3 turns as history with citation markup removed, dropped oldest-first under the ~32K cap,
+  answer language from `lingua` with the run's target language as fallback, same citation
+  parsing and time refinement); the Ask page (chat, source pills, right-side drawer) and Notes'
+  "Open in Ask" button; tests for history trimming, language fallback and citations in answers.
+  Long-meeting ranking (FTS5) stays in Phase 6.
 **Phase 6: hardening:** sequential memory policy, inputs over 2 h (two-pass reduce with
 marker-based citations), Ask ranking for long meetings, "Other (beta)" target languages, error
 messages for missing ffmpeg or models, a cache size note for the README; optional regional Map
@@ -1955,4 +1969,49 @@ models`, and before new model downloads. Don't add --judge claude (needs an API 
 dependency). No new dependencies are expected; if one is needed, check its license (§11) and ask.
 When done: tick the checklist, update §20 and NOTES.md, make sure the gate passes, and open a PR
 (ask before pushing). Stop there; Phase 5 (UI) is a separate session.
+```
+
+### Kickoff prompt for Phase 5a (UI without Ask)
+```text
+Continue cohr: Phase 5a (Streamlit UI without Ask). Read CLAUDE.md, then PLAN.md sections §9
+(the 5a bullet), §7 (all of it: UI, layout, theme, tests), §12 (sources, upload limit, local
+path, prune/delete, disk checks), §4 (memory policy, GPU limit), §5.6 (in-app render mode,
+anchors, refined t), §11 (footer disclaimer) and §20 (D13, D14). Then the latest NOTES.md entry.
+Load the developing-with-streamlit skill before writing any UI code. Work on branch
+phase-5a-ui. Follow the 5a acceptance criteria in §9:
+1. Theme first: .streamlit/config.toml exactly as in §7 (server address localhost, upload limit,
+   gatherUsageStats=false, [theme], [theme.light], [theme.dark] and their sidebars) and
+   tests/test_theme.py (light/dark key parity, contrast ratios, no Google Fonts, no telemetry).
+2. Job layer without Streamlit: src/cohr/jobs.py runs pipeline.run in a background thread with
+   a progress queue, a cancel Event and one job at a time (the ModelManager lock); the UI only
+   reads its state. On app start, pipeline.recover_interrupted for every run. Add
+   pipeline.run(force=[stage names]) so a stage can re-run on demand (later stages follow
+   through the input-hash chain); "Re-reduce" uses it. Unit tests with fake stages, no models.
+3. app.py: per-page set_page_config layouts as in §7, st.navigation with New run, Notes and
+   Runs (Ask is 5b), the sidebar run picker (the current run in session_state), the model and
+   memory status line with the GPU limit warning, and the §11 footer. ModelManager through
+   st.cache_resource. Poll a running job with st.fragment(run_every=…), not full-page reruns.
+4. Pages per §7: New run (st.form; upload or local path; languages side by side; Advanced
+   expander with window length, memory policy, source mode; a clear message when disk space or
+   models are missing; one st.status per stage; Cancel). Notes (render.py in app mode; the
+   Sources panel with one block per segment: anchor, time range, st.audio(start_time,
+   end_time), slide images with alt text; unaligned slides last; download the portable
+   notes.md; Re-reduce; uncited caption; semantic badge colors). Runs (st.dataframe with
+   single-row selection, size, date, status; Resume for interrupted runs; re-run stage; Prune
+   and Delete confirmed in st.dialog; the peak-memory-per-stage bar chart).
+5. tests/test_app.py with AppTest, a fake ModelManager and a fixture run dir (no models): every
+   page renders without exceptions, Notes has one Sources block per segment, Runs lists the
+   run, New run refuses a missing local path.
+6. Manual checks, then record them: start the app (uv run streamlit run app.py) and do one real
+   run through the UI on evals/data/gen/clean-en (progress, Cancel, then Resume). Ask me before
+   using Claude in Chrome; with it, take screenshots at ~420, 800, 1280, 1512 and 2560 px in
+   light and dark. D13: does the 880 px notes container shrink below 880 px (else
+   width="stretch")? D14: does a citation anchor scroll the Sources panel (else the drawer
+   fallback from §7)? Record both in §20.
+Rules from CLAUDE.md apply: theme only via config.toml, no custom CSS or JS components, pages in
+app_pages/, never use_container_width, no telemetry. No new dependencies are expected; if one is
+needed, check its license (§11) and ask. Ask me before the opt-in model tests (the `models`
+pytest marker), before anything in `cohr eval --set full`, and before new model downloads.
+When done: tick the checklist, update §20 and NOTES.md, make sure the gate passes, and open a PR
+(ask before pushing). Stop there; Phase 5b (Ask) is a separate session.
 ```
