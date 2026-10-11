@@ -159,3 +159,40 @@ def test_download_fetches_only_missing(tmp_path: Path, monkeypatch: pytest.Monke
     )
     assert names == ["vision", "map"]
     assert fetched == [specs["vision"].repo, specs["map"].repo]
+
+
+def test_set_config_keeps_models_when_only_language_changes(tmp_path: Path) -> None:
+    m, counting, _ = manager(tmp_path)
+    with m.use("vision"):
+        pass
+    m.set_config(Config(target_language="de"))
+    assert m.loaded() == ["vision"] and m.config.target_language == "de"
+    with m.use("vision"):
+        pass
+    assert counting.loads == ["vision"]
+
+
+def test_set_config_sequential_releases_everything(tmp_path: Path) -> None:
+    m, _, _ = manager(tmp_path)
+    with m.use("vision"):
+        pass
+    m.set_config(Config(memory_policy="sequential"))
+    assert m.loaded() == []
+
+
+def test_set_config_releases_a_model_whose_spec_changed(tmp_path: Path) -> None:
+    m, _, _ = manager(tmp_path)
+    for name in ("vision", "transcribe"):
+        with m.use(name):
+            pass
+    other = dict(Config().models, vision=ModelSpec(repo="x/y", revision="0" * 40))
+    m.set_config(Config(models=other))
+    assert m.loaded() == ["transcribe"]
+
+
+def test_memory_stats_without_mlx_are_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+
+    monkeypatch.delitem(sys.modules, "mlx.core", raising=False)
+    mem = models.MlxMemory()
+    assert mem.active() is None and mem.limit() is None and mem.peak() is None

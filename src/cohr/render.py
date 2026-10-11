@@ -3,7 +3,10 @@
 Section headings come from a static table in the target language (English when missing); the
 model's own headings are never used. Two modes from the same notes:
 - portable (notes.md, Download): plain `[12:47]` / `[slide 4]` citations and a Sources appendix;
-- app (Notes page, §7): `[12:47](#seg-3)` / `[slide 4](#slide-3)` links to the Sources panel.
+- app (Notes page, §7): `[12:47](#seg-3)` / `[slide 4](#slide-3)` links to the Sources panel, in
+  Streamlit markdown: `$` escaped (it would start LaTeX), gray text + gray badge for uncited
+  claims, and a count badge in the section's semantic color (§7) on Decisions, Action items
+  and Open questions.
 Uncited claims are kept and flagged in both.
 """
 
@@ -287,6 +290,15 @@ def labels(language: str) -> dict[str, str]:
     return LABELS.get(language, LABELS["en"])
 
 
+# Semantic colors on the Notes page (§7); the same names in light and dark.
+SECTION_COLORS = {"decisions": "green", "action_items": "orange", "open_questions": "violet"}
+
+
+def app_escape(text: str) -> str:
+    """Model text inside Streamlit markdown: `$` starts LaTeX, brackets close a `:gray[…]`."""
+    return text.replace("\\", "\\\\").replace("$", "\\$").replace("[", "\\[").replace("]", "\\]")
+
+
 # --- markdown (pure) -----------------------------------------------------------------------
 
 
@@ -307,8 +319,12 @@ def claim_md(
         extra = [f"{words[k]}: {v}" for k, v in (("owner", claim.owner), ("due", claim.due)) if v]
         if extra:
             text += f" ({'; '.join(extra)})"
-    if not claim.citations:
-        return f"{text} *({words['uncited']})*" if mode == "app" else f"{text} [{words['uncited']}]"
+    if mode == "app":
+        text = app_escape(text)
+        if not claim.citations:
+            return f":gray[{text}] :gray-badge[{words['uncited']}]"
+    elif not claim.citations:
+        return f"{text} [{words['uncited']}]"
     return f"{text} " + " ".join(citation_md(c, segments, mode) for c in claim.citations)
 
 
@@ -350,7 +366,10 @@ def render(
     out: list[str] = []
     for name in SECTIONS:
         items = getattr(notes.sections, name)
-        out += [f"## {words[name]}", ""]
+        heading = f"## {words[name]}"
+        if mode == "app" and items and name in SECTION_COLORS:
+            heading += f" :{SECTION_COLORS[name]}-badge[{len(items)}]"
+        out += [heading, ""]
         rendered = [claim_md(c, by_seg, words, mode) for c in items]
         if not rendered:
             out.append("—")

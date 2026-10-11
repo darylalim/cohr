@@ -100,8 +100,21 @@ def test_portable_markdown() -> None:
 def test_app_markdown_links_to_sources() -> None:
     md = render.render(_notes(), SEGMENTS, SLIDES, "app")
     assert "Budget approved. [12:47](#seg-0) [slide 1](#slide-0)" in md
-    assert "Not sourced. *(uncited)*" in md
+    assert ":gray[Not sourced.] :gray-badge[uncited]" in md
     assert "## Sources" not in md
+
+
+def test_app_markdown_badges_and_escapes() -> None:
+    notes = _notes()
+    notes.sections.decisions.append(Claim(text="Cap at $14,500 [final]", citations=[]))
+    md = render.render(notes, SEGMENTS, SLIDES, "app")
+    assert "## Action items :orange-badge[2]\n" in md
+    assert "## Decisions :green-badge[1]\n" in md
+    assert "## Open questions\n" in md  # empty: no badge
+    assert "## Summary\n" in md
+    assert ":gray[Cap at \\$14,500 \\[final\\]]" in md
+    portable = render.render(notes, SEGMENTS, SLIDES, "portable")
+    assert "- Cap at $14,500 [final] [uncited]" in portable  # the download stays plain
 
 
 def test_localized_headings_from_the_table() -> None:

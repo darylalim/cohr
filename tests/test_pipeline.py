@@ -309,3 +309,28 @@ def test_default_stages_order() -> None:
         "reduce",
         "render",
     ]
+
+
+def test_force_reruns_that_stage_and_later(run_dir: Path) -> None:
+    pipeline.run(run_dir, stages=three(Recorder()))
+    rec = Recorder()
+    assert pipeline.plan(run_dir, three(rec), force=["b"]) == [("b", "forced"), ("c", "input")]
+    assert pipeline.run(run_dir, stages=three(rec), force=["b"]) == {
+        "a": "skipped",
+        "b": "done",
+        "c": "done",
+    }
+    assert rec.ran == ["b", "c"]
+    # Forcing changes no hash: the next plain run skips everything again.
+    assert pipeline.plan(run_dir, three(Recorder())) == []
+
+
+def test_force_on_a_stale_stage_keeps_the_real_reason(run_dir: Path) -> None:
+    assert pipeline.plan(run_dir, three(Recorder()), force=["a"])[0] == ("a", "new")
+
+
+def test_force_unknown_stage_fails_before_running(run_dir: Path) -> None:
+    rec = Recorder()
+    with pytest.raises(ValueError, match="unknown stage"):
+        pipeline.run(run_dir, stages=three(rec), force=["reduce"])
+    assert rec.ran == []

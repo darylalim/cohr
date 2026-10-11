@@ -13,6 +13,7 @@ Phase 4a done 2026-10-11 (reduce + render). Phase 4b-1 done 2026-10-11 (planted-
 `cohr eval --set quick`, D11/D12/D19; fixes for ingest scene detection, Map due dates, Reduce
 markers and citation jump times). Phase 4b-1b done 2026-10-11 (Map number guard, D20).
 Phase 4b-2 done 2026-10-11 (judge: support rate, judge recall, D15 passed at 80.0%).
+Phase 5a done 2026-10-11 (UI without Ask: theme, job layer, New run / Notes / Runs; D13, D14 pass).
 Hub metadata verified 2026-10-04 and 2026-10-10; packages, licenses and Streamlit config checked
 2026-10-05.
 
@@ -448,6 +449,10 @@ src/cohr/
   render.py          notes.md rendering with anchors
   pipeline.py        stage runner: manifest, hashing, skip logic, progress callbacks, cancel
                      flag, interrupted-stage recovery, atomic writes, run log
+  jobs.py            UI job layer, no Streamlit: pipeline in a background thread, progress
+                     queue, cancel, one job at a time, recover_all on app start (Phase 5a)
+  ui.py              Streamlit glue shared by app.py and app_pages/: cached ModelManager and
+                     JobRunner, sidebar, job panel, per-segment audio clips (Phase 5a)
   prompts/           vision.md  map.md  reduce.md  reduce_pass2.md  ask.md  translate.md  judge.md
                      judge_coverage.md  judge_retry.md
                      (plain files; each hash feeds its stage's config hash, §3)
@@ -675,15 +680,22 @@ app_pages/
   - Left, **notes**: the rendered notes inside `st.container(width=880)`, so lines stay readable
     on very wide monitors (~75–90 characters). Phase 5 check: at window widths below 880 px the
     container must shrink with the column. If it doesn't, use `width="stretch"` and accept long
-    lines on very wide screens.
+    lines on very wide screens. (5a: it shrinks, D13.)
   - Right, **sources**: `st.container(height=…, border=True)`, scrolling independently, one
-    block per segment with its anchor, time range, `st.audio(start_time=t0, end_time=t1)` and slide
-    images (`width="stretch"`, `alt=` slide title). Unaligned slides come after.
+    block per segment with its anchor (`st.subheader(anchor="seg-N")`, slides `slide-N`), time
+    range, an `st.audio` player and slide images (`width="stretch"`, `alt=` slide title).
+    Unaligned slides come after. The player gets that segment's clip of `audio.wav` (cached WAV
+    bytes, `start_time` = earliest cited moment − t0): `st.audio` with a path reads and hashes
+    the whole file on every call (5a).
   - At ≤ 640 px the columns stack: notes first, then sources. Citation anchors still jump to the
     right block, because they're anchors, not layout.
   - **Phase 5 check:** in-page anchors may scroll only the page, not the Sources panel's own
     scroll area. If a citation click doesn't bring its block into view, use the Ask pattern
     instead: citations become small buttons that open the right-side drawer with that segment.
+    (5a: anchors scroll the panel, D14.)
+  - **Medium windows (5a finding):** at ~800 px with the sidebar open, the columns get
+    ~209 / 128 px because they only stack at ≤ 640 px viewport width. Closing the sidebar gives
+    422 / 271 px. Open question for a later phase; see NOTES.md 2026-10-11 Phase 5a.
 
 *Ask* (`centered`)
 - `st.chat_message` history, `st.chat_input` pinned at the bottom (built in).
@@ -745,6 +757,7 @@ server address)
 [server]
 maxUploadSize = 4096                     # MB, §12
 address = "localhost"                    # local only: no LAN access to recordings (§7 Layout)
+fileWatcherType = "none"                 # its sys.modules walk imports transformers' lazy torch modules (5a)
 
 [browser]
 gatherUsageStats = false                 # Streamlit sends usage stats by default (checked 1.65)
@@ -974,7 +987,7 @@ invalid-JSON fallback, §5.5); token budget enforced.
   them before the judge runs on them), D15. `cohr eval --calibrate-judge`, `--no-judge`; answers cached
   per item in `evals/data/judge/`. Kickoff prompt in §21.
 **Phase 5: Streamlit UI**, split in two PRs:
-- **5a: UI without Ask.** "Paper & Ink" theme (`.streamlit/config.toml` exactly as §7) with
+- **5a: UI without Ask** (done 2026-10-11, NOTES.md). "Paper & Ink" theme (`.streamlit/config.toml` exactly as §7) with
   `test_theme.py`; a Streamlit-free job layer (`src/cohr/jobs.py`: pipeline in a background thread,
   progress queue, cancel, one job at a time, `recover_interrupted` on app start) with unit tests;
   `pipeline.run(force=…)` so Runs/Notes can re-run a stage on demand ("Re-reduce"); `app.py`
@@ -1778,8 +1791,8 @@ section.
 | D10 | Speed target realistic (§9) | ≤ 20 min per audio hour | Phase 0 per-stage timings | Phase 0 || Realistic: ≈ 9–10 min per audio hour projected |
 | D11 | Slide alignment threshold (§5.4) | 0.15 | Maximize `pdf-slides-en` accuracy | Phase 3, re-check Phase 4b-1 | **0.15**: on `pdf-slides-en` all 8 slides align correctly at every threshold 0.05–0.35 (best scores 0.35–0.50); 0.15 stays between those and the 0.125 of an undiscussed slide (Phase 3 fixture) |
 | D12 | Fuse window length (§5.4) | 300 s | Fact recall vs. speed on `quick` | Phase 4b-1 | **300 s**: vs 120 s, recall 82.3% vs 79.4%, made-up items 3 vs 6, Map 123 vs 180 s/audio h (one seed per item; re-check against D16 noise) |
-| D13 | Notes column `width=880` shrinks below 880 px (§7) | 880 | Resize check | Phase 5 | |
-| D14 | Anchors scroll the Sources panel (§7) | Anchors | Click check; fallback = drawer buttons | Phase 5 | |
+| D13 | Notes column `width=880` shrinks below 880 px (§7) | 880 | Resize check | Phase 5 | **Shrinks, 880 kept**: 377 px at a 420 px window, 422 at 800 (sidebar closed), 559 at 1512, capped at 880 at 2560. But at 800 px with the sidebar open the columns get 209 / 128 px (they only stack at ≤ 640) |
+| D14 | Anchors scroll the Sources panel (§7) | Anchors | Click check; fallback = drawer buttons | Phase 5 | **Anchors work**: clicking `[5:41](#seg-1)` scrolled the Sources container 0 → 2358 px and brought its block to the top; no drawer needed |
 | D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4b-2 | **Pass, no margin**: 3-way 80.0% (24/30), yes vs not-yes 96.7% (29/30). All 12 "yes" right; 4 of 8 "partial" judged "no" (an added detail read as a contradiction), 1 "partial" judged "yes", 1 "no" judged "partial". Support rate counts only "yes", so the partial/no confusion barely moves it. Judge metrics stay out of the gate until D16 (Phase 6) |
 | D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 repeated `quick` runs: threshold ≥ 2× noise | Phase 6 | |
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 7 | |
