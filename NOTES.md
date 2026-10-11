@@ -983,3 +983,21 @@ Six questions in one conversation (`ask.run`, history carried like the page), ~9
 ### Next
 - Phase 6. Candidates from 5b: an Ask eval on the planted facts (answer accuracy, citation
   jump, "not stated" on near-miss questions, cross-language follow-ups), and FTS5 ranking.
+
+## 2026-10-11 · Phase 6 split and 6a kickoff prompt (no code)
+
+### Plan changes
+- §9 Phase 6 split in five PRs: 6a baseline + Ask eval (measurement only), 6b quality fixes,
+  6c long meetings (two-pass reduce, `long-en`, Ask FTS5 ranking), 6d languages ("Other
+  (beta)", cross-language items, D18), 6e `full` set + v1 (FLEURS/AMI, error messages,
+  sequential check, README cache note, release gate, `1.0.0` only when asked).
+- Why measurement first: 5b tuned the Ask prompt by eye on one fixture and stopped with
+  known limits; from 6b on, every change is compared with a committed baseline and D16
+  thresholds.
+- D16 method made precise (§20): same media, pipeline seeds 1–3 via `-c seed=N`. `--seed`
+  changes the generator seed (new meetings), and with a fixed pipeline seed the outputs are
+  deterministic, so repeating a run would show zero noise.
+- §21 kickoff prompt for 6a. Prompts for 6b–6e are written after each sub-phase, as for 4b and 5b.
+
+### Next
+- Phase 6a in a new session with the §21 prompt.
