@@ -214,7 +214,7 @@ def run_stage(ctx: StageContext) -> None:
             for path, _ in raw:
                 ctx.check_cancel()
                 with Image.open(path) as img:
-                    hashes.append(imagehash.phash(img))
+                    hashes.append(imagehash.phash(img, hash_size=cfg.phash_size))
             for i in dedupe(hashes, cfg.dedupe_max_distance):
                 path, pts = raw[i]
                 fid = len(frames)
@@ -245,7 +245,7 @@ def run_stage(ctx: StageContext) -> None:
                         frame_id=fid,
                         path=f"frames/{fid:03d}.png",
                         pts=None,
-                        phash=str(imagehash.phash(img)),
+                        phash=str(imagehash.phash(img, hash_size=cfg.phash_size)),
                         source=item.stored,
                         page=page if pdf else None,
                     )
