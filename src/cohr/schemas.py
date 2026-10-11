@@ -232,12 +232,13 @@ class NotesSections(_Model):
 
 
 class NotesDoc(RunFile):
-    FORMAT_VERSION: ClassVar[int] = 1
+    FORMAT_VERSION: ClassVar[int] = 2
     FILENAME: ClassVar[str] = "notes.json"
 
     sections: NotesSections
     passes: Literal[1, 2]
     language: str
+    raw: str  # R7B's reply with citation markup, as generated (debugging, evals)
 
 
 # --- I/O -----------------------------------------------------------------------------------

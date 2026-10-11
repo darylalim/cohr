@@ -141,6 +141,7 @@ SAMPLES: list[RunFile] = [
         ),
         passes=1,
         language="en",
+        raw="<co>Budget approved</co: 0:[0]>",
     ),
 ]
 

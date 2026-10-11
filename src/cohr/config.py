@@ -123,6 +123,8 @@ class MapConfig(_Section):
 
 
 class ReduceConfig(_Section):
+    max_tokens: int = 2048
+    temperature: float = 0.0
     max_input_tokens: int = 32_000  # above this: two-pass reduce (§4)
     citation_min_score: float = 0.1  # D19
 

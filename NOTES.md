@@ -356,3 +356,56 @@ None due this phase (D11 is Phase 3).
 ### Next
 - Open the Phase 3 PR. Then Phase 4
   (reduce + render, eval generator, D11 re-check, D12, D15, D19).
+
+## 2026-10-11 · Phase 4a (reduce + render)
+
+### Findings
+- **Documents:** one per segment (title `0:00–1:32 · slides 1,2,3`, snippet = map notes as
+  labelled lines + transcript) and **one per slide, aligned or not** (`slide 2: <title>`,
+  slide text + chart notes). Phase 0 showed R7B cites only the segment when slide text sits
+  inside it, which would leave `[slide N]` citations (and the Phase 5 slide anchors) unused.
+- **Reply parsing (`reduce.py`, pure):** strip `<|START_RESPONSE|>…<|END_RESPONSE|>` first
+  (the first marker shares the wrapper's line); split on the fixed markers (case, spaces and
+  `**`/`:` around a marker normalized, still English-only); unknown headings go to Summary
+  and are logged. `<co>` spans are atomic pieces, so a citation always stays with its claim.
+  Summary splits into sentences (`.!?` + space, `。！？`), other sections into list items.
+- **Citations:** `0:[i,j]` → [i, j] (the 0 is the tool call); out-of-range indices dropped and
+  counted; first occurrence of each target kept. Refinement = §5.4 overlap of the cited span
+  against the segment's chunks, ≥ `citation_min_score` (0.1, D19) or the segment's `t0`.
+- **Action items:** `[owner: …] [due: …] task` (either bracket optional, `?` → null); else the
+  map.json fallback (overlap = shared / smaller token set ≥ 0.6, cited segments only). The
+  prompt now shows two example lines (Phase 0 got `Priya: screenshots by 20 October`).
+- **Over the 32K cap:** transcripts trimmed 25% at a time, stage fails below 300 chars per
+  segment with a "two-pass reduce" message. Map notes and slides are never trimmed.
+- **Render:** a separate no-model `render` stage (`notes.md`, FORMAT_VERSION 1), so label
+  changes don't re-run R7B. `LABELS[lang]` (23 languages × 9 words) replaces the plan's
+  `SECTION_TITLES`. Portable: `[12:47]` / `[slide 4]`, `[uncited]`, Sources appendix; app mode
+  (for Phase 5): `[12:47](#seg-3)` / `[slide 4](#slide-3)` (anchors use ids, labels `id + 1`).
+- `NotesDoc` v2 adds `raw` (the reply as generated) instead of a separate `notes_raw.txt`, so
+  every run file still goes through `schemas.py`. `ReduceConfig` gains `max_tokens` 2048 and
+  `temperature` 0.0.
+- **Tests:** 161 pass without models in ~4 s (new: reduce 18, render 6). Smoke test extended
+  to reduce + render (≥ 1 resolving citation, refined `t` inside the segment, notes.md with
+  Sources and no anchors): **passes in 55.4 s** offline, run by the user (Phase 3: 34.3 s;
+  reduce 21.5 s on a 2,698-token prompt, 4 documents, render 0.0 s).
+- **Smoke-test notes:** 18 claims, **0 uncited, 0 dropped**, all 5 markers in order; slide
+  citations now appear (slides 1–3 cited across key points and decisions); refined times 0:00,
+  0:17, 1:00 instead of all 0:00; action items came back in the exact `[owner] [due]` format.
+  R7B copies the map notes' action lines, so their owner/due are only as good as Map's.
+  **Error found (upstream, for 4b):** Tiny Aya gave Priya's screenshots item Tom's due date
+  ("end of next week"; the task text itself says "by October 20"), and R7B kept it. The 4b
+  made-up-items metric should count this; candidate fix is in `map.md`, not in reduce.
+  Summary was 1 sentence (the prompt asks for 2–4).
+
+### Decisions (PLAN §20)
+- None final. D19 (0.1) used as-is; measured in 4b.
+
+### Plan changes
+- §3, §5.6: every slide its own document; `raw` in notes.json; over-cap trimming until Phase 6;
+  claim splitting rules; `LABELS`; render as a stage; uncited flag in both modes.
+- §9: Phase 4 split into 4a (this) and 4b (evals, D11/D12/D15/D19).
+- §19: `NotesDoc` v2 (`raw`), snapshot regenerated.
+
+### Next
+- Merge the Phase 4a PR. Then 4b (planted-facts generator, `cohr eval
+  --set quick`, D11 re-check, D12, D15, D19).

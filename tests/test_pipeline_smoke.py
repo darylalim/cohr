@@ -1,8 +1,8 @@
 """Smoke test with real models (PLAN §8), opt in with the `models` marker.
 
-Phase 3 scope: ingest → vad → transcribe → vision → fuse → map on the Phase 0 fixtures (92 s
+Phase 4a scope: every stage, ingest → … → map → reduce → render, on the Phase 0 fixtures (92 s
 two-voice meeting with a 20 s noise + music gap, 3 slide images without timestamps, so Fuse
-text-aligns them). Phase 4 extends it to notes.md.
+text-aligns them), ending in notes.json and notes.md with citations that resolve.
 """
 
 import json
@@ -15,7 +15,16 @@ import pytest
 from cohr import schemas, storage
 from cohr.cli import main
 from cohr.config import runs_dir
-from cohr.schemas import ChunksFile, Manifest, MapFile, SegmentsFile, SlidesFile, Transcript
+from cohr.reduce import SECTIONS
+from cohr.schemas import (
+    ChunksFile,
+    Manifest,
+    MapFile,
+    NotesDoc,
+    SegmentsFile,
+    SlidesFile,
+    Transcript,
+)
 from tests.conftest import REAL_HF_HOME, needs_ffmpeg
 
 pytestmark = [pytest.mark.models, needs_ffmpeg]
@@ -34,7 +43,7 @@ def fixtures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return out
 
 
-def test_pipeline_through_map_on_fixtures(
+def test_pipeline_end_to_end_on_fixtures(
     fixtures: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     slides = [str(fixtures / f"slide_{i}.png") for i in (1, 2, 3)]
@@ -49,6 +58,8 @@ def test_pipeline_through_map_on_fixtures(
         "vision": "done",
         "fuse": "done",
         "map": "done",
+        "reduce": "done",
+        "render": "done",
     }
 
     chunks = schemas.load(run_dir, ChunksFile)
@@ -91,8 +102,28 @@ def test_pipeline_through_map_on_fixtures(
     dumped = notes[0].model_dump_json()
     assert "14,500" in dumped or "14500" in dumped
 
+    # Reduce: fixed markers parsed, citations resolve to the segment or a slide.
+    doc = schemas.load(run_dir, NotesDoc)
+    claims = [c for name in SECTIONS for c in getattr(doc.sections, name)]
+    cited = [c for claim in claims for c in claim.citations]
+    assert doc.sections.summary and doc.sections.decisions and doc.sections.action_items
+    assert cited, doc.raw
+    seg = segments.segments[0]
+    for c in cited:
+        if c.kind == "seg":
+            assert c.id == seg.seg_id and c.t is not None and seg.t0 <= c.t <= seg.t1
+        else:
+            assert c.id in (0, 1, 2)
+    uncited = [claim.text for claim in claims if not claim.citations]
+    print(f"\n{len(claims)} claims, {len(cited)} citations, uncited: {uncited}")
+    print(doc.raw)
+
+    md = (run_dir / "notes.md").read_text(encoding="utf-8")
+    assert md.startswith("## Summary") and "## Sources" in md and "](#" not in md
+    print(md)
+
     capsys.readouterr()
     assert main(["resume", run_dir.name]) == 0
     err = capsys.readouterr().err
-    for stage in ("ingest", "vad", "transcribe", "vision", "fuse", "map"):
+    for stage in ("ingest", "vad", "transcribe", "vision", "fuse", "map", "reduce", "render"):
         assert f"{stage}: skipped" in err

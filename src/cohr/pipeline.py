@@ -92,9 +92,18 @@ class Stage:
 
 
 def default_stages() -> list[Stage]:
-    from cohr import asr, fuse, ingest, mapper, vad, vision  # stage modules import this one
+    from cohr import asr, fuse, ingest, mapper, reduce, render, vad, vision  # these import us
 
-    return [ingest.STAGE, vad.STAGE, asr.STAGE, vision.STAGE, fuse.STAGE, mapper.STAGE]
+    return [
+        ingest.STAGE,
+        vad.STAGE,
+        asr.STAGE,
+        vision.STAGE,
+        fuse.STAGE,
+        mapper.STAGE,
+        reduce.STAGE,
+        render.STAGE,
+    ]
 
 
 # --- hashing -------------------------------------------------------------------------------
