@@ -194,3 +194,50 @@ Entry template:
 
 ### Next
 - Phase 0 complete. Open the Phase 0 PR (ask before pushing). Then Phase 1 (scaffold + ingest).
+
+## 2026-10-11 · Phase 1 (scaffold + ingest)
+
+### Findings
+- **Modules:** `config.py`, `schemas.py`, `atomic.py`, `storage.py`, `pipeline.py`, `ingest.py`,
+  `cli.py`. `LICENSE` (Apache-2.0 text from apache.org), `NOTICE` (§11 text), README License
+  section, `license`/`license-files` in `pyproject.toml`. Entry point is now `cohr.cli:main`.
+- **Config:** plain pydantic (frozen, `extra="forbid"`), not `pydantic-settings`: only two env vars
+  (`COHR_RUNS_DIR`, `COHR_HF_HOME`), read by `config.runs_dir()` / `hf_home()`, so no new
+  dependency. Sections per stage (`ingest`, `vad`, `fuse`, `reduce`) so each stage hashes only its
+  own section. Pinned revisions from D6.
+- **Hashes:** two per stage. `config_hash` = stage config keys + prompt file hash + FORMAT_VERSION;
+  `input_hash` = chained from the inputs' sha256 through every earlier stage's hashes. Added
+  `input_hash` to `StageState` (§19 table updated). Bumping a FORMAT_VERSION, editing a prompt or
+  changing a section re-runs that stage and every later one; `pipeline.plan()` reports why
+  (`format`, `config`, `input`, `missing output`, `not done`, `new`).
+- **Manifest `config`** is stored as a loose JSON object, not the `Config` model, so adding a
+  config field doesn't change the manifest snapshot. Stages re-validate it with `Config`.
+- **Schemas (§19):** 8 run-file models with `FORMAT_VERSION`/`FILENAME` class vars, all
+  version 1; snapshots in `tests/schemas/`. Additions to the §19 table: `InputFile.kind` and
+  `.stored` (name inside `source/`, `NN-<name>` so two inputs can't collide), `Frame.page`.
+- **Atomic writes:** `mkstemp`/`mkdtemp` create 0600/0700, so `atomic.py` applies the umask
+  afterwards (outputs get normal modes). `frames/` is built in a temp dir and swapped in whole.
+  `log.txt` is the one non-atomic file (an append-only log).
+- **Ingest:** ffmpeg 7 wants `-fps_mode vfr` (`-vsync` is deprecated). The scene filter is
+  `select='eq(n\,0)+gt(scene\,T)',scale=…,showinfo` with long-edge scaling for portrait sources;
+  pts come from `showinfo` lines, and the frame count must match the timestamp count or ingest
+  fails. `ffprobe` cover art (`attached_pic`) in audio files is not treated as video.
+  Solid-colour test frames all share one phash, so test media draws patterns.
+- **Run ids** use local time (UTC made `20261011-160526` for a 06:05 run).
+- **Stages for Phase 1:** `ingest` only. `pipeline.default_stages()` grows as stages land.
+  `HF_HUB_DISABLE_TELEMETRY=1` is set in `cohr/__init__.py`; `HF_HUB_OFFLINE=1` once cached is
+  left to the ModelManager (Phase 2), which knows what's cached.
+- **Tests:** 76 pass in ~4 s, no models (schemas 21, pipeline 17, storage 13, ingest 14,
+  config 8, cli 3). ffmpeg tests skip if ffmpeg is missing; CI installs it.
+  `tests/__init__.py` exists so `tests.conftest` imports resolve under ty.
+- **CI (§15):** `.github/workflows/ci.yml` as planned, with `actions/checkout@v7` and
+  `astral-sh/setup-uv@v10` (latest majors on 2026-10-11).
+- **GitHub (§17), state before this PR:** repo public, default branch `main`, description set,
+  Actions token read-only. Not yet: topics, merge settings (squash only, delete branch on merge,
+  no wiki/projects), branch protection.
+- **Not in Phase 1 (by plan):** release job (§16), ModelManager and download disk check (Phase
+  2), upload streaming (Phase 5).
+
+### Next
+- §17 steps 2, 3, 5 and 6 after confirmation; first CI run on the Phase 1 PR. Then Phase 2
+  (perception: `vad.py`, `asr.py`, `vision.py`, ModelManager).

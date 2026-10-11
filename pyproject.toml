@@ -3,6 +3,8 @@ name = "cohr"
 version = "0.1.0"
 description = "Local Streamlit app: recording + slides to multilingual notes where every claim cites its timestamp or slide"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [
     { name = "Daryl Lim", email = "73304404+darylalim@users.noreply.github.com" }
 ]
@@ -25,7 +27,7 @@ dependencies = [
 ]
 
 [project.scripts]
-cohr = "cohr:main"
+cohr = "cohr.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.12.22,<0.13.0"]
@@ -53,3 +55,11 @@ extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-m", "not models"]
+markers = ["models: needs real model weights and Metal (opt in: -m models)"]

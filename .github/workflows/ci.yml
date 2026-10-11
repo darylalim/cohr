@@ -1,0 +1,40 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  HF_HUB_OFFLINE: "1"          # no model downloads in CI, ever
+  ALLOW_TORCH: "0"             # Phase 0 (D9): torch is absent from uv.lock
+jobs:
+  check:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - name: Install ffmpeg
+        run: command -v ffmpeg || brew install ffmpeg
+      - name: Sync (lockfile must be current; all groups so ty sees eval imports)
+        run: uv sync --locked --all-groups
+      - name: No PyTorch (§1 all-MLX rule)
+        run: |
+          if [ "$ALLOW_TORCH" != "1" ] && grep -q '^name = "torch' uv.lock; then
+            uv tree --invert --package torch
+            echo "::error::torch is in uv.lock; see PLAN §1 / §9 Phase 0"; exit 1
+          fi
+      - name: Format
+        run: uv run ruff format --check .
+      - name: Lint
+        run: uv run ruff check --output-format=github .
+      - name: Type check
+        run: uv run ty check
+      - name: Unit tests
+        run: uv run pytest -q -m "not models"

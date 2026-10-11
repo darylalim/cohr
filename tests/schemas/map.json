@@ -1,0 +1,129 @@
+{
+  "format_version": 1,
+  "schema": {
+    "$defs": {
+      "MapActionItem": {
+        "additionalProperties": false,
+        "properties": {
+          "due": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Due"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Owner"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "title": "MapActionItem",
+        "type": "object"
+      },
+      "SegmentNotes": {
+        "additionalProperties": false,
+        "properties": {
+          "action_items": {
+            "items": {
+              "$ref": "#/$defs/MapActionItem"
+            },
+            "title": "Action Items",
+            "type": "array"
+          },
+          "decisions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
+          "key_points": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Points",
+            "type": "array"
+          },
+          "open_questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Open Questions",
+            "type": "array"
+          },
+          "raw": {
+            "title": "Raw",
+            "type": "string"
+          },
+          "seg_id": {
+            "title": "Seg Id",
+            "type": "integer"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "terms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Terms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "seg_id",
+          "summary",
+          "key_points",
+          "decisions",
+          "action_items",
+          "open_questions",
+          "terms",
+          "raw"
+        ],
+        "title": "SegmentNotes",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "notes": {
+        "items": {
+          "$ref": "#/$defs/SegmentNotes"
+        },
+        "title": "Notes",
+        "type": "array"
+      },
+      "target_language": {
+        "title": "Target Language",
+        "type": "string"
+      }
+    },
+    "required": [
+      "target_language",
+      "notes"
+    ],
+    "title": "MapFile",
+    "type": "object"
+  }
+}

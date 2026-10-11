@@ -1,0 +1,75 @@
+{
+  "format_version": 1,
+  "schema": {
+    "$defs": {
+      "Frame": {
+        "additionalProperties": false,
+        "properties": {
+          "frame_id": {
+            "title": "Frame Id",
+            "type": "integer"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Page"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "phash": {
+            "title": "Phash",
+            "type": "string"
+          },
+          "pts": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pts"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame_id",
+          "path",
+          "pts",
+          "phash",
+          "source"
+        ],
+        "title": "Frame",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "frames": {
+        "items": {
+          "$ref": "#/$defs/Frame"
+        },
+        "title": "Frames",
+        "type": "array"
+      }
+    },
+    "required": [
+      "frames"
+    ],
+    "title": "FramesFile",
+    "type": "object"
+  }
+}

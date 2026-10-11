@@ -1,0 +1,65 @@
+{
+  "format_version": 1,
+  "schema": {
+    "$defs": {
+      "TranscriptItem": {
+        "additionalProperties": false,
+        "properties": {
+          "chunk_id": {
+            "title": "Chunk Id",
+            "type": "integer"
+          },
+          "t0": {
+            "title": "T0",
+            "type": "number"
+          },
+          "t1": {
+            "title": "T1",
+            "type": "number"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t0",
+          "t1",
+          "chunk_id",
+          "text"
+        ],
+        "title": "TranscriptItem",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "items": {
+        "items": {
+          "$ref": "#/$defs/TranscriptItem"
+        },
+        "title": "Items",
+        "type": "array"
+      },
+      "language": {
+        "title": "Language",
+        "type": "string"
+      },
+      "runtime": {
+        "enum": [
+          "mlx-speech",
+          "mlx-audio"
+        ],
+        "title": "Runtime",
+        "type": "string"
+      }
+    },
+    "required": [
+      "language",
+      "runtime",
+      "items"
+    ],
+    "title": "Transcript",
+    "type": "object"
+  }
+}

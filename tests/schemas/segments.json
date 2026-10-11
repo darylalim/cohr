@@ -1,0 +1,75 @@
+{
+  "format_version": 1,
+  "schema": {
+    "$defs": {
+      "Segment": {
+        "additionalProperties": false,
+        "properties": {
+          "chunk_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Chunk Ids",
+            "type": "array"
+          },
+          "seg_id": {
+            "title": "Seg Id",
+            "type": "integer"
+          },
+          "slide_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Slide Ids",
+            "type": "array"
+          },
+          "t0": {
+            "title": "T0",
+            "type": "number"
+          },
+          "t1": {
+            "title": "T1",
+            "type": "number"
+          },
+          "transcript_text": {
+            "title": "Transcript Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t0",
+          "t1",
+          "seg_id",
+          "chunk_ids",
+          "transcript_text",
+          "slide_ids"
+        ],
+        "title": "Segment",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "segments": {
+        "items": {
+          "$ref": "#/$defs/Segment"
+        },
+        "title": "Segments",
+        "type": "array"
+      },
+      "unaligned_slide_ids": {
+        "items": {
+          "type": "integer"
+        },
+        "title": "Unaligned Slide Ids",
+        "type": "array"
+      }
+    },
+    "required": [
+      "segments",
+      "unaligned_slide_ids"
+    ],
+    "title": "SegmentsFile",
+    "type": "object"
+  }
+}

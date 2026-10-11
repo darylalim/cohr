@@ -1,0 +1,184 @@
+{
+  "format_version": 1,
+  "schema": {
+    "$defs": {
+      "ActionItem": {
+        "additionalProperties": false,
+        "properties": {
+          "citations": {
+            "items": {
+              "$ref": "#/$defs/Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Due"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Owner"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "citations"
+        ],
+        "title": "ActionItem",
+        "type": "object"
+      },
+      "Citation": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "seg",
+              "slide"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "t": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "T"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "Citation",
+        "type": "object"
+      },
+      "Claim": {
+        "additionalProperties": false,
+        "properties": {
+          "citations": {
+            "items": {
+              "$ref": "#/$defs/Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "citations"
+        ],
+        "title": "Claim",
+        "type": "object"
+      },
+      "NotesSections": {
+        "additionalProperties": false,
+        "properties": {
+          "action_items": {
+            "items": {
+              "$ref": "#/$defs/ActionItem"
+            },
+            "title": "Action Items",
+            "type": "array"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/$defs/Claim"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
+          "key_points": {
+            "items": {
+              "$ref": "#/$defs/Claim"
+            },
+            "title": "Key Points",
+            "type": "array"
+          },
+          "open_questions": {
+            "items": {
+              "$ref": "#/$defs/Claim"
+            },
+            "title": "Open Questions",
+            "type": "array"
+          },
+          "summary": {
+            "items": {
+              "$ref": "#/$defs/Claim"
+            },
+            "title": "Summary",
+            "type": "array"
+          }
+        },
+        "required": [
+          "summary",
+          "key_points",
+          "decisions",
+          "action_items",
+          "open_questions"
+        ],
+        "title": "NotesSections",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "language": {
+        "title": "Language",
+        "type": "string"
+      },
+      "passes": {
+        "enum": [
+          1,
+          2
+        ],
+        "title": "Passes",
+        "type": "integer"
+      },
+      "sections": {
+        "$ref": "#/$defs/NotesSections"
+      }
+    },
+    "required": [
+      "sections",
+      "passes",
+      "language"
+    ],
+    "title": "NotesDoc",
+    "type": "object"
+  }
+}
