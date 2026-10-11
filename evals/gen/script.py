@@ -1,9 +1,9 @@
 """Meeting scripts with planted facts, from a seed (PLAN §18). Pure: no audio, no files.
 
 A script is a list of spoken lines grouped into topics (one slide per topic), with N decisions,
-M action items (owner + due date) and one number per topic planted on known lines, plus filler
-talk that carries no facts. Facts come from small templates and word lists, so the truth is
-exact. The same seed and variant always give the same script.
+M action items (owner + due date), one number per topic and one or two open questions planted on
+known lines, plus filler talk that carries no facts. Facts come from small templates and word
+lists, so the truth is exact. The same seed and variant always give the same script.
 
 Numbers are kept apart so a value in the notes can only mean one fact: every number spoken or
 shown (facts, previous values, due-date days, misspoken values) is distinct, and fact values
@@ -14,7 +14,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Literal
 
-FactKind = Literal["decision", "action", "number"]
+FactKind = Literal["decision", "action", "number", "open_question"]
 GapKind = Literal["silence", "noise", "music"]
 
 VOICES = ("Samantha", "Daniel", "Karen")  # en_US, en_GB, en_AU (`say -v '?'`)
@@ -156,6 +156,22 @@ TASKS = (
     "review the security audit",
     "record the onboarding video",
 )
+# Asked and left unresolved: what Reduce's Open questions section should hold (6b). No numbers,
+# and no words shared with the decisions or tasks, so a match can only mean this question.
+OPEN_QUESTIONS = (
+    "partner with a reseller in Japan",
+    "charge extra for the premium reports",
+    "offer a tablet version",
+    "outsource the translation work",
+    "rename the company blog",
+    "run the user conference online",
+    "sponsor the local hackathon",
+)
+OPEN_QUESTION_LINES = (
+    "One thing we haven't settled: should we {q}?",
+    "We still don't know whether we should {q}. Let's leave that open.",
+    "Open question for next time: do we {q}? Nobody has an answer yet.",
+)
 ACTION_LINES = (
     "{owner} will {task} by {due}.",
     "Action item for {owner}: {task} by {due}.",
@@ -240,13 +256,15 @@ class Variant:
     gaps: tuple[GapKind, ...] = ("silence",)  # one gap per entry, after topics 1, 2, …
     gap_s: float = 12.0
     conflict: bool = False  # one money fact misspoken in speech, correct on the slide
+    open_questions: tuple[int, int] = (1, 2)  # how many are planted: random in this range
 
 
 @dataclass(frozen=True)
 class PlannedFact:
     id: str
     kind: FactKind
-    text: str  # decisions: the decision; actions: the task; numbers: "label: value"
+    text: str  # decisions: the decision; actions: the task; numbers: "label: value";
+    # open questions: what's asked ("open the beta to customers in Europe")
     line: int  # index into Script.lines where it's spoken
     topic: int
     owner: str | None = None
@@ -345,6 +363,15 @@ def generate(seed: int, variant: Variant) -> Script:
     decision_topic = sorted(rng.sample(slots, variant.decisions))
     action_topic = sorted(rng.sample(slots, variant.actions))
 
+    # Open questions draw from their own generator, so planting them left the other facts as
+    # they were before 6b.
+    q_rng = random.Random(f"{seed}-open-questions")
+    n_questions = q_rng.randint(*variant.open_questions)
+    questions = q_rng.sample(OPEN_QUESTIONS, n_questions)
+    question_topic = dict(
+        zip(q_rng.sample(range(variant.topics), n_questions), questions, strict=True)
+    )
+
     script = Script(project=rng.choice(PROJECTS))
     last_voice = ""
 
@@ -390,6 +417,11 @@ def generate(seed: int, variant: Variant) -> Script:
         say(f"That's compared with {spoken(topic, prev)} last {topic.period}.", k)
         for text in rng.sample(DISCUSSION, 4):
             say(text.format(topic=topic.title.lower()), k)
+        if k in question_topic:
+            q = question_topic[k]
+            voice = q_rng.choice([v for v in VOICES if v != last_voice])
+            line = say(q_rng.choice(OPEN_QUESTION_LINES).format(q=q), k, voice)
+            script.facts.append(PlannedFact(next_id(), "open_question", q, line, k))
 
         # ("decision", index) and ("action", index) planted in this topic, in random order.
         items = [("decision", i) for i, t in enumerate(decision_topic) if t == k]

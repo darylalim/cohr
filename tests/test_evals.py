@@ -44,7 +44,15 @@ from cohr.schemas import (
     TranscriptItem,
 )
 from evals.gen import build as gen_build
-from evals.gen.script import TEEN_TO_TY, Variant, generate
+from evals.gen.script import (
+    DECISIONS,
+    OPEN_QUESTIONS,
+    TASKS,
+    TEEN_TO_TY,
+    Script,
+    Variant,
+    generate,
+)
 from tests.conftest import make_run
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -218,6 +226,27 @@ def test_score_facts_and_made_up_items() -> None:
     assert wrong == ["Update the pricing page"]
 
 
+def test_open_questions_have_their_own_recall_and_made_up_count() -> None:
+    facts = [
+        fact("open_question", id="q1", text="outsource the translation work", t0=80.0),
+        fact("decision", id="d1", text="drop the legacy export feature", t0=50.0),
+    ]
+    doc = notes(
+        decisions=[Claim(text="Drop the legacy export feature.", citations=cite(50.0))],
+        open_questions=[
+            Claim(text="Should the translation work be outsourced?", citations=cite(82.0)),
+            Claim(text="Is there seasonality in the retention figures?", citations=cite(90.0)),
+        ],
+    )
+    results = {r.id: r for r in evals.score_facts(facts, doc, {})}
+    assert results["q1"].found and results["q1"].section == "open_questions"
+    assert evals.made_up_questions(facts, doc) == ["Is there seasonality in the retention figures?"]
+    assert evals.made_up_questions(facts, doc, cross_language=True) == []
+    # A planted question only counts in the Open questions section.
+    elsewhere = notes(key_points=[Claim(text="Outsource the translation work.", citations=[])])
+    assert not evals.score_facts(facts, elsewhere, {})[0].found
+
+
 # --- stage metrics -------------------------------------------------------------------------
 
 
@@ -373,6 +402,26 @@ def test_script_invariants() -> None:
         line = s.lines[f.line].text
         assert (f.owner or "") in line and (f.kind == "number" or f.text in line)
     assert len(s.gaps_after) == len(v.gaps)
+    questions = [f for f in s.facts if f.kind == "open_question"]
+    assert 1 <= len(questions) <= 2 and len({f.topic for f in questions}) == len(questions)
+    assert all(s.lines[f.line].text.endswith(("?", "open.", "yet.")) for f in questions)
+
+
+def test_open_questions_leave_the_other_facts_as_they_were() -> None:
+    def other(s: Script) -> list[tuple]:
+        return [
+            (f.kind, f.text, f.owner, f.due, f.value) for f in s.facts if f.kind != "open_question"
+        ]
+
+    for seed in (1, 2, 3, 4):
+        with_q, without = generate(seed, Variant()), generate(seed, Variant(open_questions=(0, 0)))
+        assert other(with_q) == other(without)
+        assert len(with_q.lines) > len(without.lines)
+    # Planted questions share no content word with a decision or a task (a match is unambiguous).
+    for q in OPEN_QUESTIONS:
+        assert not numbers_in(q)
+        for text in DECISIONS + TASKS:
+            assert not evals.content(q) & evals.content(text), (q, text)
 
 
 def fake_say(voice: str, text: str) -> np.ndarray:
