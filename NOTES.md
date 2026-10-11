@@ -884,3 +884,102 @@ force a stage, so 5a adds `force=`.
 
 ### Next
 - Phase 5b in a new session with the §21 prompt.
+
+## 2026-10-11 · Phase 5b (Ask)
+
+### Built
+- `src/cohr/ask.py` (no Streamlit): `ask()` / `run()` answer one question from the run's own
+  files with Reduce's pieces: `reduce.documents` and `fit_prompt` (transcripts trimmed when
+  the documents alone don't fit), `claims` / `resolve` (one claim per sentence, out-of-range
+  indices dropped and counted, uncited sentences kept with `citations: []`) and
+  `segment_refiner` (D19 jump times). Returns a frozen `Answer` (claims, language, prompt
+  tokens, turns dropped, transcript limit, dropped citations, raw reply). `run()` switches the
+  shared ModelManager to the run's config under its lock, uses `reduce`, and restores the
+  previous config, so a job that set it keeps it. **`reduce.py` is unchanged** (the planned chat
+  variant of `prompt()` was dropped, D22), and the config hash test pins Reduce's hash.
+- `prompts/ask.md`, `ask_history.md`, `ask_turn.md`: rules, then history, then the question,
+  then "Answer in <language>." as the last line.
+- History: the last 3 turns, answers as their claim texts (no `<co>` markup), dropped
+  oldest-first until the prompt fits `reduce.max_input_tokens`; then Reduce's trimming.
+- Answer language (D23): lingua over R7B's 23 languages; ≥ 2 words or CJK, confidence ≥ 0.2,
+  lead ≥ 0.05, else the run's target language. The detector is built once (0.2 s).
+- `render` gets a `chat` mode: app-mode escaping and the uncited badge, but plain `[12:47]`
+  labels, because the Ask page has no anchors to link to. `render.answer_md`.
+- `ui.py`: `segment_block` / `slide_block` / `RunMedia` (one source block for Notes' Sources
+  panel and the Ask drawer), `citation_label`, `unique_citations`, cached `ask_sources`.
+- `app_pages/ask.py` (centered): chat history per run in `st.session_state`, answers with the
+  uncited badge, one `st.pills` row of cited moments per answer; a pill opens
+  `st.dialog(position="right")` with that segment's block, its audio starting at the cited `t`
+  (or the slide). The pill clears itself so the same source can be reopened. "Clear chat".
+- **Ask while a job runs (§7 reading):** the chat input is disabled with a caption instead of
+  blocking the script thread on the ModelManager lock; the sidebar status fragment reruns
+  the page when the job ends, which re-enables it. The lock still serializes model use if a
+  job starts mid-question.
+- Notes: "Open in Ask" (switches page, same current run), and the D21 "Sources" segmented
+  control (Beside / Below, `persist_state="session"`). Below = notes in the 880 px container,
+  then the source blocks without the fixed-height box.
+- Tests: `test_ask.py` (19: instruction shape, history oldest-first and last-3, transcript
+  trimming after history, too-long error, no markup in history, language fallback cases and
+  real lingua, citations parsed/refined, dropped indices, uncited kept, run config applied and
+  restored, Reduce hash unchanged); `test_app.py` +6 (Ask renders, answer + pills, pill opens
+  the drawer, follow-up history, input disabled during a job, Open in Ask, Notes Below).
+  348 tests.
+
+### Manual checks (real R7B, `runs/20261011-103055-meeting` = clean-en)
+Six questions in one conversation (`ask.run`, history carried like the page), ~9–10 s each,
+~4.3K prompt tokens, peak 5.9 GB (R7B alone):
+| Question | Truth | Answer | Citations |
+|---|---|---|---|
+| How many open tickets are there? | 390, 0:12–0:15, slide 1 | "There are 390 open tickets." | 0:12, slide 1 ✓ |
+| What needs to be sent to legal? | Laura, Friday, 0:46–0:50 | "Laura needs to send a contract to legal by Friday." | 0:46 ✓ |
+| Who owns that, and by when? (follow-up) | Laura, Friday | "Laura owns the contract to be sent to legal by Friday." | 0:46 ✓ |
+| What does Omar need to do? | hiring plan, end of next week, 1:39–1:42 | "Omar needs to draft the hiring plan by the end of next week." | 1:39 ✓ |
+| Wie lange dauert das Laden der Seite? | 950 ms, 1:08–1:12, slide 2 | "Ich konnte keine Informationen … finden." (German, but wrong) | uncited |
+| What is the marketing budget for next year? | not in the meeting | "The approved budget for next quarter is $42,500." | 1:48, slide 3 |
+
+### Findings
+- **R7B's multi-turn `rag` format doesn't work for follow-ups (D22).** The template puts the
+  documents after the first user turn only; on later turns R7B wrote a new tool call
+  (`{"tool_call_id": "1", "tool_name": "direct-injected-document"}`) instead of an answer
+  (4 of 6). Prefilling `<|START_RESPONSE|>` made it answer, but follow-ups lost their
+  citations. Folding history into one user turn (Reduce's single-turn shape) fixed both.
+- With the language line first, a German question got an English answer; last line fixes it
+  (the Map lesson, §5.5).
+- **Cross-language after history is fragile.** The German question alone: "Das Laden der
+  Seite dauert 950 ms." [1:07, slide 2]; after two English turns (legal, Omar): correct; after
+  one turn (Omar): R7B repeated "Omar needs to draft the hiring plan…"; after legal / who owns /
+  Omar: "no information". Three history layouts tried (labels, context first): none fixed all
+  cases without breaking another, so the simplest stays. German questions without history
+  were all right (tickets 390, Laura → legal by Friday, 950 ms).
+- **Near-miss questions get a related fact.** "Marketing budget for next year" → next
+  quarter's $42,500 (cited) under every rule wording tried. A clean miss ("Who was hired as
+  the new head of sales?") is answered "the meeting doesn't mention…" with the rule now in
+  `ask.md`; without it, R7B invented "Omar was hired as the new head of sales."
+- Citations on German answers to English documents can't be refined (no token overlap), so
+  they jump to the segment start (0:00 instead of 1:07 once); slide citations still land.
+- lingua on single words is unreliable ("Priya?" → Indonesian 0.56, "Q3 ARR?" → Spanish
+  0.24), hence the 2-word minimum (D23).
+- `st.switch_page` inside an `on_click` callback raises "Could not find page": callbacks run
+  before `st.navigation` registers the pages. Called from the script instead.
+- AppTest renders `st.dialog` content into the main tree, so the drawer is testable.
+
+### Decisions (PLAN §20)
+- D22 = history folded into one user turn, language line last. D23 = lingua with ≥ 2 words
+  (or CJK), confidence ≥ 0.2, lead ≥ 0.05.
+
+### Plan changes
+- Status line; §5.7 (prompt shape, language rule, known limits); §6 prompts; §9 5b; §20 D22, D23.
+
+### Browser checks (user, normal Chrome window, real models)
+- Audio plays in the Notes Sources panel, starting at the earliest cited moment (5a couldn't
+  verify playback).
+- Open in Ask switches to Ask with the same run; "How many open tickets are there?" → 390 with
+  pills `0:12` and `slide 1`; the `0:12` pill opens the right-side drawer and its audio starts
+  at ~0:12; the same pill reopens it after closing. The follow-up (legal → "Who owns that, and
+  by when?") answers Laura, Friday, cited 0:46.
+- At ~800 px with the sidebar open, Notes in Below mode: clicking a citation scrolls the page
+  to its block; Below stays selected after going to Ask and back.
+
+### Next
+- Phase 6. Candidates from 5b: an Ask eval on the planted facts (answer accuracy, citation
+  jump, "not stated" on near-miss questions, cross-language follow-ups), and FTS5 ranking.

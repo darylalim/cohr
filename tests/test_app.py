@@ -1,5 +1,6 @@
 """PLAN §7 UI through AppTest: a fake ModelManager and a fixture run dir, no models."""
 
+import threading
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -20,6 +21,7 @@ from cohr.schemas import (
     Frame,
     FramesFile,
     Manifest,
+    MapFile,
     NotesDoc,
     NotesSections,
     Segment,
@@ -27,9 +29,12 @@ from cohr.schemas import (
     Slide,
     SlidesFile,
     StageState,
+    Transcript,
+    TranscriptItem,
 )
 from cohr.storage import Source
 from tests.conftest import fake_manager, pattern
+from tests.test_reduce import FakeR7B
 
 APP = str(Path(__file__).resolve().parents[1] / "app.py")
 TIMEOUT = 30
@@ -95,6 +100,9 @@ def make_fixture_run(tmp_path: Path) -> Path:
         for i in range(3)
     ]
     schemas.save(run_dir, SegmentsFile(segments=segments, unaligned_slide_ids=[1]))
+    schemas.save(run_dir, MapFile(target_language="en", notes=[]))
+    items = [TranscriptItem(chunk_id=i, t0=3.0 * i, t1=3.0 * (i + 1), text="hi") for i in range(3)]
+    schemas.save(run_dir, Transcript(language="en", runtime="mlx-speech", items=items))
     schemas.save(
         run_dir,
         NotesDoc(
@@ -138,16 +146,15 @@ def app(page: str | None = None) -> AppTest:
     return at
 
 
-@pytest.mark.parametrize(
-    "page", [None, "app_pages/new_run.py", "app_pages/notes.py", "app_pages/runs.py"]
-)
+PAGES = ["app_pages/new_run.py", "app_pages/notes.py", "app_pages/ask.py", "app_pages/runs.py"]
+
+
+@pytest.mark.parametrize("page", [None, *PAGES])
 def test_every_page_renders_without_runs(page: str | None) -> None:
     app(page)
 
 
-@pytest.mark.parametrize(
-    "page", ["app_pages/new_run.py", "app_pages/notes.py", "app_pages/runs.py"]
-)
+@pytest.mark.parametrize("page", PAGES)
 def test_every_page_renders_with_a_run(tmp_path: Path, page: str) -> None:
     make_fixture_run(tmp_path)
     at = app(page)
@@ -238,3 +245,101 @@ def test_recovery_runs_on_app_start(tmp_path: Path) -> None:
     schemas.save(run_dir, manifest)
     app()
     assert schemas.load(run_dir, Manifest).stages["map"].status == "interrupted"
+
+
+def test_notes_below_renders_every_source_block(tmp_path: Path) -> None:
+    make_fixture_run(tmp_path)
+    at = app("app_pages/notes.py")
+    at.segmented_control(key="notes_sources").set_value("Below").run()
+    assert not at.exception
+    anchors = [h.anchor for h in at.subheader if h.anchor]
+    assert anchors == ["seg-0", "slide-0", "seg-1", "seg-2", "slide-1"]
+    assert len(at.get("audio")) == 3 and len(at.get("image")) == 2
+    md = "\n".join(m.value for m in at.markdown)
+    assert "[0:01](#seg-0)" in md  # the anchors are the same in both layouts
+
+
+def test_open_in_ask_switches_page_with_the_run(tmp_path: Path) -> None:
+    run_dir = make_fixture_run(tmp_path)
+    at = app("app_pages/notes.py")
+    next(b for b in at.button if b.label == "Open in Ask").click().run()
+    assert not at.exception
+    assert at.title[0].value == "Ask"
+    assert at.caption[0].value == run_dir.name
+    assert at.session_state[ui.RUN_KEY] == run_dir.name
+
+
+def _with_r7b(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, reply: str) -> FakeR7B:
+    lm = FakeR7B(reply)
+    monkeypatch.setattr(ui, "make_models", lambda: fake_manager(Config(), tmp_path, reduce=lm))
+    st.cache_resource.clear()
+    return lm
+
+
+def test_ask_answers_with_pills_for_cited_sources(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    make_fixture_run(tmp_path)
+    reply = "<co>The budget is $14,500</co: 0:[0,3]>. Nobody knows the date."
+    lm = _with_r7b(monkeypatch, tmp_path, reply)
+    at = app("app_pages/ask.py")
+    at.chat_input[0].set_value("What is the budget?").run()
+    assert not at.exception
+    assert lm.calls  # answered through the ModelManager
+    md = "\n".join(m.value for m in at.markdown)
+    assert "What is the budget?" in md
+    # No transcript chunk matches the span, so the jump time is the segment start (§5.6).
+    assert "The budget is \\$14,500. \\[0:00\\] \\[slide 1\\]" in md
+    assert ":gray[Nobody knows the date.] :gray-badge[uncited]" in md
+    [pills] = at.button_group
+    assert pills.options == ["0:00", "slide 1"]
+
+
+def test_ask_pill_opens_the_source_drawer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    make_fixture_run(tmp_path)
+    _with_r7b(monkeypatch, tmp_path, "<co>Ship it</co: 0:[2]>.")
+    at = app("app_pages/ask.py")
+    at.chat_input[0].set_value("What was decided?").run()
+    at.button_group[0].set_value(0).run()
+    assert not at.exception
+    assert any(h.value == "0:06–0:09" for h in at.subheader)  # seg 2's block, in the drawer
+    assert len(at.get("audio")) == 1
+    assert at.button_group[0].value is None  # cleared, so the same pill reopens it
+
+
+def test_ask_follow_up_sends_history_without_markup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    make_fixture_run(tmp_path)
+    lm = _with_r7b(monkeypatch, tmp_path, "<co>Ship it</co: 0:[2]>.")
+    at = app("app_pages/ask.py")
+    at.chat_input[0].set_value("What was decided?").run()
+    at.chat_input[0].set_value("Who owns that?").run()
+    assert not at.exception
+    sent = lm.instructions[-1]
+    assert "Q: What was decided?\nA: Ship it." in sent and "Question: Who owns that?" in sent
+    assert len(at.button_group) == 2  # one pill row per answer
+
+
+def test_ask_input_is_disabled_while_a_job_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    release = threading.Event()
+
+    def wait(ctx: StageContext) -> None:
+        release.wait(10)
+        atomic.write_text(ctx.run_dir / "fake.txt", "ok")
+
+    stage = Stage(name="fake", run=wait, outputs=("fake.txt",), format_version=1)
+    monkeypatch.setattr(ui, "make_runner", lambda m: JobRunner(m, stages=lambda: [stage]))
+    run_dir = make_fixture_run(tmp_path)
+    at = app("app_pages/ask.py")
+    assert not at.chat_input[0].disabled
+    job = ui.get_runner().start(run_dir)
+    try:
+        at.run()
+        assert at.chat_input[0].disabled
+        assert any("A job is using the models" in c.value for c in at.caption)
+    finally:
+        release.set()
+        job.wait(5)

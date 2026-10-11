@@ -14,6 +14,8 @@ Phase 4a done 2026-10-11 (reduce + render). Phase 4b-1 done 2026-10-11 (planted-
 markers and citation jump times). Phase 4b-1b done 2026-10-11 (Map number guard, D20).
 Phase 4b-2 done 2026-10-11 (judge: support rate, judge recall, D15 passed at 80.0%).
 Phase 5a done 2026-10-11 (UI without Ask: theme, job layer, New run / Notes / Runs; D13, D14 pass).
+Phase 5b done 2026-10-11 (Ask page and drawer, Notes Beside/Below toggle; D22, D23; browser
+checks passed).
 Hub metadata verified 2026-10-04 and 2026-10-10; packages, licenses and Streamlit config checked
 2026-10-05.
 
@@ -407,12 +409,22 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
 - Same documents as Reduce, the user's question, and the `rag` template with citations. Answer
   rendered with the same citation links, using the same citation rules and time refinement as
   §5.6. No re-processing needed.
-- **Follow-ups:** the last 3 question/answer turns are sent as chat history (answers with
+- **Follow-ups:** the last 3 question/answer turns are sent as history (answers with
   citation markup removed, to save tokens), so "and who owns that?" works. History counts toward
   the ~32K cap and is dropped oldest-first if needed.
-- **Answer language:** the language of the question, detected with `lingua-language-detector`
-  (moved from the eval group to runtime deps for this). If detection is unsure, use the run's target
-  language. The documents stay as they are; R7B answers across languages.
+- **Prompt shape (D22, Phase 5b):** one user turn through Reduce's own `prompt()`: the rules,
+  the history (`prompts/ask_history.md`, `ask_turn.md`), the question, and "Answer in
+  <language>." as the **last line** (as in Map, §5.5). R7B's native multi-turn `rag` format puts
+  the documents after the first turn only, and R7B then called the document tool again on every
+  follow-up instead of answering. Reduce's prompt, code and config hash are unchanged (tested).
+- **Answer language (D23):** the language of the question, detected with `lingua-language-detector`
+  (a runtime dependency) over R7B's 23 languages. Sure means: at least 2 words (or any CJK
+  text), top confidence ≥ 0.2, and a lead of ≥ 0.05 over the runner-up. Otherwise, use the run's
+  target language. The documents stay as they are; R7B answers across languages.
+- **Known limits (5b manual check):** a question in another language than the history can get
+  "no information" or a repeat of an earlier answer; a near-miss question ("marketing budget
+  next year") can get a related cited fact ("budget for next quarter") instead of "not
+  stated". An Ask eval on the planted facts would measure both (Phase 6).
 - **Long meetings:** if the documents exceed the ~32K cap, rank them for the question with an
   in-memory SQLite FTS5 table (BM25, stdlib; `trigram` tokenizer for zh/ja/ko) and send the
   top-ranked ones that fit. The Ask page then says "Answer based on the N most relevant
@@ -453,7 +465,8 @@ src/cohr/
                      queue, cancel, one job at a time, recover_all on app start (Phase 5a)
   ui.py              Streamlit glue shared by app.py and app_pages/: cached ModelManager and
                      JobRunner, sidebar, job panel, per-segment audio clips (Phase 5a)
-  prompts/           vision.md  map.md  reduce.md  reduce_pass2.md  ask.md  translate.md  judge.md
+  prompts/           vision.md  map.md  reduce.md  reduce_pass2.md  ask.md  ask_history.md
+                     ask_turn.md  translate.md  judge.md
                      judge_coverage.md  judge_retry.md
                      (plain files; each hash feeds its stage's config hash, §3)
   cli.py             `cohr run <audio> [--slides …] [--video …] --lang en --target en`, `cohr eval`
@@ -1001,7 +1014,7 @@ invalid-JSON fallback, §5.5); token budget enforced.
   Re-reduce, uncited caption) and Runs (table, Resume, re-run stage, Prune/Delete with
   confirmation, peak-memory chart); `test_app.py` (AppTest, fake ModelManager, fixture run);
   the window-width and light/dark checks; D13, D14. Kickoff prompt in §21.
-- **5b: Ask.** `src/cohr/ask.py` + `prompts/ask.md` (§5.7: same `rag` documents as Reduce, the
+- **5b: Ask** (done 2026-10-11, NOTES.md). `src/cohr/ask.py` + `prompts/ask.md` (§5.7: same `rag` documents as Reduce, the
   last 3 turns as history with citation markup removed, dropped oldest-first under the ~32K cap,
   answer language from `lingua` with the run's target language as fallback, same citation
   parsing and time refinement); the Ask page (chat, source pills, right-side drawer) and Notes'
@@ -1805,6 +1818,8 @@ section.
 | D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | **0.1 and ±15 s, plus a sentence offset inside the chunk**: chunk `t0` alone was a median 12.5 s early (61% within 15 s); with the offset 98% (53 of 54 errors ≤ 5 s, so 15 s hides nothing). Min score 0.0 = 0.1 > 0.2 (94.6%) > 0.3 (91.1%) |
 | D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | **Default rule kept**: 8 repairs on `quick`, all to the transcript's value (0 wrong); number recall 81.2% → 87.5%, fact recall 82.3% → 85.3%, made-up 3 → 3, citation accuracy 98.2% → 100%; numbers in no source 6 → 1 (a flagged `3,360` with two candidates). Short numbers are weak evidence (any one-digit number is one edit from the next): watch on `full` |
 | D21 | Notes layout in medium windows (§7) | Two columns; close the sidebar | Options within the no-CSS rule (NOTES.md 2026-10-11 5a finding) | Before 5b | **Beside/Below toggle** in the Notes header, default Beside, per session. Rejected: Sources always in the drawer (undoes D14, loses side-by-side on wide screens), a "close the sidebar" hint only, `initial_sidebar_state="collapsed"` on Notes (localStorage overrides it). Built in 5b |
+| D22 | Ask history format (§5.7) | R7B's multi-turn `rag` messages | Manual check on clean-en: follow-ups cited and answered | Phase 5b | **Folded into one user turn** (Reduce's `prompt()`), language line last. Native multi-turn: 4 of 6 answers were a new tool call, no answer. Native + `<|START_RESPONSE|>` prefill: answered, but follow-ups lost their citations. Folded: every English answer cited, jump times inside the truth spans |
+| D23 | Ask answer-language detection (§5.7) | lingua, fallback = target language | lingua confidences on sample questions in 9 languages | Phase 5b | **≥ 2 words (or CJK), confidence ≥ 0.2, lead ≥ 0.05**: "Priya?" read as Indonesian at 0.56 and "Wat is het budget?" tied nl/en at 0.25; full sentences scored 0.25–1.0 with a clear lead |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

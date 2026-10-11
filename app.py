@@ -15,6 +15,7 @@ page = st.navigation(
     [
         st.Page("app_pages/new_run.py", title="New run", icon=":material/add_circle:"),
         st.Page("app_pages/notes.py", title="Notes", icon=":material/description:"),
+        st.Page("app_pages/ask.py", title="Ask", icon=":material/forum:"),
         st.Page("app_pages/runs.py", title="Runs", icon=":material/folder_open:"),
     ],
     position="sidebar",
