@@ -1,12 +1,14 @@
-"""Command line (PLAN §6): `cohr run`, `cohr resume`, `cohr runs`, `cohr prune`, `cohr rm`."""
+"""Command line (PLAN §6, §12): `cohr run`, `resume`, `runs`, `prune`, `rm`, `models`."""
 
 import argparse
 import sys
 from pathlib import Path
 
-from cohr import pipeline, schemas, storage
+from cohr import models, pipeline, schemas, storage
+from cohr.asr import LANGUAGES
 from cohr.config import Config, runs_dir
 from cohr.ingest import IngestError, probe
+from cohr.models import ModelManager, ModelsMissing
 from cohr.pipeline import Cancelled, ProgressEvent, StageFailed
 from cohr.schemas import Manifest
 from cohr.storage import DiskSpaceError, Source
@@ -20,8 +22,12 @@ def _print_progress(event: ProgressEvent) -> None:
 
 
 def _execute(run_dir: Path) -> int:
+    config = Config.model_validate(schemas.load(run_dir, Manifest).config)
     try:
-        pipeline.run(run_dir, progress=_print_progress)
+        pipeline.run(run_dir, progress=_print_progress, models=ModelManager(config))
+    except ModelsMissing as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
     except KeyboardInterrupt:
         print("interrupted; resume with `cohr resume`", file=sys.stderr)
         return 130
@@ -96,6 +102,25 @@ def cmd_rm(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_models(args: argparse.Namespace) -> int:
+    config = Config()
+    names = args.names or list(models.PIPELINE_MODELS)
+    unknown = [n for n in names if n not in config.models]
+    if unknown:
+        raise SystemExit(f"error: unknown model(s) {unknown}; choose from {list(config.models)}")
+    if args.action == "download":
+        specs = {n: config.models[n] for n in names}
+        try:
+            fetched = models.download(specs)
+        except DiskSpaceError as e:
+            raise SystemExit(f"error: {e}") from e
+        print(f"downloaded: {', '.join(fetched)}" if fetched else "all cached", file=sys.stderr)
+    for name, spec, size in models.cached_report(config, names):
+        state = f"{size / storage.GB:6.2f} GB" if size is not None else "   missing"
+        print(f"{name:<11} {state}  {spec.repo}@{spec.revision[:7]}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cohr", description="Cited meeting notes on MLX.")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -104,7 +129,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("audio", nargs="?", help="audio file")
     p.add_argument("--video", help="video file (audio + slide frames)")
     p.add_argument("--slides", nargs="*", default=[], help="PDF or image slide files")
-    p.add_argument("--lang", default="en", help="source language (default en)")
+    p.add_argument("--lang", default="en", choices=LANGUAGES, help="source language (default en)")
     p.add_argument("--target", default="en", help="target language for the notes (default en)")
     p.add_argument("--copy", action="store_true", help="copy sources instead of linking")
     p.add_argument("--name", help="run name (default: the media file name)")
@@ -125,6 +150,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("run")
     p.add_argument("-y", "--yes", action="store_true", help="don't ask for confirmation")
     p.set_defaults(func=cmd_rm)
+
+    p = sub.add_parser("models", help="list pipeline models and whether they're downloaded")
+    p.add_argument("action", nargs="?", choices=["list", "download"], default="list")
+    p.add_argument("names", nargs="*", help="model names (default: the pipeline models)")
+    p.set_defaults(func=cmd_models)
     return parser
 
 

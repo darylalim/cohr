@@ -1,11 +1,22 @@
 """Shared fixtures. Media is generated on the fly into tmp_path; nothing binary is committed."""
 
+import os
 import shutil
 import subprocess
+import threading
 from pathlib import Path
 
+import numpy as np
 import pytest
+import soundfile as sf
 from PIL import Image, ImageDraw
+
+from cohr import schemas, storage
+from cohr.config import Config, ModelSpec
+from cohr.models import MlxMemory, ModelManager
+from cohr.pipeline import StageContext
+from cohr.schemas import Manifest
+from cohr.storage import Source
 
 needs_ffmpeg = pytest.mark.skipif(
     shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None,
@@ -13,10 +24,15 @@ needs_ffmpeg = pytest.mark.skipif(
 )
 
 
+# The user's model cache, for the opt-in smoke test only.
+REAL_HF_HOME = os.environ.get("COHR_HF_HOME")
+
+
 @pytest.fixture(autouse=True)
-def _isolated_runs_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Tests never touch the real runs/ (PLAN §12)."""
+def _isolated_dirs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests never touch the real runs/ or the real model cache (PLAN §12)."""
     monkeypatch.setenv("COHR_RUNS_DIR", str(tmp_path / "runs"))
+    monkeypatch.setenv("COHR_HF_HOME", str(tmp_path / "hf"))
 
 
 def pattern(kind: int, size: tuple[int, int] = (2000, 1000)) -> Image.Image:
@@ -103,3 +119,47 @@ def slide_png(tmp_path: Path) -> Path:
     out.parent.mkdir(exist_ok=True)
     pattern(1, (900, 2400)).save(out)
     return out
+
+
+class NullMemory(MlxMemory):
+    """MlxMemory stand-in: counts cache clears, reports a fixed peak."""
+
+    def __init__(self) -> None:
+        self.clears = 0
+
+    def reset_peak(self) -> None:
+        pass
+
+    def peak(self) -> int | None:
+        return 42
+
+    def clear_cache(self) -> None:
+        self.clears += 1
+
+
+def fake_manager(config: Config, tmp_path: Path, **adapters: object) -> ModelManager:
+    """A real ModelManager whose loaders return the given adapters (no MLX, no cache)."""
+
+    def resolve(spec: ModelSpec) -> Path:
+        return tmp_path
+
+    loaders = {name: (lambda _path, a=adapter: a) for name, adapter in adapters.items()}
+    return ModelManager(config, loaders=loaders, resolve=resolve, memory=NullMemory())
+
+
+def make_run(tmp_path: Path, audio: np.ndarray | None = None, config: Config | None = None) -> Path:
+    """A run dir with a 16 kHz mono audio.wav (no ingest, no ffmpeg)."""
+    src = tmp_path / "in.wav"
+    src.write_bytes(b"x")
+    run_dir = storage.create_run(tmp_path / "runs", [Source(src, "audio")], config or Config())
+    if audio is not None:
+        sf.write(run_dir / "audio.wav", audio, 16000, subtype="PCM_16")
+    return run_dir
+
+
+def ctx_for(run_dir: Path, stage: str, models: ModelManager | None = None) -> StageContext:
+    manifest = schemas.load(run_dir, Manifest)
+    config = Config.model_validate(manifest.config)
+    return StageContext(
+        run_dir, config, manifest, stage, threading.Event(), lambda _e: None, models
+    )

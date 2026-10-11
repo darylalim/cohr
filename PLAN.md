@@ -7,6 +7,7 @@ models plus a small voice-detection model, all on MLX and all fitting in memory 
 
 Status: Phase 0 done 2026-10-10 (all checks passed; findings in `NOTES.md`, results in §20).
 Phase 1 done 2026-10-11 (scaffold + ingest; §17 GitHub setup complete, CI green).
+Phase 2 done 2026-10-11 (perception: VAD, Transcribe, Vision, ModelManager; smoke test passes offline).
 Hub metadata verified 2026-10-04 and 2026-10-10; packages, licenses and Streamlit config checked
 2026-10-05.
 
@@ -196,7 +197,9 @@ Voice detection sends only speech to Transcribe.
 - `speech_runs = detect(audio.wav)` with threshold 0.5, minimum speech 250 ms, minimum silence
   100 ms, padding 30 ms (the `mlx-audio` defaults; tune in Phase 0).
 - Merge runs separated by < 0.5 s. Pack consecutive runs into chunks up to `max_chunk_s`
-  (default 30 s, capped by the Transcribe limit found in Phase 0), cutting only *between* runs.
+  (default 30 s, capped by the Transcribe limit found in Phase 0), cutting only *between* runs,
+  and never across a pause longer than `max_inner_gap_s` (default 2 s), so a long non-speech
+  stretch between two nearby runs is never sent to Transcribe (Phase 2).
 - A single run longer than `max_chunk_s` is split at the frame with the lowest speech probability
   in its last ~5 s.
 - Regions with no speech go into `gaps` and are never transcribed. Fuse still uses real time, so
@@ -208,10 +211,10 @@ Voice detection sends only speech to Transcribe.
   budget in §4).
 
 **Fallback chunker: `silence`** (`config.chunker = "silence"`, also used automatically if the VAD
-model can't load): `ffmpeg -af silencedetect` with a **relative** threshold: measure the noise
-floor first (`ffmpeg -af astats` on the quietest ~10% of 1 s windows) and use
-`noise = floor + 6 dB`, not a fixed -30 dB. Then cut at the silence nearest ~27 s, forcing a cut
-at `max_chunk_s`.
+model can't load): a **relative** threshold computed in numpy on `audio.wav` (Phase 2; replaces
+`ffmpeg silencedetect`, same rule): noise floor = 10th percentile of 1 s window levels,
+`noise = floor + 6 dB`, not a fixed -30 dB; quiet dips < 0.3 s inside speech are filled. The
+runs then go through the same packing; long runs are cut at their quietest frame.
 
 **Packing logic is pure Python** (input: list of speech runs and probabilities), so it is unit
 tested without the model (§8).
@@ -872,7 +875,7 @@ PR (§21).
 **Phase 1: scaffold + ingest** (done 2026-10-11, NOTES.md): GitHub repo created and configured (§17), then tool config
 (ruff, ty, pytest) in the Phase 0 `pyproject.toml`, `schemas.py` with snapshot tests (§19), config (including `seed`, §3), prompts folder, pipeline runner
 (atomic writes, cancel, recovery, log), ingest functions; the §6 gate passes; CI workflow (§15) green on a PR.
-**Phase 2: perception:** `vad.py` (chunks.json) and `asr.py` (slices `audio.wav` by offsets), `vision.py`, ModelManager with
+**Phase 2: perception** (done 2026-10-11, NOTES.md): `vad.py` (chunks.json) and `asr.py` (slices `audio.wav` by offsets), `vision.py`, ModelManager with
 pinned revisions and a free-disk check before downloads, `transcript.json` and `slides.json`, plus skip logic.
 **Phase 3: fuse + map:** slide text alignment, `segments.json` and `map.json` (with `open_questions` and the
 invalid-JSON fallback, §5.5); token budget enforced.
@@ -1002,9 +1005,11 @@ stage outputs are the source of truth. A rebuildable search index comes later (�
 - Before any download: `shutil.disk_usage(cache_dir).free` must be ≥ the missing weights plus a
   2 GB margin, or the UI stops with a clear message (needed vs. free).
 - **Offline at runtime:** `cohr/__init__.py` sets `HF_HUB_DISABLE_TELEMETRY=1` before
-  `huggingface_hub` is imported. Once every pinned revision is cached, it also sets
-  `HF_HUB_OFFLINE=1`, so no request reaches the Hub during normal use. Only the explicit download
-  step (UI button or `cohr models download`) runs with offline mode off.
+  `huggingface_hub` is imported. The ModelManager resolves every model with
+  `snapshot_download(..., local_files_only=True)` and loads it from the local path, so no request
+  reaches the Hub during normal use (Phase 2: `HF_HUB_OFFLINE` is read once at import, so setting
+  it later wouldn't work; the smoke test runs with it set to prove nothing calls out). Only the
+  explicit download step (UI button or `cohr models download`) talks to the Hub.
 - Sidebar and `cohr models` CLI show which repos are cached and their size on disk.
   Deleting models is left to `hf cache delete` (documented in the README, not reimplemented).
 

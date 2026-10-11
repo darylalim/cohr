@@ -1,5 +1,6 @@
 """PLAN §3, §7, §19: skip logic, hash chaining, atomic writes, cancel, failure, recovery."""
 
+import dataclasses
 import threading
 import time
 from datetime import UTC, datetime, timedelta
@@ -37,7 +38,7 @@ class Recorder:
             outputs=(f"{name}.txt",),
             format_version=version,
             config_keys=keys,
-            prompt=prompt,
+            prompts=(prompt,) if prompt else (),
         )
 
 
@@ -267,3 +268,35 @@ def test_atomic_outputs_follow_umask(tmp_path: Path) -> None:
     plain_dir.mkdir()
     assert (tmp_path / "a.json").stat().st_mode == plain.stat().st_mode
     assert (tmp_path / "frames").stat().st_mode == plain_dir.stat().st_mode
+
+
+def test_preflight_requires_models_only_for_stages_that_will_run(
+    run_dir: Path, tmp_path: Path
+) -> None:
+    from cohr.models import ModelManager, ModelsMissing
+
+    rec = Recorder()
+    a = rec.stage("a")
+    b = rec.stage("b")
+    b = dataclasses.replace(b, models=("vision",))
+
+    def resolve(_spec: object) -> Path:
+        raise FileNotFoundError
+
+    missing = ModelManager(Config(), loaders={}, resolve=resolve)
+    with pytest.raises(ModelsMissing):
+        pipeline.run(run_dir, stages=[a, b], models=missing)
+    assert rec.ran == []  # nothing starts when a model is missing
+
+    present = ModelManager(Config(), loaders={}, resolve=lambda _s: tmp_path)
+    pipeline.run(run_dir, stages=[a, b], models=present)
+    assert rec.ran == ["a", "b"]
+    # Everything is done now: no stage needs a model, so a missing one doesn't matter.
+    assert pipeline.run(run_dir, stages=[a, b], models=missing) == {"a": "skipped", "b": "skipped"}
+    with pytest.raises(RuntimeError, match="need a ModelManager"):
+        pipeline.run(run_dir, stages=[a, dataclasses.replace(b, format_version=2)])
+
+
+def test_default_stages_order() -> None:
+    names = [s.name for s in pipeline.default_stages()]
+    assert names == ["ingest", "vad", "transcribe", "vision"]

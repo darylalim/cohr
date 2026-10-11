@@ -245,3 +245,63 @@ Entry template:
 ### Next
 - Merge PR #3 (squash). Then Phase 2 (perception: `vad.py`, `asr.py`, `vision.py`,
   ModelManager with pinned revisions, offline mode once cached, free-disk check).
+
+## 2026-10-11 · Phase 2 (perception)
+
+### Findings
+- **Modules:** `models.py` (ModelManager), `vad.py`, `asr.py`, `vision.py`; stages
+  `ingest → vad → transcribe → vision`. Each wrapper's `load(path)` returns a small adapter
+  (`SileroVad.detect`, `CohereAsr.transcribe`, `MicroVision.describe`); MLX imports live only
+  inside those, so unit tests use fake adapters through the real ModelManager.
+- **ModelManager:** one `RLock`; `use(name)` loads on first use and releases afterwards under
+  `sequential` (VAD is always released). Load failures raise `ModelLoadError`; models that
+  aren't downloaded raise `ModelsMissing` listing all of them. `pipeline.run(models=…)` checks
+  every model needed by the stages that will run **before** any stage starts, so a fresh
+  machine fails fast with "Run `uv run cohr models download`". Peak memory is reset per stage
+  and read only if MLX is already imported (ingest-only runs and CI never import MLX).
+- **Offline:** `huggingface_hub` reads `HF_HUB_OFFLINE` once at import, so setting it after
+  checking the cache (§12 as planned) would do nothing. Runtime resolution uses
+  `snapshot_download(local_files_only=True)` and loaders get local paths (all three loaders
+  accept them). The smoke test passes with `HF_HUB_OFFLINE=1`, so no hidden Hub call remains.
+- **Downloads:** `cohr models [list|download] [names]`. Download sizes come from
+  `model_info(files_metadata=True)`; free space must cover missing weights + 2 GB before
+  anything is fetched. `COHR_HF_HOME` → `cache_dir=<it>/hub`. Tests point it at an empty
+  tmp dir (conftest), so they never see the real cache.
+- **VAD:** `generate()` returns timestamps and one probability per 512 samples; the
+  probabilities drive the long-run split (least-speechy frame in the last 5 s before
+  `max_chunk_s`). New `max_inner_gap_s = 2.0`: the Phase 0 packer would have packed two runs
+  around a 20 s noise gap into one chunk whenever both fit in 30 s, sending the noise to
+  Transcribe. Gaps = complement of the chunks, so "gaps are never transcribed" holds exactly.
+- **Silence fallback** in numpy (32 ms frames, floor + 6 dB, dips < 0.3 s filled) instead of
+  `ffmpeg silencedetect`: same rule, no stderr parsing, unit-testable; its frame levels drive the
+  long-run split the same way.
+- **Vision:** `vision_retry.md` holds the retry instruction (prompt text stays in prompts/);
+  `Stage.prompt` became `Stage.prompts` (tuple) so both prompt files feed the hash. Phase 0
+  quirks handled: `tables_md` as a list of row objects → one Markdown table; row lists; `"None"`
+  / `"null"` / `"N/A"` → `""`. Seed passed to `mx.random.seed` before every slide.
+  `VisionConfig` (max_tokens 1024, temperature 0) so those settings are in the stage hash.
+- **Transcribe:** chunks read with `soundfile.read(start=, stop=)`; text stripped; the 14
+  languages are checked in the stage and by `cohr run --lang` choices.
+- **Smoke test** (`tests/test_pipeline_smoke.py`, `models` marker, run by the user with
+  `HF_HUB_OFFLINE=1`): passes in 26.8 s. VAD 1.4 s → 4 chunks, 69.5 of 92.3 s sent to
+  Transcribe, none inside the noise+music gap; Transcribe 3.9 s; Vision 12.5 s, 3/3 slides valid
+  JSON first try, "14,500" found; `cohr resume` skips all four stages.
+- **Tests:** 112 pass without models in ~4 s (new: vad 11, models 10, vision 6, asr 4, cli +3,
+  pipeline +2). The guard hook blocks any command containing the models-marker flag, even
+  in a heredoc, so test files that mention it are written with the file tools.
+- **Schemas:** unchanged (Phase 1 models already matched); no FORMAT_VERSION bump.
+
+### Decisions (PLAN §20)
+None due this phase (D11 is Phase 3).
+
+### Plan changes
+- §5.1a: `max_inner_gap_s` (2 s) and `split_search_s` (5 s) in `VadConfig`; silence fallback in
+  numpy instead of ffmpeg.
+- §12: offline by local-only resolution, not by setting `HF_HUB_OFFLINE` after a cache check.
+- Known trade-off: `input_hash` chains linearly, so a VAD or language change also re-runs
+  Vision (it doesn't depend on them). ~13 s per 3 slides; revisit if it matters (a stage could
+  declare its real inputs). `vad` is preflight-required even with `chunker = "silence"`.
+
+### Next
+- Open the Phase 2 PR (ask before pushing). Then Phase 3 (fuse + map: slide alignment, D11,
+  `segments.json`, `map.json`, token budget).
