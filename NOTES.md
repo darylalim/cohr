@@ -524,3 +524,26 @@ Run 1 (before the generator fixes below) is not comparable; it found the generat
 ### Next
 - Phase 4b-2 (judge) in a new session. Before or alongside it, decide the Map digit guard
   (recall is below the 85% target mainly because of it) and the slide-conflict miss.
+
+---
+
+## 2026-10-11 · Phase 4b-1b planning (no code)
+
+### Findings
+- The 4b-1 digit errors all change one digit or a factor of 10 ($42,500 → $420,500, 57,000 →
+  570,000, 336 → 3,360, 22nd → 2nd, $59,500 → $595,000, $11,800 → $1,180), and the transcript
+  was right each time. A prompt rule and temperature 0 didn't help, so the fix is a
+  deterministic check of Map's numbers against the segment's own transcript and slides.
+- Doing it before 4b-2 means the judge's 30 calibration pairs are drawn from output without
+  this known error.
+
+### Decisions (PLAN §20)
+- None. D20 (repair rule) is decided in 4b-1b from `quick` before/after.
+
+### Plan changes
+- §5.5 Number guard (repair when exactly one source number is one digit edit or a factor of
+  10/100/1000 away, else keep and flag); §6 `numbers.py`; §9 Phase 4b-1b; §19 `MapFile` v3
+  (`unverified_numbers`); §20 D20; §21 kickoff prompt.
+
+### Next
+- Phase 4b-1b in a new session, then 4b-2.
