@@ -87,9 +87,14 @@ def language_name(code: str) -> str:
 
 
 class IngestConfig(_Section):
-    scene_threshold: float = 0.3  # ffmpeg select='gt(scene,…)'
+    # ffmpeg select='gt(scene,…)'. A change between two white text slides scores 0.04–0.07
+    # (Phase 4b-1 eval), so 0.3 kept only the first slide of a deck recording.
+    scene_threshold: float = 0.02
     max_edge_px: int = 1600  # frames and slide pages, long edge
-    dedupe_max_distance: int = 6  # phash Hamming distance to the last kept frame
+    # 16×16 phash (256 bits): an 8×8 one put consecutive text slides only 4–8 bits apart,
+    # inside the old limit of 6; at 16×16 they are 38–60 apart.
+    phash_size: int = 16
+    dedupe_max_distance: int = 24  # Hamming distance to the last kept frame
 
 
 class VadConfig(_Section):

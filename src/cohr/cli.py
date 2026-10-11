@@ -1,4 +1,5 @@
-"""Command line (PLAN §6, §12): `cohr run`, `resume`, `runs`, `prune`, `rm`, `models`."""
+"""Command line (PLAN §6, §12, §18): `cohr run`, `resume`, `runs`, `prune`, `rm`, `models`,
+`eval`."""
 
 import argparse
 import sys
@@ -121,6 +122,44 @@ def cmd_models(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_eval(args: argparse.Namespace) -> int:
+    from cohr import evals  # pulls in the eval dependency group lazily
+
+    root = Path(args.root)
+    try:
+        overrides = dict(evals.parse_override(o) for o in args.config)
+        report = evals.run_set(
+            args.set,
+            root=root,
+            items=args.item,
+            seed=args.seed,
+            overrides=overrides,
+            fresh=args.fresh,
+            models=ModelManager(Config()),
+            log=lambda msg: print(msg, file=sys.stderr),
+            progress=_print_progress,
+        )
+    except (FileNotFoundError, KeyError, ValueError) as e:
+        raise SystemExit(f"error: {e}") from e
+    except ModelsMissing as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    except StageFailed as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+
+    baseline = Path(args.baseline) if args.baseline else root / evals.BASELINE
+    if baseline.is_file() and not args.update_baseline:
+        report.baseline = str(baseline)
+        report.regressions = evals.compare(report, evals.load_report(baseline))
+    path = evals.write_report(report, root)
+    print(evals.render_markdown(report))
+    print(f"report: {path} (+ .md)", file=sys.stderr)
+    if args.update_baseline:
+        print(f"baseline updated: {evals.write_baseline(report, root)}", file=sys.stderr)
+    return 1 if report.regressions else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cohr", description="Cited meeting notes on MLX.")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -155,6 +194,26 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("action", nargs="?", choices=["list", "download"], default="list")
     p.add_argument("names", nargs="*", help="model names (default: the pipeline models)")
     p.set_defaults(func=cmd_models)
+
+    p = sub.add_parser("eval", help="run an eval set and score it (PLAN §18)")
+    p.add_argument("--set", default="quick", help="evals/sets/<name>.yaml (default quick)")
+    p.add_argument("--item", nargs="*", default=[], help="only these item ids")
+    p.add_argument("--seed", type=int, help="override every item's seed")
+    p.add_argument(
+        "-c",
+        "--config",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="config override, e.g. fuse.window_s=120 (repeatable)",
+    )
+    p.add_argument("--fresh", action="store_true", help="new runs instead of reusing stages")
+    p.add_argument("--baseline", help="report to compare with (default evals/baseline.json)")
+    p.add_argument(
+        "--update-baseline", action="store_true", help="write this report as the baseline"
+    )
+    p.add_argument("--root", default=".", help="repo root (default: current directory)")
+    p.set_defaults(func=cmd_eval)
     return parser
 
 

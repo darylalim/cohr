@@ -1,0 +1,28 @@
+# Quick eval set (PLAN §18): the four English planted-facts meetings, ~5 min each.
+# Run: uv run cohr eval --set quick. Fields: cohr.evals.ItemSpec.
+items:
+  - id: clean-en
+    seed: 1
+    media: video
+    slides: video
+    gaps: [silence]
+
+  - id: noisy-en
+    seed: 2
+    media: video
+    slides: video
+    gaps: [music, noise]
+    background_noise: 0.02
+
+  - id: pdf-slides-en
+    seed: 3
+    media: audio
+    slides: pdf
+    gaps: [silence]
+
+  - id: slide-conflict-en
+    seed: 4
+    media: video
+    slides: video
+    gaps: [silence]
+    conflict: true

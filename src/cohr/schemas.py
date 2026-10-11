@@ -232,7 +232,9 @@ class NotesSections(_Model):
 
 
 class NotesDoc(RunFile):
-    FORMAT_VERSION: ClassVar[int] = 2
+    # v3: a seg citation's `t` is placed inside the chunk at the cited sentence (D19), so
+    # older runs re-run Reduce (same reply at temperature 0, new jump times).
+    FORMAT_VERSION: ClassVar[int] = 3
     FILENAME: ClassVar[str] = "notes.json"
 
     sections: NotesSections

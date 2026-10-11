@@ -1,0 +1,482 @@
+"""Eval scoring and generator (PLAN §18 Tests). No models, no `say`, no ffmpeg."""
+
+import json
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from cohr import evals, schemas
+from cohr.config import Config
+from cohr.evals import (
+    ItemReport,
+    ItemSpec,
+    Report,
+    Truth,
+    TruthFact,
+    TruthSlide,
+    action_fit,
+    citation_check,
+    compare,
+    coverage,
+    digits,
+    numbers_in,
+    same_due,
+    wer_text,
+)
+from cohr.schemas import (
+    ActionItem,
+    Chunk,
+    ChunksFile,
+    Citation,
+    Claim,
+    Manifest,
+    NotesDoc,
+    NotesSections,
+    Slide,
+    SlidesFile,
+    Span,
+    StageState,
+    Transcript,
+    TranscriptItem,
+)
+from evals.gen import build as gen_build
+from evals.gen.script import TEEN_TO_TY, Variant, generate
+from tests.conftest import make_run
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+# --- normalization -------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "values"),
+    [
+        ("$14,500", {14500}),
+        ("fourteen thousand five hundred dollars", {14500}),
+        ("14.5k", {14500}),
+        ("$70 thousand", {70000}),
+        ("38%", {38}),
+        ("thirty eight percent", {38}),
+        ("the twentieth of October", {20}),
+        ("on the 3rd", {3}),
+        ("twenty first", {21}),
+        ("one hundred and five tickets", {105}),
+        ("Revenue rose to 1.2 million", {1200000}),
+        ("no numbers here", set()),
+    ],
+)
+def test_numbers_normalized_to_digits(text: str, values: set[int]) -> None:
+    assert numbers_in(text) == {float(v) for v in values}
+
+
+def test_thousand_alone_is_not_a_number() -> None:
+    assert numbers_in("a thousand thanks") == set()
+    assert digits("thousands of users") == "thousands of users"
+
+
+def test_wer_text_makes_spoken_and_written_forms_equal() -> None:
+    spoken = "The budget is fourteen thousand five hundred dollars, up thirty eight percent."
+    written = "the budget is $14,500, up 38%."
+    assert wer_text(spoken) == wer_text(written)
+
+
+@pytest.mark.parametrize(
+    ("stated", "planted", "same"),
+    [
+        ("the twentieth of October", "October 20", True),
+        ("Oct 20", "October 20", True),
+        ("20 October", "October 20", True),
+        ("by the end of next week", "end of next week", True),
+        ("Friday", "Friday", True),
+        ("by Friday", "end of next week", False),
+        ("end of the month", "end of next week", False),
+        ("October 21", "October 20", False),
+    ],
+)
+def test_due_dates(stated: str, planted: str, same: bool) -> None:
+    assert same_due(stated, planted) is same
+
+
+def test_coverage_uses_content_tokens_and_stems() -> None:
+    fact = "move the weekly sync to Thursdays"
+    assert coverage(fact, "The weekly syncs moved to Thursday.") == 1.0
+    assert coverage(fact, "Weekly meeting stays on Tuesdays.") < evals.TEXT_MATCH_MIN
+
+
+# --- fact matching -------------------------------------------------------------------------
+
+
+def fact(kind: str = "action", **kw: object) -> TruthFact:
+    base: dict[str, object] = {
+        "id": "f1",
+        "kind": kind,
+        "text": "update the pricing page",
+        "t0": 100.0,
+        "t1": 104.0,
+    }
+    if kind == "action":
+        base |= {"owner": "Priya", "due": "October 20"}
+    return TruthFact.model_validate(base | kw)
+
+
+def item(
+    text: str, owner: str | None = None, due: str | None = None, citations: list | None = None
+) -> ActionItem:
+    return ActionItem(text=text, citations=citations or [], owner=owner, due=due)
+
+
+def test_action_owner_and_due() -> None:
+    f = fact()
+    assert action_fit(item("Update the pricing page", "Priya", "20 October"), f) == "match"
+    assert action_fit(item("Update the pricing page", "Priya", None), f) == "match"
+    assert action_fit(item("Priya: update the pricing page"), f) == "match"  # owner in text
+    assert action_fit(item("Update the pricing page"), f) == "partial"  # no owner stated
+    plain = Claim(text="Update the pricing page by Oct 20.", citations=[])
+    assert action_fit(plain, f) == "partial"
+    assert action_fit(item("Update the pricing page", "Tom", None), f) == "wrong"
+    # The Phase 4a Map error: someone else's due date on the right task.
+    assert action_fit(item("Update the pricing page", "Priya", "end of next week"), f) == "wrong"
+    assert action_fit(item("Book the venue", "Priya", "October 20"), f) == "none"
+
+
+def test_cross_language_matches_exact_fields_only() -> None:
+    f = fact()
+    de = item("Preisseite aktualisieren", "Priya", "20. Oktober")
+    assert action_fit(de, f, cross_language=True) == "match"
+    assert action_fit(item("Preisseite", "Priya", "21. Oktober"), f, True) == "wrong"
+    assert action_fit(item("Preisseite", "Tom", "20. Oktober"), f, True) == "none"
+    number = fact("number", text="Open tickets: 409", value=409.0)
+    assert evals.fact_fit(Claim(text="409 offene Tickets", citations=[]), number, True) == "match"
+    decision = fact("decision", text="drop the legacy export feature")
+    claim = Claim(text="Den alten Export einstellen", citations=[])
+    assert evals.fact_fit(claim, decision, True) == "none"  # judge only (4b-2)
+
+
+def test_citation_tolerance_and_slides() -> None:
+    f = fact("number", text="Open tickets: 409", value=409.0, slide=2)
+    near = Claim(text="x", citations=[Citation(kind="seg", id=0, t=115.0)])
+    far = Claim(text="x", citations=[Citation(kind="seg", id=0, t=115.5)])
+    slide = Claim(text="x", citations=[Citation(kind="slide", id=7)])
+    assert citation_check(near, f, {}) == (True, 15.0, False)
+    assert citation_check(far, f, {})[0] is False
+    assert citation_check(slide, f, {2: 7}) == (True, None, True)
+    assert citation_check(slide, f, {2: 6})[0] is False
+    both = Claim(text="x", citations=[*far.citations, Citation(kind="seg", id=1, t=98.0)])
+    assert citation_check(both, f, {})[1] == -2.0  # nearest error, signed
+
+
+def notes(**sections: list[Claim]) -> NotesDoc:
+    empty: dict[str, list] = {s: [] for s in evals.SECTIONS}
+    return NotesDoc(
+        sections=NotesSections.model_validate(empty | sections),
+        passes=1,
+        language="en",
+        raw="",
+    )
+
+
+def cite(t: float) -> list[Citation]:
+    return [Citation(kind="seg", id=0, t=t)]
+
+
+def test_score_facts_and_made_up_items() -> None:
+    facts = [
+        fact("decision", id="d1", text="drop the legacy export feature", t0=50.0),
+        fact(id="a1", t0=100.0),
+        fact("number", id="n1", text="Open tickets: 409", value=409.0, t0=10.0, slide=0),
+        fact("decision", id="d2", text="hire a contract designer", t0=200.0),
+    ]
+    doc = notes(
+        key_points=[Claim(text="There are 409 open tickets.", citations=cite(40.0))],
+        decisions=[
+            Claim(text="The legacy export feature will be dropped.", citations=cite(45.0)),
+            Claim(text="Move the office to Berlin.", citations=cite(60.0)),
+        ],
+        action_items=[
+            item("Update the pricing page", "Priya", "October 20", citations=cite(101.0)),
+            item("Write the release notes", "Tom", "Friday", citations=cite(120.0)),
+            item("Update the pricing page", "Priya", "Friday", citations=cite(101.0)),
+            item("Update the pricing page by October 20", citations=cite(101.0)),
+        ],
+    )
+    results = {r.id: r for r in evals.score_facts(facts, doc, {0: 3})}
+    assert results["d1"].found and results["d1"].citation_ok and results["d1"].t_error == -5.0
+    assert results["a1"].found and results["a1"].section == "action_items"
+    assert results["n1"].found and results["n1"].citation_ok is False  # 30 s off, no slide
+    assert not results["d2"].found
+    made, wrong = evals.made_up(facts, doc)
+    assert made == [
+        "Move the office to Berlin.",
+        "Write the release notes",
+        "Update the pricing page",
+    ]
+    assert wrong == ["Update the pricing page"]
+
+
+# --- stage metrics -------------------------------------------------------------------------
+
+
+def test_speech_f1() -> None:
+    truth = [Span(t0=1.0, t1=3.0)]
+    assert evals.speech_f1(truth, [Span(t0=1.0, t1=3.0)], 5.0) == 1.0
+    assert evals.speech_f1(truth, [Span(t0=2.0, t1=4.0)], 5.0) == pytest.approx(0.5)
+    assert evals.speech_f1(truth, [], 5.0) == 0.0
+
+
+def test_gap_text_counts_chunks_mostly_inside_gaps() -> None:
+    t = Transcript(
+        language="en",
+        runtime="mlx-speech",
+        items=[
+            TranscriptItem(chunk_id=0, t0=0.0, t1=10.0, text="real speech here"),
+            TranscriptItem(chunk_id=1, t0=19.0, t1=25.0, text="la la la"),
+            TranscriptItem(chunk_id=2, t0=29.0, t1=35.0, text="more speech"),
+        ],
+    )
+    words, texts = evals.gap_text(t, [Span(t0=18.0, t1=30.0)])
+    assert (words, texts) == (3, ["la la la"])
+
+
+def slide(slide_id: int, title: str, tables: list[str], t: float | None = None) -> Slide:
+    return Slide(
+        slide_id=slide_id,
+        frame_id=slide_id,
+        t=t,
+        t_source="aligned" if t is not None else "none",
+        title=title,
+        text_md="",
+        tables_md=tables,
+        chart_notes="",
+        visual_notes="",
+    )
+
+
+def test_slide_matching_and_metrics() -> None:
+    truth = [
+        TruthSlide(slide_id=0, title="Retention", cells=["Metric", "Value", "83%"], t0=0, t1=50),
+        TruthSlide(slide_id=1, title="Site Speed", cells=["Page load (ms)", "640"], t0=50, t1=99),
+    ]
+    out = [
+        slide(0, "**Site Speed**", ["| Page load (ms) | 640 |"], t=55.0),
+        slide(1, "Retention", ["| Metric | Value |\n|---|---|\n| Week 2 | 83 % |"], t=60.0),
+    ]
+    ids = evals.match_slides(truth, out)
+    assert ids == {0: 1, 1: 0}
+    m = evals.slide_metrics(truth, out, ids)
+    assert m["slides_found"] == 1.0 and m["slide_title_exact"] == 1.0
+    assert m["slide_cell_accuracy"] == 1.0 and m["slide_number_recall"] == 1.0
+    chunks = [Span(t0=55.0, t1=70.0), Span(t0=60.0, t1=80.0)]
+    # Slide 1 ("Site Speed") lands on a chunk inside its stretch; "Retention" is too late.
+    assert evals.alignment_accuracy(truth, out, ids, chunks) == 0.5
+
+
+# --- reports and the baseline gate ---------------------------------------------------------
+
+
+def report(**summary: float) -> Report:
+    base = {"fact_recall": 0.9, "citation_accuracy": 0.95, "made_up_items": 0}
+    base |= {"uncited_claims": 0, "gap_words_per_min": 0.0}
+    return Report(
+        created_at=datetime(2026, 10, 11, tzinfo=UTC),
+        set="quick",
+        git_sha="abc",
+        models={},
+        prompts={},
+        items=[],
+        summary=base | summary,
+        stages={"map": {"s_per_audio_hour": 100.0, "peak_mem_gb": 9.0}},
+    )
+
+
+def test_baseline_thresholds() -> None:
+    old = report()
+    assert compare(report(fact_recall=0.86), old) == []  # −4 points: within −5
+    assert compare(report(fact_recall=0.85), old) == []  # exactly −5
+    assert "fact_recall" in compare(report(fact_recall=0.84), old)[0]
+    assert compare(report(citation_accuracy=0.92), old) == []
+    assert "citation_accuracy" in compare(report(citation_accuracy=0.91), old)[0]
+    assert "made_up_items" in compare(report(made_up_items=1), old)[0]
+    assert "uncited_claims" in compare(report(uncited_claims=2), old)[0]
+    assert "gap_words_per_min" in compare(report(gap_words_per_min=0.5), old)[0]
+    slow = report()
+    slow.stages["map"]["s_per_audio_hour"] = 126.0
+    assert "map" in compare(slow, old)[0]
+    slow.stages["map"]["s_per_audio_hour"] = 124.0
+    assert compare(slow, old) == []
+
+
+def test_error_histogram_buckets() -> None:
+    hist = evals.error_histogram([0.0, -3.0, 5.0, 12.0, -20.0, 90.0], (5, 15, 30, 60))
+    assert hist == [
+        ("0–5 s", 3),
+        ("5–15 s", 1),
+        ("15–30 s", 1),
+        ("30–60 s", 0),
+        ("> 60 s", 1),
+    ]
+
+
+def test_overrides() -> None:
+    assert evals.parse_override("fuse.window_s=120") == ("fuse.window_s", 120)
+    assert evals.parse_override("vad.chunker=silence") == ("vad.chunker", "silence")
+    config = evals.apply_overrides(Config(), {"fuse.window_s": 120, "reduce.temperature": 0.1})
+    assert config.fuse.window_s == 120.0 and config.reduce.temperature == 0.1
+    with pytest.raises(KeyError):
+        evals.apply_overrides(Config(), {"fuse.windw_s": 1})
+
+
+def test_quick_set_loads() -> None:
+    quick = evals.load_set("quick", ROOT)
+    assert [i.id for i in quick.items] == [
+        "clean-en",
+        "noisy-en",
+        "pdf-slides-en",
+        "slide-conflict-en",
+    ]
+    assert len({i.seed for i in quick.items}) == 4
+
+
+# --- generator -----------------------------------------------------------------------------
+
+
+def test_script_invariants() -> None:
+    v = Variant(conflict=True)
+    s = generate(5, v)
+    kinds = [f.kind for f in s.facts]
+    assert kinds.count("decision") == v.decisions and kinds.count("action") == v.actions
+    assert kinds.count("number") == v.topics and len(s.slides) == v.topics
+    owners = [f.owner for f in s.facts if f.kind == "action"]
+    assert len(set(owners)) == len(owners)
+    values = [f.value for f in s.facts if f.value is not None]
+    assert len(set(values)) == len(values) and all(x > 31 for x in values)
+    (conflict,) = [f for f in s.facts if f.misspoken is not None]
+    assert conflict.value is not None and conflict.misspoken is not None
+    assert TEEN_TO_TY[int(conflict.value) // 1000] * 1000 == conflict.misspoken
+    spoken = s.lines[conflict.line].text
+    assert f"{int(conflict.misspoken):,}" in spoken and f"{int(conflict.value):,}" not in spoken
+    for f in s.facts:  # every fact is spoken on its line
+        line = s.lines[f.line].text
+        assert (f.owner or "") in line and (f.kind == "number" or f.text in line)
+    assert len(s.gaps_after) == len(v.gaps)
+
+
+def fake_say(voice: str, text: str) -> np.ndarray:
+    """Deterministic stand-in for `say`: length from the text, tone from the voice."""
+    n = int(len(text) * 0.06 * gen_build.SR)
+    return (0.1 * np.sin(np.arange(n) * (0.05 + len(voice) / 100))).astype(np.float32)
+
+
+def test_generator_is_deterministic(tmp_path: Path) -> None:
+    spec = ItemSpec(id="t", seed=3, media="audio", slides="pdf", gaps=["noise"])
+    a = gen_build.build(spec, tmp_path / "a", fake_say, ROOT)
+    b = gen_build.build(spec, tmp_path / "b", fake_say, ROOT)
+    assert (tmp_path / "a" / "truth.json").read_bytes() == (
+        tmp_path / "b" / "truth.json"
+    ).read_bytes()
+    assert a == b
+    assert (tmp_path / "a" / "deck.pdf").is_file() and (tmp_path / "a" / "meeting.wav").is_file()
+    c = gen_build.build(spec.model_copy(update={"seed": 4}), tmp_path / "c", fake_say, ROOT)
+    assert c.script_text != a.script_text
+    # Gaps sit between lines, facts sit on their lines, slides cover their topics.
+    (gap,) = a.gap_spans
+    assert all(line.t1 <= gap.t0 or line.t0 >= gap.t1 for line in a.lines)
+    for f in a.facts:
+        assert any(line.t0 == f.t0 and line.t1 == f.t1 for line in a.lines)
+    assert [s.t0 for s in a.slides] == sorted(s.t0 for s in a.slides)
+
+
+# --- score_item on a run built by hand ------------------------------------------------------
+
+
+def test_score_item_end_to_end(tmp_path: Path) -> None:
+    spec = ItemSpec(id="t", seed=1, media="audio", slides="pdf", gaps=["silence"])
+    truth = Truth(
+        item=spec,
+        gen_hash="x",
+        language="en",
+        duration_s=60.0,
+        media="meeting.wav",
+        deck="deck.pdf",
+        script_text="The number of open tickets is 409. Priya will update the pricing page by "
+        "Friday.",
+        lines=[],
+        facts=[
+            fact("number", id="n1", text="Open tickets: 409", value=409.0, t0=2.0, slide=0),
+            fact(id="a1", t0=20.0, due="Friday"),
+        ],
+        speech_spans=[Span(t0=0.0, t1=30.0)],
+        gap_spans=[Span(t0=30.0, t1=45.0)],
+        slides=[TruthSlide(slide_id=0, title="Support Queue", cells=["409"], t0=0, t1=30)],
+    )
+    run_dir = make_run(tmp_path)
+    schemas.save(
+        run_dir,
+        ChunksFile(chunker="vad", chunks=[Chunk(chunk_id=0, t0=0.0, t1=15.0)] + [], gaps=[]),
+    )
+    schemas.save(
+        run_dir,
+        Transcript(
+            language="en",
+            runtime="mlx-speech",
+            items=[
+                TranscriptItem(
+                    chunk_id=0,
+                    t0=0.0,
+                    t1=15.0,
+                    text="The number of open tickets is 409. Priya will update the pricing "
+                    "page by Friday.",
+                )
+            ],
+        ),
+    )
+    schemas.save(
+        run_dir, SlidesFile(slides=[slide(0, "Support Queue", ["| Open tickets | 409 |"], 0.0)])
+    )
+    schemas.save(
+        run_dir,
+        notes(
+            key_points=[Claim(text="There are 409 open tickets.", citations=cite(0.0))],
+            action_items=[item("Update the pricing page", "Priya", "Friday", citations=cite(0.0))],
+        ),
+    )
+    manifest = schemas.load(run_dir, Manifest)
+    start = datetime(2026, 10, 11, 9, 0, tzinfo=UTC)
+    manifest.stages["map"] = StageState(
+        status="done",
+        started_at=start,
+        finished_at=start + timedelta(seconds=6),
+        peak_mem_bytes=9_000_000_000,
+    )
+    schemas.save(run_dir, manifest)
+
+    rep = evals.score_item(truth, run_dir, since=start - timedelta(seconds=1))
+    m = rep.metrics
+    assert m["fact_recall"] == 1.0 and m["citation_accuracy"] == 0.5  # action cited 20 s early
+    assert m["made_up_items"] == 0 and m["uncited_claims"] == 0
+    assert m["wer"] == 0.0 and m["gap_words"] == 0 and m["output_language_ok"] == 1
+    assert m["slide_alignment"] == 1.0
+    assert rep.stages["map"] == evals.StageCost(
+        seconds=6.0, s_per_audio_hour=360.0, peak_mem_gb=9.0, reused=False
+    )
+
+    full = Report(
+        created_at=start,
+        set="quick",
+        git_sha=None,
+        models={},
+        prompts={},
+        items=[rep],
+        summary=evals.summarize([rep]),
+        stages=evals.stage_summary([rep]),
+        citation_errors=[-20.0, -2.0],
+    )
+    assert full.summary["fact_recall"] == 1.0
+    md = evals.render_markdown(full)
+    assert "citation off by -20 s" in md and "| map | 360 | 9 |" in md
+    path = evals.write_report(full, tmp_path)
+    assert evals.load_report(path) == full
+    assert json.loads(path.read_text())["summary"]["facts"] == 2
+    assert isinstance(full.items[0], ItemReport)

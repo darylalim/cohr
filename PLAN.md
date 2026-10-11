@@ -9,6 +9,9 @@ Status: Phase 0 done 2026-10-10 (all checks passed; findings in `NOTES.md`, resu
 Phase 1 done 2026-10-11 (scaffold + ingest; §17 GitHub setup complete, CI green).
 Phase 2 done 2026-10-11 (perception: VAD, Transcribe, Vision, ModelManager; smoke test passes offline).
 Phase 3 done 2026-10-11 (fuse + map: slide text alignment, segments, Tiny Aya Map).
+Phase 4a done 2026-10-11 (reduce + render). Phase 4b-1 done 2026-10-11 (planted-facts evals,
+`cohr eval --set quick`, D11/D12/D19; fixes for ingest scene detection, Map due dates, Reduce
+markers and citation jump times).
 Hub metadata verified 2026-10-04 and 2026-10-10; packages, licenses and Streamlit config checked
 2026-10-05.
 
@@ -176,12 +179,15 @@ run-to-run noise (D16) comes from real differences, not sampling luck.
 ### 5.1 Ingest
 - Normalize: `ffmpeg -i in -ac 1 -ar 16000 -c:a pcm_s16le audio.wav`.
 - Chunking happens in the next step (§5.1a), not here. Ingest uses no models.
-- Video frames: `ffmpeg -vf "select='gt(scene,0.3)',showinfo" -vsync vfr frames/%03d.png` and
+- Video frames: `ffmpeg -vf "select='gt(scene,0.02)',showinfo" -fps_mode vfr frames/%03d.png` and
   parse each frame's `pts_time` from the `showinfo` output. Always keep the first frame. Add
   `scale='min(1600,iw)':-2` (for portrait sources, scale the long edge instead) so 4K screen
   frames aren't stored at full size.
-- Dedupe: `imagehash.phash`, dropping a frame if its Hamming distance to the last kept frame is
-  ≤ 6. Expect 20–60 frames per hour of talk.
+- Dedupe: `imagehash.phash(hash_size=16)` (256 bits), dropping a frame if its Hamming distance to
+  the last kept frame is ≤ 24. Expect 20–60 frames per hour of talk. Both values come from the
+  4b-1 eval: a change between two white text slides scores only 0.04–0.07 on ffmpeg's scene
+  metric (0.3 kept one slide per deck), and their 8×8 phashes were 4–8 bits apart (the old
+  limit was 6); at 16×16 they are 38–60 apart.
 - PDF slides: `pypdfium2.PdfDocument(path)[i].render(scale=…).to_pil()`, with the scale chosen so
   the long edge is ≤1600 px (same cap as video frames), saved as `frames/NNN.png`. Image slides
   (PNG/JPG) are downscaled the same way.
@@ -287,7 +293,10 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
 - **Invalid JSON:** same rule as §5.3. Retry once with "Return only valid JSON". If it still fails,
   store the raw text as `summary`, leave the lists empty, set `raw: true` on that segment's entry,
   and log a warning. The retry prompt (`prompts/map_retry.md`) also ends with the target language.
-- Due dates are copied as spoken, never computed (Phase 0 saw "end of next week" → "10月27日"). One bad segment never fails the stage.
+- Due dates are copied as spoken, never computed (Phase 0 saw "end of next week" → "10月27日";
+  the 4b-1 eval saw `2024-11-24` for "November 24th"). `map.md` says to take owner and due only
+  from the task's own sentence, never to write numeric dates or add a year, and to copy numbers
+  digit for digit. One bad segment never fails the stage.
 - **Optional regional Map models (Phase 6, decision D18):** Cohere's regional Tiny Aya variants
   have the same size (3.35B), chat template and license (CC-BY-NC) as Global. The release
   describes their focus as Earth: Africa + West Asia, Fire: South Asia, Water: Asia-Pacific +
@@ -342,7 +351,10 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
 - **Citation time refinement** (pure Python, after parsing): a segment citation points at a window
   of up to 5 minutes, which is too coarse to play from. For each segment citation, score the cited
   span against every transcript chunk in that segment (the token overlap from §5.4) and store the
-  best chunk's `t0` as the citation's `t`. If no chunk scores ≥ 0.1 (D19), use the segment's `t0`.
+  best chunk; then place `t` inside it at the start of its best-matching sentence, by character
+  position (assumes an even speaking rate). If no chunk scores ≥ 0.1 (D19), use the segment's
+  `t0`. With the chunk's `t0` alone, `t` was a median 12.5 s early (chunks run up to 30 s) and
+  only 61% of citations landed within ±15 s; with the sentence offset, 98% (D19, 4b-1).
   Slide citations need no refinement. Two-pass citations (§4) are refined after marker resolution,
   against the resolved segments.
 - **Rendering**, two modes from the same `notes.json`:
@@ -906,7 +918,7 @@ invalid-JSON fallback, §5.5); token budget enforced.
 **Phase 4: reduce + render**, split in three PRs:
 - **4a** (done 2026-10-11, NOTES.md): `notes.json` and portable `notes.md` with working citations (fixed section
   markers, citation rules, time refinement, action item owner/due, §5.6); CLI end to end on fixtures.
-- **4b-1: evals without the judge.** Planted-facts generator (`evals/gen/`, seeded: script + `truth.json`,
+- **4b-1: evals without the judge** (done 2026-10-11, NOTES.md). Planted-facts generator (`evals/gen/`, seeded: script + `truth.json`,
   `say` voices, PIL slides, ffmpeg noise/tones/silence) for the four `quick` variants; exact metrics (fact
   recall, citation accuracy, uncited claims, made-up items, VAD gap text, WER, slides, output language,
   cost); cross-language exact-field scoring (code + unit tests; the cross-language variants run in `full`,
@@ -1536,7 +1548,7 @@ exact checks with no human labels and no LLM judge.
 | Notes: **fact recall** | Share of planted facts found in the right section (decisions → Decisions, …) | Normalized match: numbers exact, owners exact, text via token overlap ≥ 0.6. **Cross-language** (notes language ≠ script language): see below |
 | Notes: **citation accuracy** | Share of matched facts whose citation's refined jump time `t` (§5.6) is within ±15 s of the fact's `t0` (D19), or that cite its slide. A time-range overlap test would pass almost any citation, since segments span up to 5 min | Exact |
 | Notes: **uncited claims** | Claims with `citations: []` (§5.6) | Exact (count) |
-| Notes: **made-up items** | Decisions/action items in the notes that match no planted fact | Exact (count) |
+| Notes: **made-up items** | Decisions/action items in the notes that match no planted fact. An action item with the right task but another owner or due date counts (it states something not said); a real task with no owner stated doesn't (incomplete, not made up) | Exact (count) |
 | Notes: **support rate** | Share of claims whose cited segments support them | LLM judge (secondary) |
 | Output language | Notes are in the target language | `lingua-language-detector` |
 | Ask | Planted-fact questions: answer contains the fact *and* cites the right segment | Exact |
@@ -1640,7 +1652,7 @@ Pydantic models for every run file. Stages read and write **only** through them
 | `slides.json` | `SlidesFile` | `slides[{slide_id, frame_id, t?, t_source, align_score?, title, text_md, tables_md[], chart_notes, visual_notes, raw?}]` |
 | `segments.json` | `SegmentsFile` | `segments[{seg_id, t0, t1, chunk_ids[], transcript_text, slide_ids[]}]`, `unaligned_slide_ids[]` |
 | `map.json` | `MapFile` | `target_language`, `notes[{seg_id, summary, key_points[], decisions[], action_items[{owner?, task, due?}], open_questions[], terms[], raw: bool}]` (v2) |
-| `notes.json` | `NotesDoc` | `sections{summary, key_points, decisions, action_items, open_questions}` as lists of `{text, citations[{kind: seg|slide, id, t?}]}` (`t` = refined jump time, seg only; `citations: []` = uncited, §5.6); action items also have `owner?`, `due?`; `passes: 1|2`, `language`, `raw` (R7B reply) (v2) |
+| `notes.json` | `NotesDoc` | `sections{summary, key_points, decisions, action_items, open_questions}` as lists of `{text, citations[{kind: seg|slide, id, t?}]}` (`t` = refined jump time, seg only; `citations: []` = uncited, §5.6); action items also have `owner?`, `due?`; `passes: 1|2`, `language`, `raw` (R7B reply) (v3: `t` placed at the cited sentence, D19) |
 
 `notes.json` is new: the **parsed** reduce output. `notes.md` is rendered from it, and Notes, Ask,
 Search and the evals read `notes.json`, never by re-parsing Markdown.
@@ -1691,15 +1703,15 @@ section.
 | D8 | Which of the 14 languages have macOS `say` voices (§18) | en, es, ja, de | `say -v '?'` | Phase 0 || All 14 have a voice; ar, el, pl, vi only one each |
 | D9 | `torch` in the lockfile (§1, §15) | Must be absent | `uv tree --invert --package torch` | Phase 0 || Absent from `uv.lock`; never imported |
 | D10 | Speed target realistic (§9) | ≤ 20 min per audio hour | Phase 0 per-stage timings | Phase 0 || Realistic: ≈ 9–10 min per audio hour projected |
-| D11 | Slide alignment threshold (§5.4) | 0.15 | Maximize `pdf-slides-en` accuracy | Phase 3, re-check Phase 4b-1 | **0.15 provisional**: on fixture text, discussed slides score 0.23–0.56, an undiscussed slide 0.125; 0.25 drops one. Final on `pdf-slides-en` (Phase 4b-1) |
-| D12 | Fuse window length (§5.4) | 300 s | Fact recall vs. speed on `quick` | Phase 4b-1 | |
+| D11 | Slide alignment threshold (§5.4) | 0.15 | Maximize `pdf-slides-en` accuracy | Phase 3, re-check Phase 4b-1 | **0.15**: on `pdf-slides-en` all 8 slides align correctly at every threshold 0.05–0.35 (best scores 0.35–0.50); 0.15 stays between those and the 0.125 of an undiscussed slide (Phase 3 fixture) |
+| D12 | Fuse window length (§5.4) | 300 s | Fact recall vs. speed on `quick` | Phase 4b-1 | **300 s**: vs 120 s, recall 82.3% vs 79.4%, made-up items 3 vs 6, Map 123 vs 180 s/audio h (one seed per item; re-check against D16 noise) |
 | D13 | Notes column `width=880` shrinks below 880 px (§7) | 880 | Resize check | Phase 5 | |
 | D14 | Anchors scroll the Sources panel (§7) | Anchors | Click check; fallback = drawer buttons | Phase 5 | |
 | D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4b-2 | |
 | D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 repeated `quick` runs: threshold ≥ 2× noise | Phase 6 | |
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 7 | |
 | D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6 | |
-| D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | |
+| D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | **0.1 and ±15 s, plus a sentence offset inside the chunk**: chunk `t0` alone was a median 12.5 s early (61% within 15 s); with the offset 98% (53 of 54 errors ≤ 5 s, so 15 s hides nothing). Min score 0.0 = 0.1 > 0.2 (94.6%) > 0.3 (91.1%) |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

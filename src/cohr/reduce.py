@@ -50,6 +50,7 @@ _NEW_SENTENCE = re.compile(r"(?<=[.!?])\s+|(?<=[。！？])|\n")
 _ACTION = re.compile(
     r"^(?:\[\s*owner\s*:\s*([^\]]*)\]\s*)?(?:\[\s*due\s*:\s*([^\]]*)\]\s*)?(.*)$", re.I | re.S
 )
+_SENTENCE = re.compile(r"[^.!?。！？]+(?:[.!?。！？]+|$)")
 _NONE = {"none", "n/a", "-", "—", "nothing"}
 _UNKNOWN = {"", "?", "none", "null", "unknown", "n/a", "-"}
 
@@ -146,7 +147,9 @@ def split_sections(text: str) -> SplitReply:
     current = "summary"
     for line in text.splitlines():
         if m := _HEADING.match(line):
-            name = m.group(1).strip(" *:`").replace(" ", "_").casefold()
+            # R7B sometimes cites the marker itself: "## <co>SUMMARY</co: 0:[0]>" (4b-1 eval).
+            heading = _STRAY_TAG.sub("", m.group(1))
+            name = heading.strip(" *:`").replace(" ", "_").casefold()
             if name in parts:
                 current = name
                 seen.add(name)
@@ -238,18 +241,34 @@ def claims(text: str, *, sentences: bool) -> list[RawClaim]:
 # --- citations (pure) ----------------------------------------------------------------------
 
 
+def sentence_offset(span_tokens: set[str], text: str) -> float:
+    """Where in `text` (0–1, by characters) the sentence best matching the span starts."""
+    best_pos, best, pos = 0, 0.0, 0
+    for m in _SENTENCE.finditer(text):
+        score = overlap(span_tokens, set(tokens(m.group(0))))
+        if score > best:
+            best_pos, best = m.start() + len(m.group(0)) - len(m.group(0).lstrip()), score
+        pos = m.end()
+    return best_pos / max(pos, 1)
+
+
 def refine_time(
     span: str, items: Sequence[TranscriptItem], seg_t0: float, min_score: float
 ) -> float:
-    """t0 of the transcript chunk that best matches the cited span (ties: earliest), or the
-    segment's start when no chunk scores ≥ min_score (§5.6, D19)."""
+    """Jump time for a cited span (§5.6, D19): the transcript chunk that best matches it (ties:
+    earliest), then the start of its best-matching sentence, placed by character position
+    (an even speaking rate; chunks are up to 30 s, so the chunk start alone was ~13 s early
+    on the eval). The segment's start when no chunk scores ≥ min_score."""
     span_tokens = set(tokens(span))
-    best_t, best = seg_t0, 0.0
+    best_it, best = None, 0.0
     for it in items:
         score = overlap(span_tokens, set(tokens(it.text)))
         if score > best:
-            best_t, best = it.t0, score
-    return best_t if best >= min_score else seg_t0
+            best_it, best = it, score
+    if best_it is None or best < min_score:
+        return seg_t0
+    offset = sentence_offset(span_tokens, best_it.text)
+    return round(best_it.t0 + offset * (best_it.t1 - best_it.t0), 2)
 
 
 Refine = Callable[[int, str], float]  # (seg_id, span) → jump time

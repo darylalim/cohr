@@ -6,14 +6,14 @@ from pathlib import Path
 import imagehash
 import pytest
 import soundfile as sf
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 from cohr import ingest, pipeline, schemas, storage
 from cohr.config import Config, IngestConfig
 from cohr.ingest import IngestError
 from cohr.schemas import FramesFile
 from cohr.storage import Source
-from tests.conftest import needs_ffmpeg
+from tests.conftest import needs_ffmpeg, run_ffmpeg
 
 INGEST = [ingest.STAGE]
 
@@ -145,9 +145,58 @@ def test_ingest_stage_video_and_slides(
 def test_ingest_dedupes_repeated_scene(tmp_path: Path, video: Path) -> None:
     """A huge dedupe distance treats every scene as a duplicate of the first frame."""
     run_dir = storage.create_run(tmp_path / "runs", [Source(video, "video")], Config())
-    pipeline.run(run_dir, stages=INGEST, config=Config(ingest=IngestConfig(dedupe_max_distance=64)))
+    config = Config(ingest=IngestConfig(dedupe_max_distance=256))
+    pipeline.run(run_dir, stages=INGEST, config=config)
     frames = schemas.load(run_dir, FramesFile).frames
     assert [f.pts for f in frames] == [0.0]
+
+
+def text_slide(title: str, rows: list[str]) -> Image.Image:
+    """A white slide with black text, like most decks (no colour change between slides)."""
+    img = Image.new("RGB", (1600, 900), "white")
+    d = ImageDraw.Draw(img)
+    d.text((80, 60), title, fill="black", font=ImageFont.load_default(size=72))
+    for i, row in enumerate(rows):
+        d.text((100, 220 + 70 * i), f"- {row}", fill="black", font=ImageFont.load_default(size=44))
+    return img
+
+
+@needs_ffmpeg
+def test_ingest_keeps_every_text_slide_of_a_deck_recording(tmp_path: Path) -> None:
+    """Phase 4b-1 eval: scene scores between white text slides are ~0.04-0.07 and their 8x8
+    phashes 4-8 bits apart, so the old defaults kept only the first slide."""
+    media = tmp_path / "media"
+    media.mkdir()
+    slides = [
+        text_slide("Quarterly Budget", ["Spend plan by team", "Approved: $14,500"]),
+        text_slide("Retention", ["Trial users coming back", "Week-2 return: 38%"]),
+        text_slide("Support Queue", ["Ticket backlog", "Open tickets: 409"]),
+    ]
+    inputs: list[str] = []
+    for k, img in enumerate(slides):
+        img.save(media / f"s{k}.png")
+        inputs += ["-loop", "1", "-framerate", "5", "-t", "2", "-i", str(media / f"s{k}.png")]
+    out = media / "deck.mp4"
+    run_ffmpeg(
+        *inputs,
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc=duration=6",
+        "-filter_complex",
+        "[0:v][1:v][2:v]concat=n=3:v=1:a=0,format=yuv420p[v]",
+        "-map",
+        "[v]",
+        "-map",
+        "3:a",
+        "-shortest",
+        str(out),
+    )
+    run_dir = storage.create_run(tmp_path / "runs", [Source(out, "video")], Config())
+    pipeline.run(run_dir, stages=INGEST)
+    frames = schemas.load(run_dir, FramesFile).frames
+    assert [round(f.pts or 0) for f in frames] == [0, 2, 4]
+    assert all(len(f.phash) == 64 for f in frames)  # 16x16 bits as hex
 
 
 @needs_ffmpeg
