@@ -728,3 +728,26 @@ first). A second scoring: 0 calls, 80 cached, no model loaded.
 
 ### Next
 - Phase 5 (Streamlit UI) in a new session.
+
+## 2026-10-11 · Phase 5 split and 5a kickoff prompt (no code)
+
+### Plan changes
+- §9 Phase 5 split in two PRs, approved by the user: **5a** = theme, job layer
+  (`src/cohr/jobs.py`, no Streamlit), `pipeline.run(force=…)`, app shell, New run, Notes and
+  Runs pages, `test_theme.py`/`test_app.py`, the width and light/dark checks, D13 and D14;
+  **5b** = Ask (`ask.py`, `prompts/ask.md`, the Ask page, "Open in Ask"). Ask is new model work
+  (prompt, R7B chat history, answer language, citations in answers), the same reason Phase 4
+  was split.
+- §21 kickoff prompt for 5a. Choices it fixes: theme and its test first; job logic outside
+  Streamlit so it's unit tested without AppTest; progress polled with `st.fragment(run_every=…)`;
+  Claude in Chrome only after asking.
+
+### Checked (Streamlit 1.65.0, installed)
+Every API §7 uses exists: `st.dialog(position=…)`, `st.pills`, `st.audio(start_time,
+end_time)`, `st.container(horizontal, width, height)`, `st.columns(wrap)`, `st.badge`,
+`st.navigation`, `st.image(alt)`, `st.fragment(run_every)`, `AppTest`. `st.context` still has
+no viewport width (the §7 "never measure the screen" rule holds). `pipeline.run` has no way to
+force a stage, so 5a adds `force=`.
+
+### Next
+- Phase 5a in a new session with the §21 prompt.
