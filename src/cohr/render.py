@@ -6,8 +6,10 @@ model's own headings are never used. Two modes from the same notes:
 - app (Notes page, §7): `[12:47](#seg-3)` / `[slide 4](#slide-3)` links to the Sources panel, in
   Streamlit markdown: `$` escaped (it would start LaTeX), gray text + gray badge for uncited
   claims, and a count badge in the section's semantic color (§7) on Decisions, Action items
-  and Open questions.
-Uncited claims are kept and flagged in both.
+  and Open questions;
+- chat (Ask answers, §5.7): Streamlit markdown like app, but citations are plain `[12:47]`
+  labels, because the Ask page has no Sources panel to link to (its pills open the drawer).
+Uncited claims are kept and flagged in every mode.
 """
 
 from collections.abc import Mapping, Sequence
@@ -32,7 +34,7 @@ FORMAT_VERSION = 1  # of notes.md; bump when the rendering changes
 FILENAME = "notes.md"
 EXCERPT_CHARS = 200
 
-Mode = Literal["portable", "app"]
+Mode = Literal["portable", "app", "chat"]
 
 _KEYS = (*SECTIONS, "sources", "owner", "due", "uncited")
 _LABELS = {
@@ -308,7 +310,9 @@ def citation_md(c: Citation, segments: Mapping[int, Segment], mode: Mode) -> str
     else:
         t = c.t if c.t is not None else segments[c.id].t0
         text, anchor = clock(t), f"seg-{c.id}"
-    return f"[{text}](#{anchor})" if mode == "app" else f"[{text}]"
+    if mode == "app":
+        return f"[{text}](#{anchor})"
+    return f"\\[{text}\\]" if mode == "chat" else f"[{text}]"
 
 
 def claim_md(
@@ -319,13 +323,19 @@ def claim_md(
         extra = [f"{words[k]}: {v}" for k, v in (("owner", claim.owner), ("due", claim.due)) if v]
         if extra:
             text += f" ({'; '.join(extra)})"
-    if mode == "app":
+    if mode != "portable":
         text = app_escape(text)
         if not claim.citations:
             return f":gray[{text}] :gray-badge[{words['uncited']}]"
     elif not claim.citations:
         return f"{text} [{words['uncited']}]"
     return f"{text} " + " ".join(citation_md(c, segments, mode) for c in claim.citations)
+
+
+def answer_md(claims: Sequence[Claim], segments: Sequence[Segment], language: str) -> str:
+    """An Ask answer as Streamlit markdown: one paragraph, uncited sentences flagged."""
+    by_seg = {s.seg_id: s for s in segments}
+    return " ".join(claim_md(c, by_seg, labels(language), "chat") for c in claims)
 
 
 def excerpt(text: str, limit: int = EXCERPT_CHARS) -> str:

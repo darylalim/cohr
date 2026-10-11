@@ -5,20 +5,21 @@ covered by tests/test_app.py through AppTest. Job logic lives in jobs.py, not he
 """
 
 import io
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
 import soundfile as sf
 import streamlit as st
 
-from cohr import jobs, schemas, storage
+from cohr import ask, jobs, schemas, storage
 from cohr.config import Config, runs_dir
 from cohr.jobs import JobRunner, JobState
 from cohr.mapper import clock
 from cohr.models import PIPELINE_MODELS, ModelManager
-from cohr.reduce import SECTIONS
-from cohr.schemas import InputKind, Manifest, NotesDoc
+from cohr.reduce import SECTIONS, slide_label
+from cohr.schemas import Citation, FramesFile, InputKind, Manifest, NotesDoc, Segment, Slide
 
 STAGE_LABELS = {
     "ingest": "Ingest",
@@ -37,7 +38,7 @@ STAGE_MODELS = {
     "map": "Tiny Aya",
     "reduce": "Command R7B",
 }
-RUN_KEY = "run_id"  # the sidebar's current run, read by Notes (and Ask, 5b)
+RUN_KEY = "run_id"  # the sidebar's current run, read by Notes and Ask
 POLL_S = 1.0
 MEM_GB = 1e9  # memory in decimal GB, like the evals and PLAN §4 (26.8 GB limit)
 GPU_WARN_FRACTION = 0.9
@@ -188,6 +189,98 @@ def audio_clip(path: str, mtime: float, t0: float, t1: float) -> bytes:
     return buf.getvalue()
 
 
+def citation_label(c: Citation, seg_t0: dict[int, float]) -> str:
+    """`12:47` for a segment (refined t, else its start), `slide 4` for a slide."""
+    if c.kind == "slide":
+        return slide_label(c.id)
+    return clock(c.t if c.t is not None else seg_t0.get(c.id, 0.0))
+
+
+def unique_citations(citations: Sequence[Citation]) -> list[Citation]:
+    """First occurrence of each (kind, id, t), in order: one pill per cited moment."""
+    seen: set[tuple[str, int, float | None]] = set()
+    out = []
+    for c in citations:
+        if (key := (c.kind, c.id, c.t)) not in seen:
+            seen.add(key)
+            out.append(c)
+    return out
+
+
+@st.cache_data(max_entries=8, show_spinner=False)
+def ask_sources(run_dir: str, stamp: float) -> ask.Sources:
+    """The run files Ask answers from. `stamp` (notes.json's mtime) is only part of the cache
+    key: every stage that changes these files also re-runs Reduce."""
+    del stamp
+    return ask.load_sources(Path(run_dir))
+
+
+# --- source blocks (Notes' Sources panel and the Ask drawer) -------------------------------
+
+
+@dataclass(frozen=True)
+class RunMedia:
+    wav: Path | None  # None when the audio is pruned or missing
+    frames: dict[int, Path]
+    slides: dict[int, Slide]
+    pruned: bool
+
+
+def run_media(run_dir: Path, manifest: Manifest, slides: Sequence[Slide]) -> RunMedia:
+    wav = run_dir / "audio.wav"
+    frames: dict[int, Path] = {}
+    if (run_dir / FramesFile.FILENAME).is_file():
+        frames = {f.frame_id: run_dir / f.path for f in schemas.load(run_dir, FramesFile).frames}
+    return RunMedia(
+        wav=wav if wav.is_file() and not manifest.pruned else None,
+        frames=frames,
+        slides={s.slide_id: s for s in slides},
+        pruned=manifest.pruned,
+    )
+
+
+def slide_block(slide: Slide, media: RunMedia, *, anchor: bool = True) -> None:
+    label = slide_label(slide.slide_id).capitalize()
+    st.subheader(
+        f"{label}: {slide.title}" if slide.title else label,
+        anchor=f"slide-{slide.slide_id}" if anchor else False,
+        icon=":material/slideshow:",
+    )
+    image = media.frames.get(slide.frame_id)
+    if image is not None and image.is_file():
+        st.image(str(image), alt=slide.title or label)
+    else:
+        st.caption("Slide image not available (media pruned).")
+
+
+def segment_block(
+    seg: Segment,
+    media: RunMedia,
+    *,
+    cited: Sequence[float] = (),
+    start: float | None = None,
+    anchor: bool = True,
+) -> None:
+    """Time range, cited moments, an audio player from `start` (default: the earliest cited
+    moment, else the segment start), and the segment's slides."""
+    span = fmt_range(seg.t0, seg.t1)
+    st.subheader(span, anchor=f"seg-{seg.seg_id}" if anchor else False, icon=":material/schedule:")
+    if cited:
+        st.caption("Cited at " + ", ".join(clock(t) for t in cited))
+    if media.wav is not None:
+        if start is None:
+            start = cited[0] if cited else seg.t0
+        st.audio(
+            audio_clip(str(media.wav), media.wav.stat().st_mtime, seg.t0, seg.t1),
+            format="audio/wav",
+            start_time=max(0, int(start - seg.t0)),
+            alt=f"Recording {span}",
+        )
+    for slide_id in seg.slide_ids:
+        if slide_id in media.slides:
+            slide_block(media.slides[slide_id], media, anchor=anchor)
+
+
 # --- sidebar ---------------------------------------------------------------------------------
 
 
@@ -208,7 +301,7 @@ def run_picker() -> None:
         ids,
         key=RUN_KEY,
         placeholder="No runs yet",
-        help="Notes shows this run.",
+        help="Notes and Ask show this run.",
     )
 
 
