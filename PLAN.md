@@ -903,11 +903,20 @@ PR (§21).
 pinned revisions and a free-disk check before downloads, `transcript.json` and `slides.json`, plus skip logic.
 **Phase 3: fuse + map** (done 2026-10-11, NOTES.md): slide text alignment, `segments.json` and `map.json` (with `open_questions` and the
 invalid-JSON fallback, §5.5); token budget enforced.
-**Phase 4: reduce + render**, split in two PRs:
+**Phase 4: reduce + render**, split in three PRs:
 - **4a** (done 2026-10-11, NOTES.md): `notes.json` and portable `notes.md` with working citations (fixed section
   markers, citation rules, time refinement, action item owner/due, §5.6); CLI end to end on fixtures.
-- **4b:** planted-facts generator and `cohr eval --set quick` (§18) running, including cross-language scoring
-  and the uncited-claims metric, first numbers recorded; D11 re-check, D12, D15, D19.
+- **4b-1: evals without the judge.** Planted-facts generator (`evals/gen/`, seeded: script + `truth.json`,
+  `say` voices, PIL slides, ffmpeg noise/tones/silence) for the four `quick` variants; exact metrics (fact
+  recall, citation accuracy, uncited claims, made-up items, VAD gap text, WER, slides, output language,
+  cost); cross-language exact-field scoring (code + unit tests; the cross-language variants run in `full`,
+  Phase 6); `cohr eval --set quick` with reports and the baseline comparison (no committed baseline until
+  Phase 6); `tests/test_evals.py`. First `quick` numbers recorded; D11 re-check, D12 (a second `quick`
+  run with another window), D19. Fix the 4a Map error (owner's due date given to another action item,
+  `prompts/map.md`) with the made-up-items count before and after.
+- **4b-2: judge.** Qwen3 judge wrapper (§18), support rate, judge recall for cross-language text facts,
+  `evals/gen/judge_calibration.json` (30 pairs: Claude drafts labels from 4b-1 outputs, the user reviews
+  them), D15.
 **Phase 5: Streamlit UI:** "Paper & Ink" theme and adaptive layout (§7) with `test_theme.py`,
 `test_app.py` and the window-width check, all four pages, background job, progress, Ask (follow-ups and answer language, §5.7); upload limit and local
 path input (§12); Runs page shows each run's size, with Delete and Prune media.
@@ -1682,15 +1691,15 @@ section.
 | D8 | Which of the 14 languages have macOS `say` voices (§18) | en, es, ja, de | `say -v '?'` | Phase 0 || All 14 have a voice; ar, el, pl, vi only one each |
 | D9 | `torch` in the lockfile (§1, §15) | Must be absent | `uv tree --invert --package torch` | Phase 0 || Absent from `uv.lock`; never imported |
 | D10 | Speed target realistic (§9) | ≤ 20 min per audio hour | Phase 0 per-stage timings | Phase 0 || Realistic: ≈ 9–10 min per audio hour projected |
-| D11 | Slide alignment threshold (§5.4) | 0.15 | Maximize `pdf-slides-en` accuracy | Phase 3, re-check Phase 4 | **0.15 provisional**: on fixture text, discussed slides score 0.23–0.56, an undiscussed slide 0.125; 0.25 drops one. Final on `pdf-slides-en` (Phase 4) |
-| D12 | Fuse window length (§5.4) | 300 s | Fact recall vs. speed on `quick` | Phase 4 | |
+| D11 | Slide alignment threshold (§5.4) | 0.15 | Maximize `pdf-slides-en` accuracy | Phase 3, re-check Phase 4b-1 | **0.15 provisional**: on fixture text, discussed slides score 0.23–0.56, an undiscussed slide 0.125; 0.25 drops one. Final on `pdf-slides-en` (Phase 4b-1) |
+| D12 | Fuse window length (§5.4) | 300 s | Fact recall vs. speed on `quick` | Phase 4b-1 | |
 | D13 | Notes column `width=880` shrinks below 880 px (§7) | 880 | Resize check | Phase 5 | |
 | D14 | Anchors scroll the Sources panel (§7) | Anchors | Click check; fallback = drawer buttons | Phase 5 | |
-| D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4 | |
+| D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4b-2 | |
 | D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 repeated `quick` runs: threshold ≥ 2× noise | Phase 6 | |
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 7 | |
 | D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6 | |
-| D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4 | |
+| D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

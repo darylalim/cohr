@@ -409,3 +409,28 @@ None due this phase (D11 is Phase 3).
 ### Next
 - Merge the Phase 4a PR. Then 4b (planted-facts generator, `cohr eval
   --set quick`, D11 re-check, D12, D15, D19).
+
+---
+
+## 2026-10-11 · Phase 4b planning (no code)
+
+### Findings
+- Phase 4b is split in two PRs, like 4a, because D15 needs 30 hand-labeled claim/segment pairs:
+  Claude can draft the labels from real pipeline output, but the calibration only means something
+  once the user has reviewed them. Keeping the judge separate means that review doesn't block the
+  generator, metrics and the other decisions.
+- `quick` is the four English variants only. The cross-language scoring code is built and
+  unit-tested in 4b-1; the `xling-*`, `en → de/ar` and `long-en` variants, FLEURS and AMI stay in
+  `full` (Phase 6).
+
+### Decisions (PLAN §20)
+- None. D11, D12, D19 move to 4b-1; D15 to 4b-2.
+
+### Plan changes
+- §9: 4b split into **4b-1** (generator, exact metrics, cross-language exact-field scoring,
+  `cohr eval --set quick`, reports, `test_evals.py`, first numbers, D11/D12/D19, fix for the 4a
+  Map due-date error) and **4b-2** (Qwen3 judge, support rate, judge recall, calibration set, D15).
+- §20: D11, D12, D19 → Phase 4b-1; D15 → Phase 4b-2.
+
+### Next
+- Phase 4b-1 in a new session.
