@@ -1002,7 +1002,7 @@ invalid-JSON fallback, §5.5); token budget enforced.
   answer language from `lingua` with the run's target language as fallback, same citation
   parsing and time refinement); the Ask page (chat, source pills, right-side drawer) and Notes'
   "Open in Ask" button; tests for history trimming, language fallback and citations in answers.
-  Long-meeting ranking (FTS5) stays in Phase 6.
+  Long-meeting ranking (FTS5) stays in Phase 6. Kickoff prompt in §21.
 **Phase 6: hardening:** sequential memory policy, inputs over 2 h (two-pass reduce with
 marker-based citations), Ask ranking for long meetings, "Other (beta)" target languages, error
 messages for missing ffmpeg or models, a cache size note for the README; optional regional Map
@@ -2027,4 +2027,53 @@ needed, check its license (§11) and ask. Ask me before the opt-in model tests (
 pytest marker), before anything in `cohr eval --set full`, and before new model downloads.
 When done: tick the checklist, update §20 and NOTES.md, make sure the gate passes, and open a PR
 (ask before pushing). Stop there; Phase 5b (Ask) is a separate session.
+```
+
+### Kickoff prompt for Phase 5b (Ask)
+```text
+Continue cohr: Phase 5b (Ask). Read CLAUDE.md, then PLAN.md sections §9 (the 5b bullet),
+§5.7 (Ask), §5.6 (rag documents, citation parsing, time refinement, uncited rule), §7 (Ask
+page, drawer, job lifecycle: Ask waits while a job holds the models), §4 (32K cap) and §11.
+Then the latest NOTES.md entry (Phase 5a). Load the developing-with-streamlit skill before
+writing UI code. Work on branch phase-5b-ask. Follow the 5b acceptance criteria in §9:
+1. src/cohr/ask.py, Streamlit-free, reusing reduce.py rather than copying it: the same rag
+   documents (reduce.documents / fit_prompt), the same citation parsing and dropped-index rule,
+   and the same time refinement (segment_refiner). CommandR7B gets a chat variant of prompt()
+   that takes the message list (history + question); prompt() keeps its current output, so
+   Reduce's prompt and config hash don't change. History = the last 3 question/answer turns,
+   answers with citation markup removed, dropped oldest-first when the prompt exceeds the run's
+   reduce.max_input_tokens; if the documents alone don't fit, trim transcripts like Reduce
+   (FTS5 ranking is Phase 6). Answer language: lingua on the question (minimum relative
+   confidence chosen and recorded in NOTES.md), else the run's target language. Uncited answer
+   sentences are kept and flagged, never given citations. Return a small dataclass (answer
+   claims with citations, language, prompt tokens, turns dropped) that the page renders.
+2. prompts/ask.md (no prompt text in code): answer only from the documents, in {language},
+   short prose, say so when the documents don't answer it.
+3. Ask is not a pipeline stage and writes no run file: history lives in st.session_state per
+   run, so no schema change. It runs through ModelManager.use("reduce") under the same lock.
+   While a job runs (JobRunner.busy()), the chat input is disabled with a caption saying why,
+   instead of blocking the script thread on the lock; record this reading of §7 in NOTES.md.
+   Apply the run's config to the manager first (set_config), as jobs do.
+4. app_pages/ask.py per §7 (layout "centered"): st.chat_message history, st.chat_input, the
+   answer rendered with render's app-mode citation markup, uncited sentences gray with the
+   badge, st.pills of the cited sources under each answer, and a right-side
+   st.dialog(position="right") drawer for the selected source: time range, st.audio from the
+   cited t (ui.audio_clip), slide images. Build the source block once in ui.py and use it in
+   both the drawer and Notes' Sources panel. Add "Open in Ask" to the Notes header and Ask to
+   st.navigation. "Answer based on the N most relevant segments" is Phase 6 (with ranking).
+5. Tests without models: tests/test_ask.py (history trimming oldest-first under a fake token
+   counter, citation markup stripped from history, language fallback when lingua is unsure,
+   citations in answers parsed and refined, dropped indices, uncited sentences kept) with a fake
+   R7B; tests/test_app.py additions (Ask renders, pills for cited sources, input disabled while
+   a job runs, Open in Ask switches page with the run). Reduce's config hash must be unchanged
+   (test it).
+6. Manual checks, then record them: on the clean-en run, ask 3 questions whose answers are in
+   evals/gen truth.json (one numeric), one follow-up that needs history ("who owns that?"),
+   one German question (answer in German), and one the meeting doesn't answer. Check that the
+   citations jump to the right moment. Also press play in the Sources panel and the drawer in a
+   normal browser window (5a couldn't verify audio). Ask me before using Claude in Chrome.
+Rules from CLAUDE.md apply. Ask me before the opt-in model tests (the `models` pytest
+marker), anything in `cohr eval --set full`, new model downloads or new dependencies.
+When done: tick the checklist, update §20 if anything was decided, add a NOTES.md entry, make
+sure the gate passes, and open a PR (ask before pushing). Stop there; Phase 6 is separate.
 ```

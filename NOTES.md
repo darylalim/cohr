@@ -850,3 +850,20 @@ force a stage, so 5a adds `force=`.
 ### Next
 - Phase 5b (Ask) in a new session. Before that, decide the medium-window layout (above) and
   check audio playback once in a normal browser window.
+
+## 2026-10-11 · Phase 5b kickoff prompt (no code)
+
+### Plan changes
+- §21 kickoff prompt for 5b (Ask); the §9 5b bullet points to it. Choices it fixes:
+  - ask.py reuses reduce.py (documents, fit_prompt, citation parsing, segment_refiner) instead
+    of copying it. CommandR7B gets a chat variant of prompt() and the old one stays as it is,
+    so Reduce's config hash doesn't move (tested).
+  - Ask history lives in st.session_state per run: no run file, no schema change.
+  - While a job runs, the chat input is disabled with a reason, instead of blocking the
+    script thread on the ModelManager lock (a reading of §7's "waits for the lock").
+  - One source block in ui.py serves both the Ask drawer and Notes' Sources panel, which also
+    prepares the Phase 6 fix for medium windows (5a finding).
+  - The manual checks include the audio playback 5a couldn't verify.
+
+### Next
+- Phase 5b in a new session with the §21 prompt.
