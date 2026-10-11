@@ -867,3 +867,20 @@ force a stage, so 5a adds `force=`.
 
 ### Next
 - Phase 5b in a new session with the §21 prompt.
+
+## 2026-10-11 · D21: Notes layout in medium windows (no code)
+
+### Decisions (PLAN §20)
+- D21 = a "Sources: Beside / Below" st.segmented_control in the Notes header, default Beside,
+  kept in st.session_state. Below puts the source blocks under the notes without the
+  fixed-height box, so anchors scroll the page (D14 still holds). The user picks because Python
+  can't see the width. Rejected: Sources always in the drawer (undoes D14 and loses the
+  side-by-side view on wide screens), a "close the sidebar" hint only, and collapsing the
+  sidebar on Notes (localStorage overrides initial_sidebar_state, 5a finding).
+
+### Plan changes
+- §7 Notes medium-window bullet; §9 5b bullet; §20 D21; §21 5b prompt (item 4, a test, and a
+  manual check at ~800 px).
+
+### Next
+- Phase 5b in a new session with the §21 prompt.
