@@ -230,8 +230,10 @@ Entry template:
 - **Tests:** 76 pass in ~4 s, no models (schemas 21, pipeline 17, storage 13, ingest 14,
   config 8, cli 3). ffmpeg tests skip if ffmpeg is missing; CI installs it.
   `tests/__init__.py` exists so `tests.conftest` imports resolve under ty.
-- **CI (§15):** `.github/workflows/ci.yml` as planned, with `actions/checkout@v7` and
-  `astral-sh/setup-uv@v10` (latest majors on 2026-10-11).
+- **CI (§15):** `.github/workflows/ci.yml` as planned. Actions are pinned to commit SHAs:
+  `actions/checkout` v7.0.1 and `astral-sh/setup-uv` v10.3.0. setup-uv publishes only full
+  version tags (no moving `v10`), so `@v10` failed the first run with "unable to find version".
+- **§17 topics:** the §17 list has 17 topics, not 18; all 17 applied.
 - **GitHub (§17), state before this PR:** repo public, default branch `main`, description set,
   Actions token read-only. Not yet: topics, merge settings (squash only, delete branch on merge,
   no wiki/projects), branch protection.
