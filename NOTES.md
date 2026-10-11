@@ -1001,3 +1001,95 @@ Six questions in one conversation (`ask.run`, history carried like the page), ~9
 
 ### Next
 - Phase 6a in a new session with the §21 prompt.
+
+## 2026-10-11 · Phase 6a (baseline + Ask eval)
+
+### Ask eval rules (recorded before the first run)
+- **Questions** (`evals.ask_questions`, templates from `truth.json`, no LLM), per item: one per
+  number fact ("What is <label>?", label words from `NUMBER_LABELS`), one per action ("What
+  does <owner> need to do?"), a follow-up after the first action ("Who owns that, and by
+  when?"), two German number questions ("Wie hoch ist <label>?": the first number alone; the
+  second after the English action + follow-up turns) and one near-miss (the last number's
+  label with "two years ago", "for the marketing team" or "for next year", picked by the item
+  id; the generator only ever says "last quarter/month/week/release"). History = the earlier
+  answers as `Answer.turn()`, as the Ask page keeps it. 17 questions per quick item.
+- **Correct** = the answer states the fact and a claim stating it cites the fact's segment
+  within ±15 s (D19) or its slide. Numbers: the value in a claim (German "42.500 $" read as
+  42500, eval-only). Actions: `fact_fit` as in fact recall (owner exact, task overlap ≥ 0.6).
+  Follow-up: the owner and the planted due date both in the answer.
+- **Near-miss rule:** planted values = every number in the script or slide cells above 31
+  (1–31 are dates and "week two"). Going through the answer's claims in order: a claim with a
+  "not given" marker (not, no, n't, never, none, unknown, cannot; German kein/nicht) passes the
+  answer; a claim with a planted value before any such marker fails it; no planted value at all
+  passes. Why not "no planted value anywhere": `ask.md` asks R7B to say the meeting doesn't give
+  it, *then* what it does give, so a related fact after the negation is the wanted answer.
+  Known blind spot: "It's $42,500 for next quarter, not next year." passes (marker and value in
+  one claim).
+- **Metrics:** Ask accuracy (correct / English number + action questions), Ask stated, Ask
+  citation accuracy (cited right / stated), follow-up, German alone, German after history,
+  near-miss (one each per item, so 4 per set: 25-point steps).
+- Answers cached in `evals/data/ask/<item>.json`, keyed by question, history, the ask prompt
+  hashes, the R7B revision, a hash of the run's documents and the seed / target language /
+  Reduce config.
+
+### Built
+- `evals.py` Ask eval: `ask_questions` (templates above), `score_answer` / `ask_metrics`,
+  `answer_numbers` (German thousands separators, eval-only; `numbers.py` unchanged),
+  `due_in`, `meeting_numbers`, `near_miss_ok`; `CachedAsk` + `ask_session` (misses go through
+  `ask.run` on the shared ModelManager while R7B is still resident from Reduce, before the judge
+  releases the pipeline models); `ask_item` adds `ask` results and metrics to each item.
+  Report: Ask metrics in the summary, an `ask_accuracy` column, every wrong answer listed per
+  item, Ask cost line. `cohr eval --no-ask`.
+- D16: `MAX_DROP` / `MAX_RISE` tables drive `compare()`; `evals.noise(reports)` (max − min per
+  summary metric, slowest/fastest − 1 per stage).
+- Tests: `test_eval_ask.py` (13: templates deterministic with every kind, labels cover the
+  generator, right fact + citation, wrong owner, follow-up, German numbers, near-miss pass/fail,
+  metrics, cache key incl. prompt hash, end to end through `ask.run` with a rule-based R7B,
+  cache hit with no model, seed change = miss, report); `test_evals.py` +2 (noise, gate tables).
+  363 tests.
+
+### D16 runs (quick, same media, `-c seed=1|2|3`; ~15 min each incl. 68 Ask questions ~2.5 min/item and the judge)
+| Metric | seed 1 | seed 2 | seed 3 | noise | gate |
+|---|---|---|---|---|---|
+| fact recall | 83.8% | 85.3% | 86.8% | 2.9 | −5.9 |
+| citation accuracy | 100% | 100% | 100% | 0 | −3 |
+| made-up items | 4 | 3 | 3 | 1 | +2 |
+| uncited / gap words | 0 / 0 | 0 / 0 | 0 / 0 | 0 | no rise |
+| recall decision / action | 81 / 70% | 88 / 70% | 81 / 80% | 6 / 10 | report |
+| support rate (judge) | 79.3% | 86.5% | 88.4% | 9.1 | report |
+| Ask accuracy | 98.1% | 98.1% | 98.1% | 0 | −5 |
+| Ask citation accuracy | 100% | 100% | 100% | 0 | −3 |
+| follow-up | 3/4 | 4/4 | 4/4 | 25 | report |
+| German alone / after history | 4/4, 3/4 | 4/4, 4/4 | 4/4, 4/4 | 0 / 25 | report |
+| near-miss | 0/4 | 0/4 | 0/4 | 0 | report |
+| reduce s/audio h | 274 | 293 | 303 | 10.5% | +25% |
+Ingest, VAD and Transcribe don't read `seed`, so they were reused (no noise measured: 25%
+default kept). Seeds 2 and 3 pass `compare()` against the seed-1 baseline.
+
+### Findings
+- **Near-miss is 0 of 12** over the seeds: R7B answers the off-period/off-team question with a
+  meeting number every time, despite the `ask.md` rule ("The approved budget two years ago was
+  $54,000": that's last quarter's value; "MRR for the marketing team is $248,000"). The 5b
+  limit, now measured. 6b.
+- Ask on English facts is near perfect (51 of 52 per seed, all cited right). The one miss is
+  `slide-conflict-en`'s budget: Ask gives the misspoken $80,000, not the slide's $18,000, against
+  the `ask.md` slide rule.
+- Cross-language after history: 1 of 12 wrong (seed 1), and it stated the right value but cited
+  the segment start (German answer, no token overlap for refinement, as in 5b). German alone:
+  12 of 12. The 5b fragility shows much less on the eval's history layout (action + follow-up).
+- Follow-up seed 1: R7B answered a different task's owner/date ("book the venue … by 3
+  October" instead of the contract by November 18).
+- Open questions (all filler on quick, nothing planted): 13 / 11 / 4 claims over the seeds:
+  too noisy to count as made up (kickoff item 3), left to 6b's fix.
+- Ask answers are deterministic per seed (98.1% on all three) while Reduce output varies;
+  most Reduce noise is in recall of decisions/actions, not numbers.
+
+### Decisions (PLAN §20)
+- D16 as in the table; report-only choices confirmed by the user.
+
+### Plan changes
+- Status line; §9 6a done; §18 Ask row and gate thresholds; §20 D16.
+
+### Next
+- 6b kickoff prompt: near-miss (0/4), slide-conflict in Ask, filler → open questions, Reduce
+  dropping facts Map has right; each change compared with `evals/baseline.json`.

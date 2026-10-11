@@ -139,6 +139,7 @@ def cmd_eval(args: argparse.Namespace) -> int:
             fresh=args.fresh,
             models=ModelManager(Config()),
             judge_=not args.no_judge,
+            ask_=not args.no_ask,
             log=lambda msg: print(msg, file=sys.stderr),
             progress=_print_progress,
         )
@@ -233,6 +234,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-judge",
         action="store_true",
         help="skip the judge metrics (support rate, judge recall)",
+    )
+    p.add_argument(
+        "--no-ask",
+        action="store_true",
+        help="skip the Ask eval (planted-fact questions through Ask)",
     )
     p.add_argument(
         "--calibrate-judge",

@@ -36,7 +36,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from cohr import atomic, judge, pipeline, schemas, storage
+from cohr import ask, atomic, judge, pipeline, schemas, storage
 from cohr.config import Config, prompt_hash
 from cohr.fuse import slide_text, tokens
 from cohr.judge import CachedJudge, Generate, Label, Supported
@@ -63,10 +63,23 @@ TEXT_MATCH_MIN = 0.6  # share of a fact's content tokens found in a claim
 SLIDE_TITLE_MATCH_MIN = 0.5
 FRAME_S = 0.01  # VAD F1 frame size
 
-# Release-gate thresholds (§18; D16 revisits them in Phase 6).
-MAX_RECALL_DROP = 0.05
-MAX_CITATION_DROP = 0.03
-MAX_STAGE_SLOWDOWN = 0.25
+# Release-gate thresholds (§18, D16): each is max(PLAN default, 2 × the run-to-run noise of
+# 3 quick runs with pipeline seeds 1–3, same media; NOTES.md 6a). Rates: the largest drop
+# allowed (points); counts: the largest rise allowed; stages: the largest slowdown (share).
+# Report-only (not here): the one-question-per-item Ask rates (follow-up, German alone and
+# after history, near-miss: 25-point steps on quick) and the judge metrics (D15, no margin).
+MAX_DROP: dict[str, float] = {
+    "fact_recall": 0.059,  # noise 2.94 points
+    "citation_accuracy": 0.03,  # noise 0
+    "ask_accuracy": 0.05,  # noise 0; Ask has no PLAN default: fact recall's
+    "ask_citation_accuracy": 0.03,  # noise 0; citation accuracy's default
+}
+MAX_RISE: dict[str, float] = {
+    "made_up_items": 2,  # noise 1 (4, 3, 3)
+    "uncited_claims": 0,  # noise 0
+    "gap_words_per_min": 0.0,  # noise 0
+}
+MAX_STAGE_SLOWDOWN = 0.25  # noisiest stage: reduce, 10.5%
 
 GEN_DIR = Path("evals") / "gen"
 SETS_DIR = Path("evals") / "sets"
@@ -543,6 +556,7 @@ class ItemReport(_Model):
     unverified_numbers: list[str] = []  # flagged by the guard in map.json
     unsupported_numbers: list[str] = []  # in notes.json claims, in no transcript or slide
     support: list[ClaimSupport] = []  # judge answers per cited claim (empty: not judged)
+    ask: list["AskResult"] = []  # Ask eval answers (empty: not asked)
     stages: dict[str, StageCost]
 
 
@@ -830,6 +844,397 @@ def judge_items(
     )
 
 
+# --- Ask eval (§18 Ask row, Phase 6a) ------------------------------------------------------
+#
+# Questions come from truth.json through templates (no LLM), so every run asks the same ones.
+# Per item: one per number fact, one per action, a follow-up after the first action, two
+# German number questions (alone; after the English action + follow-up turns) and one
+# near-miss (a number's label with a period or team the meeting never mentions).
+#
+# Scoring: a question is correct when the answer states the fact (numbers exact, owners exact,
+# task via token overlap, as in fact recall) and a claim stating it cites its segment within
+# ±15 s (D19) or its slide. Near-miss rule (NOTES.md, 6a): going through the claims in order,
+# the answer passes if a claim saying the meeting doesn't give it (a negation) comes before or
+# with the first claim stating a number from the meeting, or no claim states one; ask.md asks
+# for "not given, then what it does give", so a related fact after the negation is fine.
+
+AskKind = Literal["number", "action", "followup", "de_alone", "de_history", "near_miss"]
+ASK_KINDS: tuple[AskKind, ...] = (
+    "number",
+    "action",
+    "followup",
+    "de_alone",
+    "de_history",
+    "near_miss",
+)
+ASK_PROMPTS = ("ask", "ask_history", "ask_turn")
+ASK_CACHE_DIR = DATA_DIR / "ask"  # answers per item (gitignored with evals/data)
+
+# Slide row label (evals/gen/script.py TOPICS) → how a question names it, English and German.
+NUMBER_LABELS: dict[str, tuple[str, str]] = {
+    "Approved budget": ("the approved budget", "das genehmigte Budget"),
+    "Week-2 return rate": ("the week-2 return rate", "die Rückkehrquote in Woche 2"),
+    "Open tickets": ("the number of open tickets", "die Anzahl offener Tickets"),
+    "New trial signups": ("the number of new trial signups", "die Anzahl neuer Testanmeldungen"),
+    "Page load (ms)": ("the page load time", "die Ladezeit der Seite"),
+    "Monthly recurring revenue": (
+        "the monthly recurring revenue",
+        "der monatlich wiederkehrende Umsatz",
+    ),
+    "Candidates in pipeline": (
+        "the number of candidates in the pipeline",
+        "die Anzahl der Kandidaten in der Pipeline",
+    ),
+    "Monthly cloud bill": ("the monthly cloud bill", "die monatliche Cloud-Rechnung"),
+}
+# Periods and teams the generator never says (it says "last quarter/month/week/release").
+NEAR_MISS = (
+    "What was {label} two years ago?",
+    "What is {label} for the marketing team?",
+    "What is {label} for next year?",
+)
+FOLLOW_UP = "Who owns that, and by when?"
+_NOT_GIVEN = re.compile(
+    r"\b(?:not|no|never|none|unknown|cannot)\b|n['’]t\b|\bkeine?n?\b|\bnicht\b", re.I
+)
+_GERMAN_THOUSANDS = re.compile(r"\b\d{1,3}(?:\.\d{3})+\b")
+
+
+class AskQuestion(_Model):
+    id: str
+    kind: AskKind
+    question: str
+    fact: str  # truth fact id (near-miss: the fact whose label it borrows)
+    after: list[str] = []  # earlier question ids whose turns are the history, oldest first
+
+
+def _label(fact: TruthFact) -> tuple[str, str]:
+    return NUMBER_LABELS[fact.text.rsplit(": ", 1)[0]]
+
+
+def ask_questions(truth: Truth) -> list[AskQuestion]:
+    """The item's Ask questions, deterministic from truth.json."""
+    numbers = [f for f in truth.facts if f.kind == "number"]
+    actions = [f for f in truth.facts if f.kind == "action"]
+    out = [
+        AskQuestion(id=f"n-{f.id}", kind="number", question=f"What is {_label(f)[0]}?", fact=f.id)
+        for f in numbers
+    ]
+    out += [
+        AskQuestion(
+            id=f"a-{f.id}", kind="action", question=f"What does {f.owner} need to do?", fact=f.id
+        )
+        for f in actions
+    ]
+    history: list[str] = []
+    if actions:
+        first = f"a-{actions[0].id}"
+        out.append(
+            AskQuestion(
+                id="followup",
+                kind="followup",
+                question=FOLLOW_UP,
+                fact=actions[0].id,
+                after=[first],
+            )
+        )
+        history = [first, "followup"]
+    if numbers:
+        de = numbers[0]
+        out.append(
+            AskQuestion(
+                id="de-alone",
+                kind="de_alone",
+                question=f"Wie hoch ist {_label(de)[1]}?",
+                fact=de.id,
+            )
+        )
+        de = numbers[min(1, len(numbers) - 1)]
+        out.append(
+            AskQuestion(
+                id="de-history",
+                kind="de_history",
+                question=f"Wie hoch ist {_label(de)[1]}?",
+                fact=de.id,
+                after=history,
+            )
+        )
+        miss = numbers[-1]
+        template = NEAR_MISS[int(hashlib.sha256(truth.item.id.encode()).hexdigest(), 16) % 3]
+        out.append(
+            AskQuestion(
+                id="near-miss",
+                kind="near_miss",
+                question=template.format(label=_label(miss)[0]),
+                fact=miss.id,
+            )
+        )
+    return out
+
+
+def answer_numbers(text: str) -> set[float]:
+    """numbers_in, plus German thousands separators ("42.500 $" → 42500). Eval only:
+    numbers.py stays English, as the Map guard uses it."""
+    german = _GERMAN_THOUSANDS.sub(lambda m: m.group(0).replace(".", ""), text)
+    return numbers_in(text) | numbers_in(german)
+
+
+def due_in(text: str, due: str) -> bool:
+    """The planted due date is stated somewhere in free text ("by the end of next week")."""
+    words = {
+        _MONTH_ABBR.get(w, w)
+        for w in re.findall(r"\w+", re.sub(r"(\d+)(?:st|nd|rd|th)\b", r"\1", digits(text).lower()))
+    }
+    return due_key(due) <= words
+
+
+def meeting_numbers(truth: Truth) -> set[float]:
+    """Every number spoken or shown, except 1–31 (dates; "week two"): what a near-miss answer
+    must not give as its answer."""
+    cells = " ".join(c for s in truth.slides for c in s.cells)
+    return {v for v in answer_numbers(f"{truth.script_text} {cells}") if v > 31}
+
+
+class AskResult(_Model):
+    id: str
+    kind: AskKind
+    question: str
+    fact: str
+    answer: str  # claim texts
+    citations: list[str]  # "seg 0 @12.5", "slide 3"
+    language: str
+    stated: bool  # the fact is in the answer (near-miss: no planted value given as the answer)
+    citation_ok: bool | None  # a claim stating it cites right (None: not stated / near-miss)
+    t_error: float | None = None
+    correct: bool
+
+
+def _cite_label(c: Any) -> str:
+    return f"{c.kind} {c.id}" + (f" @{c.t:g}" if c.t is not None else "")
+
+
+def near_miss_ok(claims: Sequence[Claim], planted: set[float]) -> bool:
+    for claim in claims:
+        if _NOT_GIVEN.search(claim.text):
+            return True
+        if answer_numbers(claim.text) & planted:
+            return False
+    return True
+
+
+def score_answer(
+    q: AskQuestion,
+    answer: ask.Answer,
+    facts: Mapping[str, TruthFact],
+    slide_ids: Mapping[int, int],
+    planted: set[float],
+) -> AskResult:
+    fact = facts[q.fact]
+    claims = answer.claims
+    stating: list[Claim]
+    if q.kind == "near_miss":
+        stating = []
+        stated = near_miss_ok(claims, planted)
+    elif q.kind == "followup":
+        assert fact.owner is not None and fact.due is not None
+        text = " ".join(c.text for c in claims)
+        stated = bool(re.search(rf"\b{re.escape(fact.owner)}\b", text)) and due_in(text, fact.due)
+        stating = [
+            c
+            for c in claims
+            if re.search(rf"\b{re.escape(fact.owner)}\b", c.text) or due_in(c.text, fact.due)
+        ]
+    elif fact.kind == "number":
+        stating = [c for c in claims if fact.value in answer_numbers(c.text)]
+        stated = bool(stating)
+    else:
+        stating = [c for c in claims if fact_fit(c, fact) == "match"]
+        stated = bool(stating)
+
+    ok, err = None, None
+    if q.kind != "near_miss" and stated:
+        checks = [citation_check(c, fact, slide_ids) for c in stating]
+        ok = any(c[0] for c in checks)
+        errs = [c[1] for c in checks if c[1] is not None]
+        err = min(errs, key=abs) if errs else None
+    return AskResult(
+        id=q.id,
+        kind=q.kind,
+        question=q.question,
+        fact=q.fact,
+        answer=" ".join(c.text for c in claims),
+        citations=[_cite_label(c) for claim in claims for c in claim.citations],
+        language=answer.language,
+        stated=stated,
+        citation_ok=ok,
+        t_error=None if err is None else round(err, 2),
+        correct=stated if q.kind == "near_miss" else bool(stated and ok),
+    )
+
+
+def ask_metrics(results: Sequence[AskResult]) -> dict[str, float | int | None]:
+    """Ask accuracy and citation accuracy over the English fact questions (number, action);
+    one rate each for the follow-up, German alone / after history and the near-miss."""
+
+    def rate(kinds: tuple[str, ...]) -> float | None:
+        of = [r for r in results if r.kind in kinds]
+        return round(sum(r.correct for r in of) / len(of), 4) if of else None
+
+    facts = [r for r in results if r.kind in ("number", "action")]
+    stated = [r for r in facts if r.stated]
+    return {
+        "ask_questions": len(results),
+        "ask_accuracy": rate(("number", "action")),
+        "ask_stated": round(len(stated) / len(facts), 4) if facts else None,
+        "ask_citation_accuracy": (
+            round(sum(bool(r.citation_ok) for r in stated) / len(stated), 4) if stated else None
+        ),
+        "ask_followup": rate(("followup",)),
+        "ask_xlang_alone": rate(("de_alone",)),
+        "ask_xlang_history": rate(("de_history",)),
+        "ask_near_miss": rate(("near_miss",)),
+    }
+
+
+def sources_hash(sources: ask.Sources) -> str:
+    h = hashlib.sha256()
+    for group in (sources.segments, list(sources.notes.values()), sources.slides, sources.items):
+        for m in group:
+            h.update(m.model_dump_json().encode("utf-8"))
+            h.update(b"\0")
+    return h.hexdigest()
+
+
+def ask_cache_key(question: str, history: Sequence[ask.Turn], config: Config, sources: str) -> str:
+    """Question + history + every Ask prompt's hash + the R7B revision + the run's documents
+    and the config Ask reads (seed, target language, Reduce settings)."""
+    h = hashlib.sha256()
+    parts = (
+        question,
+        *(f"{t.question}\n{t.answer}" for t in history),
+        config.models["reduce"].revision,
+        *(prompt_hash(p) for p in ASK_PROMPTS),
+        sources,
+        str(config.seed),
+        config.target_language,
+        config.reduce.model_dump_json(),
+    )
+    for part in parts:
+        h.update(part.encode("utf-8"))
+        h.update(b"\0")
+    return h.hexdigest()
+
+
+def _answer_entry(a: ask.Answer) -> dict[str, Any]:
+    return {
+        "claims": [c.model_dump(mode="json") for c in a.claims],
+        "language": a.language,
+        "prompt_tokens": a.prompt_tokens,
+        "turns_dropped": a.turns_dropped,
+        "transcript_limit": a.transcript_limit,
+        "dropped_citations": a.dropped_citations,
+        "raw": a.raw,
+    }
+
+
+def _answer_from(question: str, entry: Mapping[str, Any]) -> ask.Answer:
+    return ask.Answer(
+        question=question,
+        claims=[Claim.model_validate(c) for c in entry["claims"]],
+        language=entry["language"],
+        prompt_tokens=entry["prompt_tokens"],
+        turns_dropped=entry["turns_dropped"],
+        transcript_limit=entry["transcript_limit"],
+        dropped_citations=entry["dropped_citations"],
+        raw=entry["raw"],
+    )
+
+
+AskFn = Callable[[Path, str, Sequence[ask.Turn], ask.Sources], ask.Answer]
+
+
+class CachedAsk:
+    """Ask answers through an on-disk cache (one JSON file per item), like CachedJudge.
+    `answer_fn` (ask.run with the shared ModelManager) is called only on a cache miss."""
+
+    def __init__(self, answer_fn: AskFn):
+        self._answer = answer_fn
+        self.calls = 0
+        self.hits = 0
+        self._path: Path | None = None
+        self._entries: dict[str, dict[str, Any]] = {}
+
+    def open(self, path: Path) -> None:
+        self.save()
+        self._path = path
+        self._entries = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+
+    def save(self) -> None:
+        if self._path is not None:
+            atomic.write_text(self._path, json.dumps(self._entries, indent=1, sort_keys=True))
+
+    def answer(
+        self,
+        run_dir: Path,
+        config: Config,
+        sources: ask.Sources,
+        question: str,
+        history: Sequence[ask.Turn],
+    ) -> ask.Answer:
+        key = ask_cache_key(question, history, config, sources_hash(sources))
+        if (entry := self._entries.get(key)) is not None:
+            try:
+                answer = _answer_from(question, entry)
+            except (KeyError, ValueError):
+                pass
+            else:
+                self.hits += 1
+                return answer
+        self.calls += 1
+        answer = self._answer(run_dir, question, history, sources)
+        self._entries[key] = _answer_entry(answer)
+        return answer
+
+
+def ask_item(report: ItemReport, truth: Truth, run_dir: Path, cache: CachedAsk) -> ItemReport:
+    """Ask the item's questions (history from the earlier answers, as the page keeps it) and
+    add the results and Ask metrics to its report."""
+    config = Config.model_validate(schemas.load(run_dir, Manifest).config)
+    sources = ask.load_sources(run_dir)
+    facts = {f.id: f for f in truth.facts}
+    slide_ids = match_slides(truth.slides, sources.slides)
+    planted = meeting_numbers(truth)
+    answers: dict[str, ask.Answer] = {}
+    results = []
+    for q in ask_questions(truth):
+        history = [answers[i].turn() for i in q.after]
+        answers[q.id] = cache.answer(run_dir, config, sources, q.question, history)
+        results.append(score_answer(q, answers[q.id], facts, slide_ids, planted))
+    metrics = {**report.metrics, **ask_metrics(results)}
+    return report.model_copy(update={"ask": results, "metrics": metrics})
+
+
+ItemReport.model_rebuild()
+
+
+def ask_session(models: Any) -> CachedAsk:
+    """A CachedAsk whose misses go through ask.run on the shared ModelManager (R7B is still
+    resident from Reduce under the default policy)."""
+
+    def answer(
+        run_dir: Path, question: str, history: Sequence[ask.Turn], sources: ask.Sources
+    ) -> ask.Answer:
+        if models is None:
+            raise RuntimeError("Ask needs a ModelManager (answers not in the cache)")
+        return ask.run(models, run_dir, question, history, sources)
+
+    return CachedAsk(answer)
+
+
+def ask_cache(root: Path, name: str) -> Path:
+    return root / ASK_CACHE_DIR / f"{name}.json"
+
+
 # --- set report, baseline comparison -------------------------------------------------------
 
 
@@ -845,6 +1250,7 @@ class Report(_Model):
     stages: dict[str, dict[str, float | None]]  # stage → s_per_audio_hour, peak_mem_gb
     citation_errors: list[float] = Field(default_factory=list)  # every t_error, for D19
     judge: JudgeCost | None = None  # eval-only cost, kept out of `stages` and the gate
+    ask: JudgeCost | None = None  # Ask eval cost (same shape; R7B already resident)
     baseline: str | None = None
     regressions: list[str] = []
 
@@ -901,6 +1307,7 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         "judge_recall": (
             round(sum(bool(f.judge_covered) for f in only) / len(only), 4) if only else None
         ),
+        **(ask_metrics([r for it in items for r in it.ask]) if any(it.ask for it in items) else {}),
         "audio_s": round(sum(it.duration_s for it in items), 1),
     }
 
@@ -936,20 +1343,35 @@ def compare(report: Report, baseline: Report) -> list[str]:
         if new is not None and old is not None and float(old) - float(new) > limit + 1e-9:
             out.append(f"{key} dropped {float(old) - float(new):.1%} ({old} → {new})")
 
-    def rise(key: str) -> None:
+    def rise(key: str, limit: float) -> None:
         new, old = s.get(key), b.get(key)
-        if new is not None and old is not None and float(new) > float(old) + 1e-9:
+        if new is not None and old is not None and float(new) - float(old) > limit + 1e-9:
             out.append(f"{key} increased ({old} → {new})")
 
-    drop("fact_recall", MAX_RECALL_DROP)
-    drop("citation_accuracy", MAX_CITATION_DROP)
-    for key in ("made_up_items", "uncited_claims", "gap_words_per_min"):
-        rise(key)
+    for key, limit in MAX_DROP.items():
+        drop(key, limit)
+    for key, limit in MAX_RISE.items():
+        rise(key, limit)
     for stage, cost in report.stages.items():
         new = cost.get("s_per_audio_hour")
         old = baseline.stages.get(stage, {}).get("s_per_audio_hour")
         if new and old and new > old * (1 + MAX_STAGE_SLOWDOWN):
             out.append(f"stage {stage} {new / old - 1:.0%} slower ({old} → {new} s/audio h)")
+    return out
+
+
+def noise(reports: Sequence[Report]) -> dict[str, float]:
+    """Run-to-run noise for D16: per summary metric, max − min over the reports; per stage,
+    the slowest over the fastest s/audio h minus 1 (key "stage:<name>")."""
+    out: dict[str, float] = {}
+    for key in reports[0].summary if reports else ():
+        vals = [float(v) for r in reports if (v := r.summary.get(key)) is not None]
+        if len(vals) == len(reports):
+            out[key] = round(max(vals) - min(vals), 4)
+    for stage in reports[0].stages if reports else ():
+        vals = [v for r in reports if (v := r.stages.get(stage, {}).get("s_per_audio_hour"))]
+        if len(vals) == len(reports):
+            out[f"stage:{stage}"] = round(max(vals) / min(vals) - 1, 4)
     return out
 
 
@@ -980,6 +1402,13 @@ PCT_KEYS = {
     "recall_number",
     "support_rate",
     "judge_recall",
+    "ask_accuracy",
+    "ask_stated",
+    "ask_citation_accuracy",
+    "ask_followup",
+    "ask_xlang_alone",
+    "ask_xlang_history",
+    "ask_near_miss",
 }
 
 
@@ -1019,6 +1448,7 @@ def render_markdown(report: Report) -> str:
         "wer",
         "slide_alignment",
         "support_rate",
+        "ask_accuracy",
     ]
     lines += ["| Item | " + " | ".join(keys) + " |", "|---" * (len(keys) + 1) + "|"]
     for it in report.items:
@@ -1037,6 +1467,8 @@ def render_markdown(report: Report) -> str:
     if j := report.judge:
         lines.append(f"| judge (eval only) | {_num(j.s_per_audio_hour)} | {_num(j.peak_mem_gb)} |")
         lines += ["", f"Judge: {j.calls} calls, {j.cached} cached, {j.seconds:g} s."]
+    if a := report.ask:
+        lines += ["", f"Ask: {a.calls} calls, {a.cached} cached, {a.seconds:g} s."]
 
     errs = report.citation_errors
     if errs:
@@ -1049,6 +1481,7 @@ def render_markdown(report: Report) -> str:
         numbers = it.number_repairs or it.unverified_numbers or it.unsupported_numbers
         weak = [c for c in it.support if c.supported != "yes"]
         judged_facts = [f for f in it.facts if f.judge_only and f.judge_covered is not None]
+        asked_wrong = [r for r in it.ask if not r.correct]
         if not (
             missed
             or off
@@ -1059,6 +1492,7 @@ def render_markdown(report: Report) -> str:
             or numbers
             or weak
             or judged_facts
+            or asked_wrong
         ):
             continue
         lines += ["", f"## {it.id} ({it.run_id})", ""]
@@ -1081,7 +1515,20 @@ def render_markdown(report: Report) -> str:
             f"- judge {'covered' if f.judge_covered else 'missed'} {f.kind}: {f.text}"
             for f in judged_facts
         ]
+        lines += [
+            f"- ask {r.kind} {_ask_verdict(r)}: {r.question} → {r.answer or '(empty)'}"
+            + (f" [{', '.join(r.citations)}]" if r.citations else "")
+            for r in asked_wrong
+        ]
     return "\n".join(lines) + "\n"
+
+
+def _ask_verdict(r: AskResult) -> str:
+    if r.kind == "near_miss":
+        return "gave a meeting number"
+    if not r.stated:
+        return "missed"
+    return "cited off" + (f" by {_num(r.t_error)} s" if r.t_error is not None else "")
 
 
 # --- runner --------------------------------------------------------------------------------
@@ -1174,6 +1621,7 @@ def run_set(
     fresh: bool = False,
     models: Any = None,
     judge_: bool = True,
+    ask_: bool = True,
     log: Callable[[str], None] = print,
     progress: pipeline.ProgressFn | None = None,
 ) -> Report:
@@ -1188,6 +1636,8 @@ def run_set(
     reports: list[ItemReport] = []
     run_dirs: list[Path] = []
     config = Config()
+    asker = ask_session(models)
+    ask_secs = 0.0
     for spec in specs:
         if seed is not None:
             spec = spec.model_copy(update={"seed": seed})
@@ -1203,7 +1653,17 @@ def run_set(
         t0 = time.perf_counter()
         pipeline.run(run_dir, config=config, models=models, progress=progress)
         log(f"{spec.id}: pipeline {time.perf_counter() - t0:.1f} s")
-        reports.append(score_item(truth, run_dir, since))
+        report = score_item(truth, run_dir, since)
+        if ask_:
+            t0 = time.perf_counter()
+            asker.open(ask_cache(root, spec.id))
+            try:
+                report = ask_item(report, truth, run_dir, asker)
+            finally:
+                asker.save()
+            ask_secs += time.perf_counter() - t0
+            log(f"{spec.id}: ask {len(report.ask)} questions, {time.perf_counter() - t0:.1f} s")
+        reports.append(report)
         run_dirs.append(run_dir)
 
     judge_cost = None
@@ -1212,6 +1672,19 @@ def run_set(
             list(zip(reports, run_dirs, strict=True)), root=root, models=models, log=log
         )
     errors = [f.t_error for it in reports for f in it.facts if f.t_error is not None]
+    hours = sum(r.duration_s for r in reports) / 3600
+    ask_cost = (
+        JudgeCost(
+            loaded=asker.calls > 0,
+            calls=asker.calls,
+            cached=asker.hits,
+            seconds=round(ask_secs, 2),
+            s_per_audio_hour=round(ask_secs / hours, 1) if hours else None,
+            peak_mem_gb=None,
+        )
+        if ask_
+        else None
+    )
     return Report(
         created_at=datetime.now().astimezone(),
         set=name,
@@ -1219,12 +1692,14 @@ def run_set(
         overrides=overrides,
         models={k: f"{m.repo}@{m.revision[:7]}" for k, m in config.models.items()},
         prompts={p: prompt_hash(p)[:12] for p in ("vision", "map", "map_retry", "reduce")}
-        | ({p: prompt_hash(p)[:12] for p in judge.PROMPTS} if judge_ else {}),
+        | ({p: prompt_hash(p)[:12] for p in judge.PROMPTS} if judge_ else {})
+        | ({p: prompt_hash(p)[:12] for p in ASK_PROMPTS} if ask_ else {}),
         items=reports,
         summary=summarize(reports),
         stages=stage_summary(reports),
         citation_errors=sorted(errors),
         judge=judge_cost,
+        ask=ask_cost,
     )
 
 
