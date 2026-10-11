@@ -1001,3 +1001,33 @@ Six questions in one conversation (`ask.run`, history carried like the page), ~9
 
 ### Next
 - Phase 6a in a new session with the §21 prompt.
+
+## 2026-10-11 · Phase 6a (baseline + Ask eval)
+
+### Ask eval rules (recorded before the first run)
+- **Questions** (`evals.ask_questions`, templates from `truth.json`, no LLM), per item: one per
+  number fact ("What is <label>?", label words from `NUMBER_LABELS`), one per action ("What
+  does <owner> need to do?"), a follow-up after the first action ("Who owns that, and by
+  when?"), two German number questions ("Wie hoch ist <label>?": the first number alone; the
+  second after the English action + follow-up turns) and one near-miss (the last number's
+  label with "two years ago", "for the marketing team" or "for next year", picked by the item
+  id; the generator only ever says "last quarter/month/week/release"). History = the earlier
+  answers as `Answer.turn()`, as the Ask page keeps it. 17 questions per quick item.
+- **Correct** = the answer states the fact and a claim stating it cites the fact's segment
+  within ±15 s (D19) or its slide. Numbers: the value in a claim (German "42.500 $" read as
+  42500, eval-only). Actions: `fact_fit` as in fact recall (owner exact, task overlap ≥ 0.6).
+  Follow-up: the owner and the planted due date both in the answer.
+- **Near-miss rule:** planted values = every number in the script or slide cells above 31
+  (1–31 are dates and "week two"). Going through the answer's claims in order: a claim with a
+  "not given" marker (not, no, n't, never, none, unknown, cannot; German kein/nicht) passes the
+  answer; a claim with a planted value before any such marker fails it; no planted value at all
+  passes. Why not "no planted value anywhere": `ask.md` asks R7B to say the meeting doesn't give
+  it, *then* what it does give, so a related fact after the negation is the wanted answer.
+  Known blind spot: "It's $42,500 for next quarter, not next year." passes (marker and value in
+  one claim).
+- **Metrics:** Ask accuracy (correct / English number + action questions), Ask stated, Ask
+  citation accuracy (cited right / stated), follow-up, German alone, German after history,
+  near-miss (one each per item, so 4 per set: 25-point steps).
+- Answers cached in `evals/data/ask/<item>.json`, keyed by question, history, the ask prompt
+  hashes, the R7B revision, a hash of the run's documents and the seed / target language /
+  Reduce config.
