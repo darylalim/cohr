@@ -1,0 +1,49 @@
+# --- Python / uv ---
+.venv/
+__pycache__/
+*.py[cod]
+dist/
+build/
+*.egg-info/
+
+# --- Tool caches ---
+.ruff_cache/
+.pytest_cache/
+.ty_cache/
+.coverage
+htmlcov/
+
+# --- Pipeline outputs (§3, §12); includes runs/index.db (§13) ---
+runs/
+
+# --- Eval data and reports (§18); evals/baseline.json stays committed ---
+evals/data/
+evals/reports/
+NOTES.local.md
+
+# --- Media: never commit recordings or frames (privacy + size) ---
+*.wav
+*.mp3
+*.m4a
+*.aiff
+*.flac
+*.mp4
+*.mov
+*.mkv
+*.webm
+
+# --- Model weights: never redistribute (§11, CC-BY-NC) ---
+*.safetensors
+*.gguf
+*.npz
+models/
+.cache/
+
+# --- Secrets & local config ---
+.env
+.env.*
+.streamlit/secrets.toml
+.claude/settings.local.json
+
+# --- macOS ---
+.DS_Store
