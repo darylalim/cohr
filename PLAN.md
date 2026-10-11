@@ -695,7 +695,11 @@ app_pages/
     (5a: anchors scroll the panel, D14.)
   - **Medium windows (5a finding):** at ~800 px with the sidebar open, the columns get
     ~209 / 128 px because they only stack at ≤ 640 px viewport width. Closing the sidebar gives
-    422 / 271 px. Open question for a later phase; see NOTES.md 2026-10-11 Phase 5a.
+    422 / 271 px. **Fix (D21, Phase 5b):** a "Sources" `st.segmented_control` in the header row,
+    **Beside** (default, the two columns above) or **Below** (notes in the same 880 px
+    container, then the Sources blocks under them without the fixed-height scroll box, so
+    anchors scroll the page). The choice lives in `st.session_state` for the session. Python
+    can't see the width, so the user picks; nothing is measured.
 
 *Ask* (`centered`)
 - `st.chat_message` history, `st.chat_input` pinned at the bottom (built in).
@@ -1002,6 +1006,7 @@ invalid-JSON fallback, §5.5); token budget enforced.
   answer language from `lingua` with the run's target language as fallback, same citation
   parsing and time refinement); the Ask page (chat, source pills, right-side drawer) and Notes'
   "Open in Ask" button; tests for history trimming, language fallback and citations in answers.
+  Notes' Sources Beside/Below toggle for medium windows (D21, §7).
   Long-meeting ranking (FTS5) stays in Phase 6. Kickoff prompt in §21.
 **Phase 6: hardening:** sequential memory policy, inputs over 2 h (two-pass reduce with
 marker-based citations), Ask ranking for long meetings, "Other (beta)" target languages, error
@@ -1799,6 +1804,7 @@ section.
 | D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6 | |
 | D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | **0.1 and ±15 s, plus a sentence offset inside the chunk**: chunk `t0` alone was a median 12.5 s early (61% within 15 s); with the offset 98% (53 of 54 errors ≤ 5 s, so 15 s hides nothing). Min score 0.0 = 0.1 > 0.2 (94.6%) > 0.3 (91.1%) |
 | D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | **Default rule kept**: 8 repairs on `quick`, all to the transcript's value (0 wrong); number recall 81.2% → 87.5%, fact recall 82.3% → 85.3%, made-up 3 → 3, citation accuracy 98.2% → 100%; numbers in no source 6 → 1 (a flagged `3,360` with two candidates). Short numbers are weak evidence (any one-digit number is one edit from the next): watch on `full` |
+| D21 | Notes layout in medium windows (§7) | Two columns; close the sidebar | Options within the no-CSS rule (NOTES.md 2026-10-11 5a finding) | Before 5b | **Beside/Below toggle** in the Notes header, default Beside, per session. Rejected: Sources always in the drawer (undoes D14, loses side-by-side on wide screens), a "close the sidebar" hint only, `initial_sidebar_state="collapsed"` on Notes (localStorage overrides it). Built in 5b |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).
@@ -2061,17 +2067,22 @@ writing UI code. Work on branch phase-5b-ask. Follow the 5b acceptance criteria 
    cited t (ui.audio_clip), slide images. Build the source block once in ui.py and use it in
    both the drawer and Notes' Sources panel. Add "Open in Ask" to the Notes header and Ask to
    st.navigation. "Answer based on the N most relevant segments" is Phase 6 (with ranking).
+   Also on Notes (D21, §7): a "Sources" st.segmented_control in the header row, Beside
+   (default, current columns) or Below (notes in the 880 px container, then the source blocks
+   without the fixed-height box), kept in st.session_state.
 5. Tests without models: tests/test_ask.py (history trimming oldest-first under a fake token
    counter, citation markup stripped from history, language fallback when lingua is unsure,
    citations in answers parsed and refined, dropped indices, uncited sentences kept) with a fake
    R7B; tests/test_app.py additions (Ask renders, pills for cited sources, input disabled while
-   a job runs, Open in Ask switches page with the run). Reduce's config hash must be unchanged
-   (test it).
+   a job runs, Open in Ask switches page with the run, Notes in Below mode renders every
+   source block). Reduce's config hash must be unchanged (test it).
 6. Manual checks, then record them: on the clean-en run, ask 3 questions whose answers are in
    evals/gen truth.json (one numeric), one follow-up that needs history ("who owns that?"),
    one German question (answer in German), and one the meeting doesn't answer. Check that the
    citations jump to the right moment. Also press play in the Sources panel and the drawer in a
-   normal browser window (5a couldn't verify audio). Ask me before using Claude in Chrome.
+   normal browser window (5a couldn't verify audio). At ~800 px with the sidebar open, switch
+   Notes to Below and check that citations still jump to their block. Ask me before using
+   Claude in Chrome.
 Rules from CLAUDE.md apply. Ask me before the opt-in model tests (the `models` pytest
 marker), anything in `cohr eval --set full`, new model downloads or new dependencies.
 When done: tick the checklist, update §20 if anything was decided, add a NOTES.md entry, make
