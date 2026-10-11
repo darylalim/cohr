@@ -966,8 +966,8 @@ invalid-JSON fallback, §5.5); token budget enforced.
   before/after on the same seeds: number recall, fact recall, made-up items; no other metric
   worse (D20). Record a wrong repair if the eval shows one.
 - **4b-2: judge.** Qwen3 judge wrapper (§18), support rate, judge recall for cross-language text facts,
-  `evals/gen/judge_calibration.json` (30 pairs: Claude drafts labels from 4b-1 outputs, the user reviews
-  them), D15.
+  `evals/gen/judge_calibration.json` (30 pairs: Claude drafts labels from 4b-1b outputs, the user reviews
+  them before the judge runs on them), D15. Kickoff prompt in §21.
 **Phase 5: Streamlit UI:** "Paper & Ink" theme and adaptive layout (§7) with `test_theme.py`,
 `test_app.py` and the window-width check, all four pages, background job, progress, Ask (follow-ups and answer language, §5.7); upload limit and local
 path input (§12); Runs page shows each run's size, with Delete and Prune media.
@@ -1896,4 +1896,43 @@ models`, and before new model downloads. No new dependencies are expected; if on
 check its license (§11) and ask.
 When done: tick the checklist, update §20 and NOTES.md, make sure the gate passes, and open a PR
 (ask before pushing). Stop there; 4b-2 (the judge) is a separate session.
+```
+
+### Kickoff prompt for Phase 4b-2 (judge)
+```text
+Continue cohr: Phase 4b-2 (judge). Read CLAUDE.md, then PLAN.md sections §9 (the 4b-2 bullet),
+§18 (Judge, Metrics, Reports and the release gate), §4 (memory policy), §20 (D15) and §6
+(prompts, layout). Then read the latest NOTES.md entry (4b-1b) for the current quick numbers.
+Work on branch phase-4b-2-judge. Follow the 4b-2 acceptance criteria in §9:
+1. Judge wrapper in a new src/cohr/judge.py (Qwen3 judge, mlx-lm, the "judge" ModelSpec already
+   pinned in config.py and already in the HF cache). Import mlx/mlx_lm only inside functions, and
+   add judge.py to the model-wrapper lists in CLAUDE.md and §8. Prompts in src/cohr/prompts/:
+   judge.md (claim + cited text → {"supported": "yes|partial|no", "reason": str}) and one for
+   cross-language coverage (fact + section claims → {"covered": bool}). JSON only, temperature 0,
+   one retry on invalid JSON, then count the pair as unjudged (never as supported).
+2. Calibration BEFORE running the judge on it: draft 30 claim/cited-text pairs from the current
+   quick runs (evals/data/runs, 4b-1b outputs) into evals/gen/judge_calibration.json with your
+   labels and a one-line reason each. Real outputs are mostly supported, so mix in negatives:
+   claims paired with the wrong segment, and the known errors (slide-conflict $80,000, a flagged
+   Map number). Aim for roughly 12 yes / 8 partial / 10 no. Synthetic text only. Then STOP and ask
+   me to review the labels; don't show the judge's answers before I've approved them.
+3. D15: agreement = share of the 30 pairs where the judge's 3-way label equals mine; also report
+   yes vs not-yes. Pass at ≥ 80% on the 3-way label. If only the binary passes, report both and
+   ask me.
+4. Eval: support rate (share of cited claims the judge marks "yes" against their cited segments
+   and slides; "partial" and unjudged counted apart) per item and in the summary, and judge
+   recall for cross-language text facts (the judge_only facts). Cache judge answers per item
+   under evals/data (key: claim, cited text, prompt hash, judge revision) so re-scoring with
+   nothing stale still loads no model. Load the judge only after the pipeline models are
+   released (§4) and report its cost as its own row. Judge metrics stay out of compare() (the
+   gate) in this phase whatever D15 shows; their thresholds come with D16 in Phase 6.
+5. Unit tests without models: a fake judge, JSON parsing and the retry, agreement, support
+   rate, judge recall, the cache (second scoring makes no judge call).
+6. Run `cohr eval --set quick` and record support rate, the judge's cost and peak memory. The
+   cross-language items run in `full` (Phase 6): cover judge recall with unit tests only.
+Running `cohr eval --set quick` is fine. Ask me before anything in `full`, before `pytest -m
+models`, and before new model downloads. Don't add --judge claude (needs an API key and a new
+dependency). No new dependencies are expected; if one is needed, check its license (§11) and ask.
+When done: tick the checklist, update §20 and NOTES.md, make sure the gate passes, and open a PR
+(ask before pushing). Stop there; Phase 5 (UI) is a separate session.
 ```

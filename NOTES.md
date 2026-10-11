@@ -613,3 +613,19 @@ v1 target. **D20: default rule kept.**
 
 ### Next
 - Phase 4b-2 (judge) in a new session.
+
+---
+
+## 2026-10-11 · Phase 4b-2 kickoff prompt (no code)
+
+### Plan changes
+- §21 kickoff prompt for 4b-2 (judge). Choices it fixes, as recommendations for the session:
+  a new `judge.py` model wrapper; calibration labels drafted and reviewed **before** the judge
+  runs on them (so the labels aren't anchored on its answers), with planted negatives because
+  real outputs are mostly supported; D15 measured on the 3-way label (binary reported too);
+  judge answers cached per item so re-scoring stays model-free; judge metrics kept out of the
+  gate until D16 (Phase 6); no `--judge claude`.
+- §9 4b-2 bullet: labels come from 4b-1b outputs.
+
+### Next
+- Phase 4b-2 in a new session with the §21 prompt.
