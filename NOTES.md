@@ -434,3 +434,93 @@ None due this phase (D11 is Phase 3).
 
 ### Next
 - Phase 4b-1 in a new session.
+
+---
+
+## 2026-10-11 · Phase 4b-1 (evals without the judge)
+
+### Built
+- `evals/gen/`: seeded planted-facts meetings. `script.py` (pure) picks 8 topics, 4 decisions,
+  5 action items (owner + spoken due date) and one number per topic, plus fact-free discussion
+  and filler; `build.py` speaks it with `say` (3 voices, byte-identical per text), adds numpy
+  pink noise/chords/silence, draws PIL slides (coloured header per slide), and makes a 5 fps
+  screen recording (ffmpeg concat) or a PDF deck, plus `truth.json`. Items are ~340–360 s
+  (two 300 s Fuse windows), 17 facts, 8 slides. Every number in a meeting is distinct and
+  > 31, so a value means one fact and never a date.
+- `src/cohr/evals.py`: truth/set models, matching, metrics, reports, baseline gate, runner.
+  `cohr eval --set quick [-c key=value] [--item] [--seed] [--fresh] [--baseline]`. Each item
+  keeps one run under `evals/data/runs/<item>/`; the pipeline's skip logic re-runs only what an
+  override or prompt change touches, so D12/D19 experiments and re-scoring are cheap (a
+  re-score with nothing stale takes < 1 s and loads no model).
+- `tests/test_evals.py` (37 tests, no models): number normalization, owner/due/text matching,
+  cross-language exact fields, citation tolerance, made-up items, VAD F1, gap text, slide
+  matching, baseline thresholds, overrides, generator determinism (fake `say`), and
+  `score_item` on a hand-built run.
+- Matching rules beyond §18: stemmed content tokens (fact tokens found ≥ 0.6); due dates
+  compared as normalized token sets ("the 22nd of November" = "Nov 22"); an action item
+  with the right task and someone else's owner/due counts as made up; with no owner stated it
+  is "partial" (not found, not made up: R7B repeats action items under Decisions).
+
+### First numbers (`quick`, 4 items, 68 facts, 23 min of audio)
+| Run | Change | Recall | Cit. acc. | Made up | Slide titles / cells |
+|---|---|---|---|---|---|
+| 2 | before (old ingest, old Map, old Reduce) | 82.3% | 60.7% | 2 | 28% / 34% |
+| 3 | ingest fix | 67.7% | 63.0% | 5 | 88% / 100% |
+| 4a | + Reduce marker fix + D19 sentence offset | 79.4% | 98.2% | 5 | 88% / 100% |
+| 4b | + Map prompt fix (final) | 82.3% | 98.2% | 3 | 88% / 100% |
+| 5 | 4b with Map temperature 0 (rejected) | 82.3% | 100% | 4 | |
+| 6 | 4b with Fuse window 120 s (D12, rejected) | 79.4% | 100% | 6 | |
+| 7 | 4b again, `--baseline` run 4b | 82.3% | 98.2% | 3 | pass (reproducible) |
+
+Final (run 7): uncited 0, VAD gap text 0 words, VAD speech F1 93.1%, WER 0.9%, slide numbers
+100%, alignment 100% (`pdf-slides-en`), output language 100%. Cost 890 s per audio hour total
+(~15 min per audio hour, under the 20 min target); Vision is now the largest stage (347 s/h)
+because video items yield all 8 slides; peak 16.8 GB (resident).
+Against the v1 targets: recall 82.3% (< 85%), citation accuracy 98.2% (≥ 90%), made-up 3 (> 0).
+
+Run 1 (before the generator fixes below) is not comparable; it found the generator issues.
+
+### Findings
+- **Ingest dropped all but the first slide of a deck recording** (fixed, user approved in
+  session): ffmpeg scene scores between white text slides are 0.04–0.07 (threshold was 0.3), and
+  8×8 phashes 4–8 bits apart (limit 6). Now `scene_threshold` 0.02, `phash_size` 16,
+  `dedupe_max_distance` 24 (16×16: 38–60 apart). All 8 frames found; slide titles 28% → 88%,
+  cells and numbers 34% → 100%. Regression test fails under the old defaults (1 frame of 3).
+- **Reduce marker parsing:** R7B sometimes cites the marker itself (`## <co>SUMMARY</co: 0:[0]>`);
+  the whole reply then landed in Summary (`slide-conflict-en` recall 23.5%). Tags are now
+  stripped from heading lines (test added).
+- **Citation jump time (D19):** the chunk's `t0` was a median 12.5 s early (chunks up to 30 s).
+  Placing `t` at the cited sentence's character position inside the chunk: 61% → 98% within
+  ±15 s, offline on stored replies and confirmed by a real run. `NotesDoc` v3 (snapshot
+  regenerated) so older runs re-run Reduce.
+- **Map due dates (the 4a error):** Tiny Aya wrote ISO dates with an invented year
+  (`2024-11-24`, `2024-10-31` for "end of next week") despite the rule. `map.md` now says to take
+  owner/due only from the task's sentence, copy the words said (no numeric dates, no year), and
+  not to turn past events into action items. ISO dates: gone. Made-up items 5 → 3, recall
+  79.4% → 82.3% (runs 4a → 4b, same seeds; examples in the prompt avoid generator values).
+- **Open: Map changes digits.** Tiny Aya turns "$42,500" into "$420,500", 336 into "3,360",
+  "22nd" into "2nd"; the transcript is right each time. The prompt rule didn't help and
+  temperature 0 doesn't either (run 5), so it's systematic. Most remaining number misses and
+  one made-up item come from it. Candidate (not done): a deterministic guard in `mapper.py`
+  that checks every number in Map's output against the segment's transcript and slide text.
+- **Open: slide conflict.** With the slide visible, Map used the misspoken value ($80,000)
+  over the slide's $18,000 despite the §5.5 rule.
+- **Remaining made-up items:** "Eleanor" for Elena (ASR: the transcript says Eleanor), "Nov 2nd"
+  for 22nd (Map digits), one "update the dashboard" from a past-tense line (noisy-en).
+- **Generator fixes found by run 1:** "Sofia" → "Sophia" and "Priya" → "Kreia" in ASR, so owners
+  are now names with one common spelling (Elena still came back as Eleanor once: candidate
+  swap in Phase 6); a discussion line ("keep an eye on X over the next few weeks") read as an
+  action item and was removed.
+- Fact recall per item is noisy with 17 facts (one fact = 5.9 points); D16 (3 repeated runs)
+  should come before trusting differences of a few points.
+
+### Decisions (PLAN §20)
+- D11 = 0.15 (final), D12 = 300 s, D19 = 0.1 / ±15 s plus the sentence offset.
+
+### Plan changes
+- §5.1 scene threshold 0.02, 16×16 phash ≤ 24; §5.5 Map rules; §5.6 sentence offset;
+  §18 made-up rule details; §19 `NotesDoc` v3; §9 4b-1 done; §20 D11/D12/D19.
+
+### Next
+- Phase 4b-2 (judge) in a new session. Before or alongside it, decide the Map digit guard
+  (recall is below the 85% target mainly because of it) and the slide-conflict miss.
