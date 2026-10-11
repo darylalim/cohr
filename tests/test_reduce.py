@@ -199,11 +199,30 @@ def test_resolve_drops_bad_indices_and_dedupes() -> None:
     assert [(c.kind, c.id, c.t) for c in claim.citations] == [("seg", 0, 1.0), ("slide", 0, None)]
 
 
+def test_markers_wrapped_in_citations_still_split() -> None:
+    reply = (
+        "## <co>SUMMARY</co: 0:[0]>\nIntro.\n"
+        "## <co>DECISIONS</co: 0:[0]>\n- <co>Ship it.</co: 0:[0]>"
+    )
+    split = reduce.split_sections(reply)
+    assert split.sections["decisions"] == "- <co>Ship it.</co: 0:[0]>"
+    assert split.sections["summary"] == "Intro." and split.unknown == []
+
+
 def test_refine_time_picks_the_best_chunk_or_falls_back() -> None:
     items = _items()[:2]
     assert reduce.refine_time("approved the 14,500 budget", items, 0.0, 0.1) == 20.0
     assert reduce.refine_time("completely unrelated words", items, 7.0, 0.1) == 7.0
     assert reduce.refine_time("", items, 7.0, 0.1) == 7.0
+
+
+def test_refine_time_moves_to_the_sentence_inside_a_long_chunk() -> None:
+    text = "Welcome back everyone. The approved budget is 59,500 dollars. Thanks."
+    chunk = TranscriptItem(chunk_id=0, t0=100.0, t1=130.0, text=text)
+    t = reduce.refine_time("Approved budget: $59,500", [chunk], 0.0, 0.1)
+    assert t == round(100.0 + 30.0 * text.index("The approved") / len(text), 2)
+    assert reduce.refine_time("welcome back everyone", [chunk], 0.0, 0.1) == 100.0
+    assert reduce.sentence_offset({"budget"}, "No match here") == 0.0
 
 
 def test_action_item_format_and_map_fallback() -> None:
