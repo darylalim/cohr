@@ -12,7 +12,7 @@ uv run pytest (no models) · uv run streamlit run app.py · uv run cohr run … 
 - Python 3.13, uv only. Never pip. Add deps with `uv add` (dev: `--dev`, eval: `--group eval`).
 - All model inference on MLX (mlx-audio / mlx-speech, mlx-vlm, mlx-lm). No torch (CI fails on it).
 - Import mlx, mlx_lm, mlx_vlm, mlx_audio, mlx_speech only inside functions in the model
-  wrappers (vad, asr, vision, mapper, reduce, models). Unit tests run in CI without a GPU.
+  wrappers (vad, asr, vision, mapper, reduce, judge, models). Unit tests run in CI without a GPU.
 - Run files are read and written only through src/cohr/schemas.py. Changing a model means
   bumping its FORMAT_VERSION and regenerating snapshots (PLAN §19).
 - Every output file is written atomically (temp file + os.replace).

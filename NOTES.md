@@ -629,3 +629,102 @@ v1 target. **D20: default rule kept.**
 
 ### Next
 - Phase 4b-2 in a new session with the §21 prompt.
+
+## 2026-10-11 · Phase 4b-2 (judge)
+
+### Built
+- `src/cohr/judge.py` (eval only): Qwen3-4B-Instruct-2507-4bit on mlx-lm, temperature 0,
+  256 max tokens. Two questions: support (claim + cited text → yes/partial/no + reason) and
+  coverage (fact + one section's claims → covered). JSON parsed from the outermost `{…}`; one
+  retry with `judge_retry.md` appended (at temperature 0 a plain resend repeats the reply),
+  then "unjudged" / `covered: None`. `CachedJudge`: one JSON file per item in
+  `evals/data/judge/`, key = question kind + texts + hash of all three judge prompts + judge
+  revision; the model is requested only on the first miss.
+- Prompts: `judge.md`, `judge_coverage.md`, `judge_retry.md`. The claim is prefixed with its
+  section ("Open question: …") and action items carry owner and due, since "an open question
+  was raised" can't be judged from the words alone.
+- `evals.py`: `cited_text` (seg citation = transcript only, not the Map notes Reduce saw;
+  slide = slide text), `judge_item` (support per cited claim, coverage per judge_only fact),
+  `judge_items` (releases the pipeline models, loads the judge lazily, releases it after;
+  cost row `Report.judge`, outside `stages` so neither the stage total nor `compare()` sees
+  it), summary `support_rate`/`support_partial`/`support_no`/`support_unjudged`/
+  `judge_recall`, report lines for every non-"yes" claim. Calibration: `Calibration` file
+  model, `calibrate`, `agreement` (3-way and yes vs not-yes; unjudged disagrees with every
+  label), confusion matrix, `*-judge-calibration.{json,md}` report.
+- CLI: `cohr eval --no-judge`, `cohr eval --calibrate-judge`. `ModelManager` has a `judge`
+  loader (not in `PIPELINE_MODELS`).
+- `mapper.fill` substitutes the placeholder names it's given (was a fixed list), so the judge
+  prompts reuse it. No prompt text changed, so no stage hash changed.
+- Tests: `tests/test_judge.py` (parsing, retry, prompts, cache key, cache across instances,
+  corrupt entry), `tests/test_eval_judge.py` (fake judge: support rate, unjudged in the
+  denominator, judge recall, re-scoring makes no call and loads nothing, pipeline models
+  released before the judge's first answer, summary and markdown, `compare()` ignores judge
+  metrics, agreement, calibrate end to end, the committed calibration file's consistency).
+  272 tests.
+
+### Calibration set (`evals/gen/judge_calibration.json`)
+30 pairs from the 4b-1b `quick` runs: 12 yes / 8 partial / 10 no. 14 are real claims with their
+real citations; 7 move the citation (wrong segment, another meeting's segment, the conflicting
+slide); 9 edit the claim (an added detail, a merged second decision, a swapped owner).
+Drafted by Claude and reviewed by the user before the judge ran on them. One change from the
+review: c11 was a second "Seasonality in measurement" real output (ambiguous, since the
+budget's measurement *is* mentioned); it became a merged-decisions partial (Thursday move from
+the cited segment + contract designer from the uncited one). Labeling choices, agreed in review:
+support = "the cited text says it", not "it's true" (c17, the misspoken $80,000 cited to the
+transcript, is yes; c01, the same claim cited to the $18,000 slide, is no); the claim's
+section is part of it.
+
+### D15 (`20261011-095636-judge-calibration`)
+| | yes | partial | no |
+|---|---|---|---|
+| label yes (12) | 12 | 0 | 0 |
+| label partial (8) | 1 | 3 | 4 |
+| label no (10) | 0 | 1 | 9 |
+
+3-way 80.0% (pass, exactly at the threshold), yes vs not-yes 96.7%. 30 calls, 61 s, peak
+3.28 GB. The misses: four partials with an *added* detail judged "no" (c07, c11, c15, c28;
+each reason says the main point is stated and the detail isn't, i.e. the partial definition);
+c10 judged "yes" with a reason that's wrong (it says retention's seasonality is mentioned;
+only other topics' is); c27 (the made-up "update dashboards" decision) judged "partial". The
+prompt was **not** tuned on these pairs. **D15 = pass, no margin.** Since support rate counts
+only "yes", the partial/no confusion doesn't move it; the binary agreement is what it rests on.
+
+### `quick` with the judge (`20261011-095926-quick`, pipeline stages reused from 4b-1b)
+| Item | Support rate | partial | no |
+|---|---|---|---|
+| clean-en | 100% (17/17) | 0 | 0 |
+| noisy-en | 85.0% (17/20) | 2 | 1 |
+| pdf-slides-en | 82.6% (19/23) | 0 | 4 |
+| slide-conflict-en | 94.7% (18/19) | 0 | 1 |
+| **all** | **90.0% (72/80)** | 2 | 6 |
+
+Exact metrics unchanged (recall 85.3%, citation accuracy 100%, made up 3). Judge recall: no
+judge_only facts in `quick` (cross-language items run in `full`, Phase 6; unit tests only).
+Judge cost: 80 calls, 156.5 s = 403 s per audio hour, peak 3.37 GB (pipeline models released
+first). A second scoring: 0 calls, 80 cached, no model loaded.
+
+### Findings
+- **Open questions are mostly made up.** 5 of the 6 open questions in `quick` are judged not
+  supported ("How to improve site speed and cloud costs?", "Support queue seasonality", …):
+  Reduce turns the filler line "there's some seasonality in X" into questions nobody asked.
+  The exact metrics can't see this (made-up items count only decisions and action items).
+  Candidate for Phase 6: a Reduce prompt rule, and counting open questions in made-up items.
+- The judge confirms the known errors without being told: 3,360 vs 336 and "November 2nd" vs
+  the 22nd are both "no"; the made-up dashboard decision is "partial".
+- All the "no" answers on `quick` were checked by hand against the transcripts: all correct.
+- Judge cost is ~45% of the pipeline's 904 s per audio hour, eval only; caching makes
+  repeated scoring free.
+- The calibration pairs are harder than real output (real claims are mostly "yes"), so
+  agreement on real eval output is likely higher than 80%.
+
+### Decisions (PLAN §20)
+- D15 = pass (3-way 80.0%, binary 96.7%). Judge metrics still stay out of `compare()` until
+  their thresholds come with D16 in Phase 6.
+
+### Plan changes
+- §6 layout (`judge.py`, judge prompts), §8 and CLAUDE.md wrapper lists (+ `judge`), §9 4b-2
+  done, §18 Judge details (section prefix, transcript-only citations, support ≠ truth, retry,
+  cache, cost row, don't tune on the calibration pairs), §20 D15.
+
+### Next
+- Phase 5 (Streamlit UI) in a new session.

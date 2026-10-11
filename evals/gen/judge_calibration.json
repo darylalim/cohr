@@ -1,0 +1,327 @@
+{
+  "about": "Judge calibration (PLAN §18, D15): claim / cited-text pairs from the 4b-1b quick runs (synthetic meetings), labeled by hand. Labels: yes = every fact in the claim is in the cited text; partial = the main point is, a detail isn't, nothing contradicts; no = the main point isn't there or a detail contradicts it. Constructed pairs change one thing in a real claim or its citation (see `source`).",
+  "sources": {
+    "clean-en/seg0": "[transcript 0:00–4:50]\nGood morning, everyone. This is the weekly sync for the Harbor Project. Morning. Can everyone see my screen? Yes, we can see it. Let's start with Support Queue. The number of open support tickets is 390. That's compared with 233 last week. When we talked to customers, Support Queue came up a couple of times, mostly in passing.\nA few people asked me about Support Queue this week, so it's good that we're covering it. Honestly, Support Queue has been more stable than I thought it would be a month ago. There's some seasonality in Support Queue, so I wouldn't read too much into one period. We agreed to use the new logo on the website. Good point. Action item for Laura send the contract to legal by Friday. Okay, sounds good.\nLet's move on to site speed. The average page load time in milliseconds is 950 milliseconds. That's compared with 820 milliseconds last release. A few people asked me about site speed this week, so it's good that we're covering it. There's some seasonality in site speed, so I wouldn't read too much into one period. The dashboard for site speed was updated on Monday, so these are fresh numbers.\nWhen we talked to customers, Sightspeed came up a couple of times, mostly in passing. Omar will draft the hiring plan by the end of next week. I think that covers it for this topic. Next topic is quarterly budget. The approved budget for next quarter is $42,500. That's compared with $59,500 last quarter. A few people asked me about quarterly budget this week, so it's good that we're covering it.\nWhen we talked to customers, quarterly budget came up a couple of times, mostly in passing. For context, the way we measure quarterly budget hasn't changed since the spring. I looked at the quarterly budget figures in more detail yesterday, and the trend is roughly what we expected. Let's move on to cloud costs. The monthly cloud bill is $11,800. That's compared with $7,700 last month.\nFor context, the way we measure cloud costs hasn't changed since the spring. There's some seasonality in cloud costs, so I wouldn't read too much into one period. When we talked to customers, cloud costs came up a couple of times, mostly in passing. A few people asked me about cloud costs this week, so it's good that we're covering it. Victor, can you write the release notes by the end of next week? Yes, no problem. Makes sense to me.\nNext topic is revenue. The monthly recurring revenue is $354,000. That's compared with $134,000 last month. When we talked to customers, revenue came up a couple of times, mostly in passing. For context, the way we measure revenue hasn't changed since the spring. A few people asked me about revenue this week, so it's good that we're covering it.\nI looked at the revenue figures in more detail yesterday, and the trend is roughly what we expected. Next topic is retention. The week 2 return rate for trial users is 34%. That's compared with 82% last month. Honestly, retention has been more stable than I thought it would be a month ago. I looked at the retention figures in more detail yesterday, and the trend is roughly what we expected.\nWhen we talked to customers, retention came up a couple of times, mostly in passing. A few people asked me about retention this week, so it's good that we're covering it. Eleanor, can you prepare the customer survey by the end of next week? Okay, will do. Let me check my notes quickly. Okay, so the decision is to keep the onboarding checklist. Thanks, that's helpful. Let's move on to hiring.\nThe number of candidates in the pipeline is 75. That's compared with 85 last month. I looked at the hiring figures in more detail yesterday, and the trend is roughly what we expected. Honestly, hiring has been more stable than I thought it would be a month ago. When we talked to customers, hiring came up a couple of times, mostly in passing. A few people asked me about hiring this week, so it's good that we're covering it.",
+    "clean-en/seg1": "[transcript 4:51–5:51]\nOkay, so the decision is to move the weekly sync to Thursdays. Sorry, I was on mute for a second. Let's move on to trial signups. The number of new trial signups this month is 4,650. That's compared with 2,600 last month. When we talked to customers, trial signups came up a couple of times, mostly in passing. There's some seasonality in trial signups, so I wouldn't read too much into one period.\nI looked at the trial signups figures in more detail yesterday, and the trend is roughly what we expected. The dashboard for trial signups was updated on Monday, so these are fresh numbers. Action item for Tom record the onboarding video by Monday. Thanks, that's helpful. Okay, so the decision is to publish the roadmap to customers. Makes sense to me. That's everything for today, thanks, everyone. Thanks, bye.",
+    "clean-en/slide0": "[slide 1]\n```json\n{\n  \"title\": \"Support Queue\",\n  \"text_md\": \"- Ticket backlog\n- Duplicates and stale tickets\",\n  \"tables_md\": [\n    {\n      \"Metric\": \"Open tickets\",\n      \"Value\": \"390\"\n    },\n    {\n      \"Metric\": \"Last week\",\n      \"Value\": \"233\"\n    }\n  ],\n  \"chart_notes\": \"None\",\n  \"visual_notes\": \"None\"\n}\n```",
+    "clean-en/slide1": "[slide 2]\nSite Speed\n- Performance work\n- Image and script sizes\nMetric\nValue\nPage load (ms)\n950\nLast release\n820",
+    "clean-en/slide5": "[slide 6]\nRetention\n- Trial users coming back back\n- Onboarding checklist impact\n| Metric | Value |\n| --- | --- |\n| Week-2 return rate | 34% |\n| Last month | 82% |",
+    "noisy-en/seg0": "[transcript 0:00–4:57]\nGood morning, everyone. This is the weekly sync for the Juniper project. Morning. Can everyone see my screen? Yes, we can see it. Let's start with the quarterly budget. The approved budget for next quarter is $75,500. That's compared with $51,000 last quarter. I looked at the quarterly budget figures in more detail yesterday, and the trend is roughly what we expected.\nA few people asked me about quarterly budget this week, so it's good that we're covering it. Honestly, quarterly budget has been more stable than I thought it would be a month ago. There's some seasonality in quarterly budget, so I wouldn't read too much into one period. We agreed to keep the onboarding checklist. Right, moving on. Okay, so the decision is to move the weekly sync to Thursdays. Good point.\nLet's move on to cloud costs. The monthly cloud bill is $9,100. That's compared with $7,700 last month. There's some seasonality in cloud costs, so I wouldn't read too much into one period. The dashboard for cloud costs was updated on Monday, so these are fresh numbers. For context, the way we measure cloud costs hasn't changed since the spring.\nHonestly, cloud costs has been more stable than I thought it would be a month ago.\nNext topic is hiring. The number of candidates in the pipeline is 93. That's compared with 71 last month. Honestly, hiring has been more stable than I thought it would be a month ago. There's some seasonality in hiring, so I wouldn't read too much into one period. A few people asked me about hiring this week, so it's good that we're covering it. The dashboard for hiring was updated on Monday, so these are fresh numbers.\nVictor, can you book the venue for the F site by 3 October? Yes, no problem. Thanks, that's helpful. Okay, so the decision is to freeze new features until the beta ships. Let me pull up the next slide. Let's move on to support queue. The number of open support tickets is 149. That's compared with 305 last week.\nA few people asked me about support queue this week, so it's good that we're covering it. There's some seasonality in support queue, so I wouldn't read too much into one period. I looked at the support queue figures in more detail yesterday, and the trend is roughly what we expected. When we talked to customers, support queue came up a couple of times, mostly in passing. Action item for Nadia draft the hiring plan by 13 October. Good point.\nNext topic is retention. The week to return rate for trial users is 36%. That's compared with 84% last month. I looked at the retention figures in more detail yesterday, and the trend is roughly what we expected. For context, the way we measure retention hasn't changed since the spring.\nHonestly, retention has been more stable than I thought it would be a month ago. There's some seasonality in retention, so I wouldn't read too much into one period. Let's move on to site speed. The average page load time in milliseconds is 370 milliseconds. That's compared with 650 milliseconds last release. The dashboard for site speed was updated on Monday, so these are fresh numbers.\nA few people asked me about site speed this week, so it's good that we're covering it. I looked at the site speed figures in more detail yesterday, and the trend is roughly what we expected. Honestly, site speed has been more stable than I thought it would be a month ago. Let's move on to trial signups. The number of new trial signups this month is 4,450. That's compared with 3,250 last month.\nHonestly, trial signups has been more stable than I thought it would be a month ago. For context, the way we measure trial signups hasn't changed since the spring. When we talked to customers, trial signups came up a couple of times, mostly in passing. The dashboard for trial signups was updated on Monday, so these are fresh numbers. Kenji will fix the login timeout bug by Monday. Let me check my notes quickly.",
+    "noisy-en/seg1": "[transcript 4:58–5:54]\nWe agreed to hire a contract designer for the redesign. Let me pull up the next slide. Let's move on to revenue. The monthly recurring revenue is $248,000. That's compared with $161,000 last month. Honestly, revenue has been more stable than I thought it would be a month ago. There's some seasonality in revenue, so I wouldn't read too much into one period.\nThe dashboard for revenue was updated on Monday, so these are fresh numbers. For context, the way we measure revenue hasn't changed since the spring. Grace, can you write the release notes by Monday? Sure, I can do that. Thanks, that's helpful. Omar will prepare the customer survey by Monday. Sorry, I was on mute for a second. That's everything for today. Thanks, everyone. Thanks, bye.",
+    "pdf-slides-en/seg0": "[transcript 0:00–4:30]\nGood morning, everyone. This is the weekly sync for the Juniper project. Morning. Can everyone see my screen? Yes, we can see it. Let's start with trial signups. The number of new trial signups this month is 3,100. That's compared with 1,350 last month. When we talked to customers, trial signups came up a couple of times, mostly in passing.\nThere's some seasonality in trial signups, so I wouldn't read too much into one period. The dashboard for trial signups was updated on Monday, so these are fresh numbers. For context, the way we measure trial signups hasn't changed since the spring. Action item for Kenji record the onboarding video by Monday. Can you say that again? The audio cut out. Laura, can you write the release notes by the 15th of November? Okay, will do.\nOkay, sounds good.\nNext topic is site speed. The average page load time in milliseconds is 350 milliseconds. That's compared with 670 milliseconds last release. When we talked to customers, site speed came up a couple of times, mostly in passing. For context, the way we measure site speed hasn't changed since the spring. There's some seasonality in site speed, so I wouldn't read too much into one period.\nI looked at the site speed figures in more detail yesterday, and the trend is roughly what we expected. Victor, can you fix the login timeout bug by Wednesday? Sure, I can do that. Thanks, that's helpful. Next topic is hiring. The number of candidates in the pipeline is 69. That's compared with 86 last month. I looked at the hiring figures in more detail yesterday, and the trend is roughly what we expected.\nWhen we talked to customers, hiring came up a couple of times, mostly in passing. There's some seasonality in hiring, so I wouldn't read too much into one period. For context, the way we measure hiring hasn't changed since the spring. We decided to move the weekly sync to Thursdays. Sorry, I was on mute for a second. Next topic is retention. The week 2 return rate for trial users is 46%.\nThat's compared with 60% last month. A few people asked me about retention this week, so it's good that we're covering it. There's some seasonality in retention, so I wouldn't read too much into one period. I looked at the retention figures in more detail yesterday, and the trend is roughly what we expected. Honestly, retention has been more stable than I thought it would be a month ago. Okay, so the decision is to publish the roadmap to customers.\nOkay, sounds good. Next topic is Support Queue. The number of open support tickets is 340. That's compared with 444 last week. The dashboard for Support Queue was updated on Monday, so these are fresh numbers. Honestly, Support Queue has been more stable than I thought it would be a month ago. When we talked to customers, Support Queue came up a couple of times, mostly in passing.\nThere's some seasonality in support queue, so I wouldn't read too much into one period. We decided to drop the legacy export feature. Right, moving on. Next topic is cloud costs. The monthly cloud bill is $8,900. That's compared with $8,200 last month. There's some seasonality in cloud costs, so I wouldn't read too much into one period.\nThe dashboard for cloud costs was updated on Monday, so these are fresh numbers. I looked at the cloud costs figures in more detail yesterday, and the trend is roughly what we expected. When we talked to customers, cloud costs came up a couple of times, mostly in passing. Elena will review the security audit by the end of the month. Good point. Let's move on to revenue. The monthly recurring revenue is $273,000.",
+    "pdf-slides-en/seg1": "[transcript 4:31–5:51]\nThat's compared with $313,000 last month. When we talked to customers, revenue came up a couple of times, mostly in passing. There's some seasonality in revenue, so I wouldn't read too much into one period. A few people asked me about revenue this week, so it's good that we're covering it. Honestly, revenue has been more stable than I thought it would be a month ago. Nadia, can you prepare the customer survey by the 22nd of November?\nSure, I can do that. I think that covers it for this topic. Okay, so the decision is to freeze new features until the beta ships. Thanks, that's helpful. Next topic is quarterly budget. The approved budget for next quarter is $57,000. That's compared with $54,000 last quarter. When we talked to customers, quarterly budget came up a couple of times, mostly in passing.\nA few people asked me about quarterly budget this week, so it's good that we're covering it. Honestly, quarterly budget has been more stable than I thought it would be a month ago. There's some seasonality in quarterly budget, so I wouldn't read too much into one period. That's everything for today. Thanks, everyone. Thanks, bye.",
+    "pdf-slides-en/slide3": "[slide 4]\nRetention\n- Trial users coming back back\n- Onboarding checklist impact\n| Metric | Value |\n| --- | --- |\n| Week-2 return rate | 46% |\n| Last month | 60% |",
+    "pdf-slides-en/slide6": "[slide 7]\nRevenue\n- Revenue trend\n- Expansion and churn\n| Metric | Value |\n| --- | --- |\n| Monthly recurring revenue | $273,000 |\n| Last month | $313,000 |",
+    "slide-conflict-en/seg0": "[transcript 0:00–4:50]\nGood morning, everyone. This is the weekly sync for the Cedar Project. Morning. Can everyone see my screen? Yes, we can see it. Let's start with trial signups. The number of new trial signups this month is 3,550. That's compared with 1,750 last month. When we talked to customers, trial signups came up a couple of times, mostly in passing.\nA few people asked me about trial signups this week, so it's good that we're covering it. There's some seasonality in trial signups, so I wouldn't read too much into one period. For context, the way we measure trial signups hasn't changed since the spring. We decided to move the weekly sync to Thursdays. Right, moving on.\nNext topic is Support Queue. The number of open support tickets is 336. That's compared with 426 last week. The dashboard for Support Queue was updated on Monday, so these are fresh numbers. A few people asked me about Support Queue this week, so it's good that we're covering it. There's some seasonality in Support Queue, so I wouldn't read too much into one period.\nHonestly, support queue has been more stable than I thought it would be a month ago. Nadia, can you send the contract to legal by the 18th of November? Okay, will do. Good point. Grace will write the release notes by Wednesday. Can you say that again? The audio cut out. Let's move on to quarterly budget. The approved budget for next quarter is $80,000. That's compared with $77,500 last quarter.\nHonestly, quarterly budget has been more stable than I thought it would be a month ago. I looked at the quarterly budget figures in more detail yesterday, and the trend is roughly what we expected. There's some seasonality in quarterly budget, so I wouldn't read too much into one period. A few people asked me about quarterly budget this week, so it's good that we're covering it. Action item for Elena Prepare the customer survey by Wednesday. Sorry, I was on mute for a second.\nNext topic is cloud costs. The monthly cloud bill is $10,700. That's compared with $10,300 last month. Honestly, cloud costs has been more stable than I thought it would be a month ago. For context, the way we measure cloud costs hasn't changed since the spring. There's some seasonality in cloud costs, so I wouldn't read too much into one period.\nA few people asked me about cloud costs this week, so it's good that we're covering it. Okay, so the decision is to use the new logo on the website. Good point. Let's move on to site speed. The average page load time in milliseconds is 740 milliseconds. That's compared with 330 milliseconds last release. The dashboard for site speed was updated on Monday, so these are fresh numbers.\nA few people asked me about Sightspeed this week, so it's good that we're covering it. Honestly, Sightspeed has been more stable than I thought it would be a month ago. When we talked to customers, Sightspeed came up a couple of times, mostly in passing. Tom will draft the hiring plan by the end of next week. Sorry, I was on mute for a second. Next topic is revenue. The monthly recurring revenue is $140,000.\nThat's compared with $371,000 last month. I looked at the revenue figures in more detail yesterday, and the trend is roughly what we expected. For context, the way we measure revenue hasn't changed since the spring. When we talked to customers, revenue came up a couple of times, mostly in passing. Honestly, revenue has been more stable than I thought it would be a month ago. We decided to freeze new features until the beta ships.\nMakes sense to me. Next topic is hiring. The number of candidates in the pipeline is 85. That's compared with 88 last month. For context, the way we measure hiring hasn't changed since the spring. A few people asked me about hiring this week, so it's good that we're covering it. The dashboard for hiring was updated on Monday, so these are fresh numbers. There's some seasonality in hiring, so I wouldn't read too much into one period.",
+    "slide-conflict-en/seg1": "[transcript 4:51–5:38]\nOmar will book the venue for the offsite by Friday. Makes sense to me. Next topic is retention. The week to return rate for trial users is 37%. That's compared with 54% last month. There's some seasonality in retention, so I wouldn't read too much into one period. For context, the way we measure retention hasn't changed since the spring.\nI looked at the retention figures in more detail yesterday, and the trend is roughly what we expected. The dashboard for retention was updated on Monday, so these are fresh numbers. We agreed to drop the legacy export feature. I think that covers it for this topic. That's everything for today. Thanks, everyone. Thanks, bye.",
+    "slide-conflict-en/slide2": "[slide 3]\nQuarterly Budget\n- Spend plan by team\n- User testing and onboarding\n| Metric | Value |\n| --- | --- |\n| Approved budget | $18,000 |\n| Last quarter | $77,500 |"
+  },
+  "pairs": [
+    {
+      "id": "c01",
+      "source": "slide-conflict-en notes.json key_points[2]; cited against the budget slide instead of the transcript",
+      "claim": "Key point: Quarterly budget: Approved budget of $80,000 (vs. $77,500 last quarter)",
+      "cited": [
+        "slide-conflict-en/slide2"
+      ],
+      "label": "no",
+      "reason": "The cited slide says the approved budget is $18,000, not $80,000 (the slide-conflict error)."
+    },
+    {
+      "id": "c02",
+      "source": "pdf-slides-en notes.json decisions[6]; cited against the wrong segment",
+      "claim": "Decision: Freeze new features until beta ships.",
+      "cited": [
+        "pdf-slides-en/seg0"
+      ],
+      "label": "no",
+      "reason": "The feature freeze is decided in segment 1; this segment doesn't mention it."
+    },
+    {
+      "id": "c03",
+      "source": "constructed: pdf-slides-en action_items[3] with an added task",
+      "claim": "Action item: Review the security audit and share the findings with the board (owner: Elena; due: End of the month)",
+      "cited": [
+        "pdf-slides-en/seg0"
+      ],
+      "label": "partial",
+      "reason": "Elena reviewing the audit by month end is stated; sharing with the board is not."
+    },
+    {
+      "id": "c04",
+      "source": "pdf-slides-en notes.json action_items[4]",
+      "claim": "Action item: Prepare customer survey by November 2nd. (owner: Nadia; due: November 2nd)",
+      "cited": [
+        "pdf-slides-en/seg1"
+      ],
+      "label": "no",
+      "reason": "The due date said is the 22nd of November, not November 2nd."
+    },
+    {
+      "id": "c05",
+      "source": "pdf-slides-en notes.json key_points[6]",
+      "claim": "Key point: Monthly recurring revenue at $273,000 (from $313,000 last month).",
+      "cited": [
+        "pdf-slides-en/seg0",
+        "pdf-slides-en/slide6"
+      ],
+      "label": "yes",
+      "reason": "$273,000 is in the transcript; the cited slide also gives last month's $313,000."
+    },
+    {
+      "id": "c06",
+      "source": "clean-en notes.json action_items[0]",
+      "claim": "Action item: Send contract to legal by Friday. (owner: Laura; due: Friday)",
+      "cited": [
+        "clean-en/seg0"
+      ],
+      "label": "yes",
+      "reason": "\"Action item for Laura send the contract to legal by Friday.\""
+    },
+    {
+      "id": "c07",
+      "source": "constructed: clean-en action_items[0] with an added condition",
+      "claim": "Action item: Send the contract to legal after the finance review (owner: Laura; due: Friday)",
+      "cited": [
+        "clean-en/seg0"
+      ],
+      "label": "partial",
+      "reason": "Laura sending the contract by Friday is stated; the finance review is not."
+    },
+    {
+      "id": "c08",
+      "source": "pdf-slides-en notes.json key_points[3]",
+      "claim": "Key point: Retention week-2 return rate at 46% (from 60% last month), more stable than expected.",
+      "cited": [
+        "pdf-slides-en/seg0",
+        "pdf-slides-en/slide3"
+      ],
+      "label": "yes",
+      "reason": "46% vs 60% last month and \"more stable than I thought\" are stated."
+    },
+    {
+      "id": "c09",
+      "source": "constructed: slide-conflict-en decisions[2] with an added step",
+      "claim": "Decision: Drop the legacy export feature and move its users to the new reports page.",
+      "cited": [
+        "slide-conflict-en/seg1"
+      ],
+      "label": "partial",
+      "reason": "Dropping the legacy export is agreed; moving users to a reports page is never said."
+    },
+    {
+      "id": "c10",
+      "source": "clean-en notes.json key_points[5]",
+      "claim": "Key point: Retention: 34% week-2 return rate (vs 82% last month). Seasonality in measurement.",
+      "cited": [
+        "clean-en/seg0",
+        "clean-en/slide5"
+      ],
+      "label": "partial",
+      "reason": "34% vs 82% is stated, but nothing about seasonality or measurement for retention."
+    },
+    {
+      "id": "c11",
+      "source": "constructed: noisy-en decisions[0] merged with decisions[3] (from the uncited segment)",
+      "claim": "Decision: Move the weekly sync to Thursdays and hire a contract designer for the redesign.",
+      "cited": [
+        "noisy-en/seg0"
+      ],
+      "label": "partial",
+      "reason": "The Thursday move is agreed in this segment; the contract designer is only in segment 1, which isn't cited."
+    },
+    {
+      "id": "c12",
+      "source": "constructed: noisy-en action_items[1] with the owner swapped",
+      "claim": "Action item: Fix the login timeout bug (owner: Victor; due: Monday)",
+      "cited": [
+        "noisy-en/seg0"
+      ],
+      "label": "no",
+      "reason": "Kenji fixes the login bug; Victor is asked to book the offsite venue."
+    },
+    {
+      "id": "c13",
+      "source": "slide-conflict-en notes.json key_points[1]",
+      "claim": "Key point: Support queue: 3,360 open tickets (vs. 426 last week)",
+      "cited": [
+        "slide-conflict-en/seg0"
+      ],
+      "label": "no",
+      "reason": "The transcript says 336 open tickets, not 3,360 (the number the Map guard flagged)."
+    },
+    {
+      "id": "c14",
+      "source": "pdf-slides-en notes.json open_questions[0]",
+      "claim": "Open question: How to best measure trial signups going forward?",
+      "cited": [
+        "pdf-slides-en/seg0"
+      ],
+      "label": "no",
+      "reason": "No one asks this; the transcript only says the way trial signups are measured hasn't changed."
+    },
+    {
+      "id": "c15",
+      "source": "constructed: noisy-en key_points[1] with an added forecast",
+      "claim": "Key point: Monthly cloud bill is $9,100, compared to $7,700 last month; the team expects it to fall next quarter.",
+      "cited": [
+        "noisy-en/seg0"
+      ],
+      "label": "partial",
+      "reason": "$9,100 vs $7,700 is stated; no forecast is given."
+    },
+    {
+      "id": "c16",
+      "source": "pdf-slides-en notes.json key_points[6]; slide citation removed",
+      "claim": "Key point: Monthly recurring revenue at $273,000 (from $313,000 last month).",
+      "cited": [
+        "pdf-slides-en/seg0"
+      ],
+      "label": "partial",
+      "reason": "$273,000 is in the cited segment, but last month's $313,000 is only in the next segment and the slide, which this pair doesn't cite."
+    },
+    {
+      "id": "c17",
+      "source": "slide-conflict-en notes.json key_points[2]",
+      "claim": "Key point: Quarterly budget: Approved budget of $80,000 (vs. $77,500 last quarter)",
+      "cited": [
+        "slide-conflict-en/seg0"
+      ],
+      "label": "yes",
+      "reason": "Only the transcript is cited and it says $80,000 vs $77,500; support is judged against the cited text, not the slide (which says $18,000)."
+    },
+    {
+      "id": "c18",
+      "source": "clean-en notes.json action_items[2]",
+      "claim": "Action item: Prepare customer survey by end of next week. (owner: Eleanor; due: End of next week)",
+      "cited": [
+        "clean-en/seg0"
+      ],
+      "label": "yes",
+      "reason": "\"Eleanor, can you prepare the customer survey by the end of next week? Okay, will do.\" (the eval scores it wrong vs truth, but the cited text supports it as written)."
+    },
+    {
+      "id": "c19",
+      "source": "noisy-en notes.json key_points[7]; cited against the wrong segment",
+      "claim": "Key point: Monthly recurring revenue increased to $248,000 from $161,000 last month.",
+      "cited": [
+        "noisy-en/seg0"
+      ],
+      "label": "no",
+      "reason": "Revenue is discussed in segment 1; this segment has no revenue figures."
+    },
+    {
+      "id": "c20",
+      "source": "slide-conflict-en notes.json action_items[0]",
+      "claim": "Action item: Send contract to legal (owner: Nadia; due: 18 November)",
+      "cited": [
+        "slide-conflict-en/seg0"
+      ],
+      "label": "yes",
+      "reason": "\"Nadia, can you send the contract to legal by the 18th of November? Okay, will do.\""
+    },
+    {
+      "id": "c21",
+      "source": "clean-en notes.json summary[0]",
+      "claim": "Summary: The weekly Harbor Project sync covered Support Queue, Site Speed, Quarterly Budget, Cloud Costs, Revenue, Retention, and Hiring.",
+      "cited": [
+        "clean-en/seg0",
+        "clean-en/seg1"
+      ],
+      "label": "yes",
+      "reason": "All seven topics are discussed in the cited segments; leaving out trial signups is not a contradiction."
+    },
+    {
+      "id": "c22",
+      "source": "clean-en notes.json action_items[3]; cited against the wrong segment",
+      "claim": "Action item: Record the onboarding video by Monday. (owner: Tom; due: Monday)",
+      "cited": [
+        "clean-en/seg0"
+      ],
+      "label": "no",
+      "reason": "Tom's onboarding video is in segment 1; this segment never mentions it."
+    },
+    {
+      "id": "c23",
+      "source": "clean-en notes.json key_points[1]; cited against another meeting's segment",
+      "claim": "Key point: Site Speed: 950ms avg page load (vs 820 last release). Dashboard updated Monday.",
+      "cited": [
+        "noisy-en/seg0"
+      ],
+      "label": "no",
+      "reason": "This meeting's page load is 370 ms vs 650 ms; 950/820 contradicts it."
+    },
+    {
+      "id": "c24",
+      "source": "noisy-en notes.json decisions[3]",
+      "claim": "Decision: Hire a contract designer for redesign.",
+      "cited": [
+        "noisy-en/seg1"
+      ],
+      "label": "yes",
+      "reason": "\"We agreed to hire a contract designer for the redesign.\""
+    },
+    {
+      "id": "c25",
+      "source": "noisy-en notes.json action_items[0]",
+      "claim": "Action item: Draft the hiring plan (owner: Nadia; due: 13 October)",
+      "cited": [
+        "noisy-en/seg0"
+      ],
+      "label": "yes",
+      "reason": "\"Action item for Nadia draft the hiring plan by 13 October.\""
+    },
+    {
+      "id": "c26",
+      "source": "clean-en notes.json key_points[1]",
+      "claim": "Key point: Site Speed: 950ms avg page load (vs 820 last release). Dashboard updated Monday.",
+      "cited": [
+        "clean-en/seg0",
+        "clean-en/slide1"
+      ],
+      "label": "yes",
+      "reason": "950 ms vs 820 ms last release and the Monday dashboard update are both stated."
+    },
+    {
+      "id": "c27",
+      "source": "noisy-en notes.json decisions[2]",
+      "claim": "Decision: Update dashboard for cloud costs, hiring, support queue, site speed, and trial signups.",
+      "cited": [
+        "noisy-en/seg0"
+      ],
+      "label": "no",
+      "reason": "Nobody decides to update dashboards; the transcript says some dashboards were already updated on Monday (and none for the support queue)."
+    },
+    {
+      "id": "c28",
+      "source": "constructed: noisy-en key_points[0] with an added reason",
+      "claim": "Key point: Approved budget for next quarter is $75,500, compared to $51,000 last quarter, driven by the new hiring plan.",
+      "cited": [
+        "noisy-en/seg0"
+      ],
+      "label": "partial",
+      "reason": "Both numbers are stated; the cause (the hiring plan) is not."
+    },
+    {
+      "id": "c29",
+      "source": "clean-en notes.json key_points[0]",
+      "claim": "Key point: Support Queue: 390 open tickets (up from 233 last week). Seasonality noted; new logo on website.",
+      "cited": [
+        "clean-en/seg0",
+        "clean-en/slide0"
+      ],
+      "label": "yes",
+      "reason": "390 vs 233, seasonality and the new logo are all said in the transcript; slide shows 390/233."
+    },
+    {
+      "id": "c30",
+      "source": "noisy-en notes.json key_points[8]",
+      "claim": "Key point: Revenue has been more stable than expected, with some seasonality.",
+      "cited": [
+        "noisy-en/seg1"
+      ],
+      "label": "yes",
+      "reason": "\"revenue has been more stable than I thought\" and \"some seasonality in revenue\"."
+    }
+  ]
+}

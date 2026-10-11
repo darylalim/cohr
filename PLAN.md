@@ -11,7 +11,8 @@ Phase 2 done 2026-10-11 (perception: VAD, Transcribe, Vision, ModelManager; smok
 Phase 3 done 2026-10-11 (fuse + map: slide text alignment, segments, Tiny Aya Map).
 Phase 4a done 2026-10-11 (reduce + render). Phase 4b-1 done 2026-10-11 (planted-facts evals,
 `cohr eval --set quick`, D11/D12/D19; fixes for ingest scene detection, Map due dates, Reduce
-markers and citation jump times).
+markers and citation jump times). Phase 4b-1b done 2026-10-11 (Map number guard, D20).
+Phase 4b-2 done 2026-10-11 (judge: support rate, judge recall, D15 passed at 80.0%).
 Hub metadata verified 2026-10-04 and 2026-10-10; packages, licenses and Streamlit config checked
 2026-10-05.
 
@@ -442,10 +443,13 @@ src/cohr/
   fuse.py            segment windows + slide alignment + token budget split
   mapper.py          Tiny Aya per-segment notes
   reduce.py          R7B rag documents, generation, citation parsing
+  judge.py           eval-only Qwen3 judge: support / coverage questions, JSON retry, answer
+                     cache (§18, Phase 4b-2)
   render.py          notes.md rendering with anchors
   pipeline.py        stage runner: manifest, hashing, skip logic, progress callbacks, cancel
                      flag, interrupted-stage recovery, atomic writes, run log
   prompts/           vision.md  map.md  reduce.md  reduce_pass2.md  ask.md  translate.md  judge.md
+                     judge_coverage.md  judge_retry.md
                      (plain files; each hash feeds its stage's config hash, §3)
   cli.py             `cohr run <audio> [--slides …] [--video …] --lang en --target en`, `cohr eval`
   numbers.py         number normalization (words, separators, ordinals → digits) shared by
@@ -844,7 +848,7 @@ dataframes, code blocks, the Runs memory chart, badges, and a Notes page full of
   Map invalid-JSON fallback; Ask history trimming under the cap.
 - **Unit tests must not need Metal or model weights:** they run on CI runners without a usable
   GPU (§15). Import `mlx`, `mlx_lm`, `mlx_vlm`, `mlx_audio` and `mlx_speech` lazily inside the model wrappers
-  (`vad.py`, `asr.py`, `vision.py`, `mapper.py`, `reduce.py`, `models.py`), never at module top level in code
+  (`vad.py`, `asr.py`, `vision.py`, `mapper.py`, `reduce.py`, `judge.py`, `models.py`), never at module top level in code
   that unit tests import.
 - **Fixtures generated on the fly** (no binaries committed):
   - Audio: `say -o <tmp_path>/x.aiff "…"` → ffmpeg → wav (macOS TTS), two speakers via `-v`
@@ -965,9 +969,10 @@ invalid-JSON fallback, §5.5); token budget enforced.
   claims found in no transcript or slide, to see whether Reduce also changes digits). `quick`
   before/after on the same seeds: number recall, fact recall, made-up items; no other metric
   worse (D20). Record a wrong repair if the eval shows one.
-- **4b-2: judge.** Qwen3 judge wrapper (§18), support rate, judge recall for cross-language text facts,
+- **4b-2: judge** (done 2026-10-11, NOTES.md). Qwen3 judge wrapper (§18), support rate, judge recall for cross-language text facts,
   `evals/gen/judge_calibration.json` (30 pairs: Claude drafts labels from 4b-1b outputs, the user reviews
-  them before the judge runs on them), D15. Kickoff prompt in §21.
+  them before the judge runs on them), D15. `cohr eval --calibrate-judge`, `--no-judge`; answers cached
+  per item in `evals/data/judge/`. Kickoff prompt in §21.
 **Phase 5: Streamlit UI:** "Paper & Ink" theme and adaptive layout (§7) with `test_theme.py`,
 `test_app.py` and the window-width check, all four pages, background job, progress, Ask (follow-ups and answer language, §5.7); upload limit and local
 path input (§12); Runs page shows each run's size, with Delete and Prune media.
@@ -1608,9 +1613,24 @@ script's text can't work when the notes are in another language. For these items
   (Apache-2.0, ~2.3 GB, MLX via `mlx-lm`). It's loaded only during eval, after the pipeline models
   are released (sequential policy, §4).
 - Prompt: claim + cited segment text → `{"supported": "yes|partial|no", "reason": str}`, JSON only,
-  temperature 0.
+  temperature 0. The claim is prefixed with its section ("Decision: …"; action items carry owner
+  and due), since a decision or an open question claims something was agreed or asked. A cited
+  segment is its **transcript only** (not the Map notes Reduce also saw, so a Map error can't
+  support itself); a cited slide is its slide text. Support means "the cited text says it", not
+  "it's true": a misspoken number cited to the transcript is supported (fact recall and the
+  slide-conflict check cover truth).
+- Invalid JSON: one retry with `judge_retry.md`, then "unjudged" (in the support-rate
+  denominator, never counted as supported). Uncited claims aren't judged.
+- **Support rate** = "yes" / cited claims; partial, no and unjudged are reported as counts.
+  **Judge recall** = judge_only facts the coverage question finds / judge_only facts.
+- Answers are cached per item in `evals/data/judge/<item>.json`, keyed by the question's text,
+  the hash of every judge prompt and the judge revision: re-scoring with nothing stale loads no
+  model. The judge loads on the first cache miss, after `release()` of the pipeline models (§4),
+  and its cost is its own report row, outside `stages` and the gate.
 - **Calibration:** 30 hand-labeled claim/segment pairs (`evals/gen/judge_calibration.json`). Record
   the judge's agreement; if it's below 80%, judge metrics are reported but excluded from the gate.
+  `cohr eval --calibrate-judge` writes `evals/reports/<ts>-judge-calibration.{json,md}`. Don't
+  tune the judge prompts on these 30 pairs: they're the only held-out measure of the judge.
 - Optional `--judge claude` for the public and synthetic sets only (needs an API key). User
   recordings are never sent to any judge.
 
@@ -1746,7 +1766,7 @@ section.
 | D12 | Fuse window length (§5.4) | 300 s | Fact recall vs. speed on `quick` | Phase 4b-1 | **300 s**: vs 120 s, recall 82.3% vs 79.4%, made-up items 3 vs 6, Map 123 vs 180 s/audio h (one seed per item; re-check against D16 noise) |
 | D13 | Notes column `width=880` shrinks below 880 px (§7) | 880 | Resize check | Phase 5 | |
 | D14 | Anchors scroll the Sources panel (§7) | Anchors | Click check; fallback = drawer buttons | Phase 5 | |
-| D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4b-2 | |
+| D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4b-2 | **Pass, no margin**: 3-way 80.0% (24/30), yes vs not-yes 96.7% (29/30). All 12 "yes" right; 4 of 8 "partial" judged "no" (an added detail read as a contradiction), 1 "partial" judged "yes", 1 "no" judged "partial". Support rate counts only "yes", so the partial/no confusion barely moves it. Judge metrics stay out of the gate until D16 (Phase 6) |
 | D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 repeated `quick` runs: threshold ≥ 2× noise | Phase 6 | |
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 7 | |
 | D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6 | |
@@ -1791,7 +1811,7 @@ uv run pytest (no models) · uv run streamlit run app.py · uv run cohr run … 
 - Python 3.13, uv only. Never pip. Add deps with `uv add` (dev: `--dev`, eval: `--group eval`).
 - All model inference on MLX (mlx-audio / mlx-speech, mlx-vlm, mlx-lm). No torch (CI fails on it).
 - Import mlx, mlx_lm, mlx_vlm, mlx_audio, mlx_speech only inside functions in the model
-  wrappers (vad, asr, vision, mapper, reduce, models). Unit tests run in CI without a GPU.
+  wrappers (vad, asr, vision, mapper, reduce, judge, models). Unit tests run in CI without a GPU.
 - Run files are read and written only through src/cohr/schemas.py. Changing a model means
   bumping its FORMAT_VERSION and regenerating snapshots (PLAN §19).
 - Every output file is written atomically (temp file + os.replace).

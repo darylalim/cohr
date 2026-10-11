@@ -2,7 +2,9 @@
 
 The generator (`evals/gen/`, outside the package) writes each item's media and `truth.json`;
 this module defines that file's format, runs the pipeline on the item and scores the run with
-exact checks only. The LLM judge (support rate, judge recall) is Phase 4b-2.
+exact checks. The LLM judge (`judge.py`) adds the secondary metrics afterwards: support rate
+(each cited claim against the text it cites) and judge recall (cross-language text facts). Its
+answers are cached per item and kept out of the release gate until D15/D16 say otherwise.
 
 Fact matching (§18):
 - numbers: the planted value appears in any claim (numbers normalized to digits first);
@@ -18,6 +20,7 @@ action item with the right task but someone else's owner or due date counts as m
 it states something that wasn't said.
 """
 
+import contextlib
 import hashlib
 import json
 import math
@@ -33,11 +36,13 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from cohr import atomic, pipeline, schemas, storage
+from cohr import atomic, judge, pipeline, schemas, storage
 from cohr.config import Config, prompt_hash
 from cohr.fuse import slide_text, tokens
+from cohr.judge import CachedJudge, Generate, Label, Supported
+from cohr.mapper import clock
 from cohr.numbers import digits, numbers_in
-from cohr.reduce import SECTIONS
+from cohr.reduce import SECTIONS, slide_label, slide_snippet
 from cohr.schemas import (
     ActionItem,
     ChunksFile,
@@ -45,6 +50,8 @@ from cohr.schemas import (
     Manifest,
     MapFile,
     NotesDoc,
+    Segment,
+    SegmentsFile,
     Slide,
     SlidesFile,
     Span,
@@ -66,6 +73,9 @@ SETS_DIR = Path("evals") / "sets"
 DATA_DIR = Path("evals") / "data"
 REPORTS_DIR = Path("evals") / "reports"
 BASELINE = Path("evals") / "baseline.json"
+JUDGE_CACHE_DIR = DATA_DIR / "judge"  # judge answers per item (gitignored with evals/data)
+CALIBRATION = GEN_DIR / "judge_calibration.json"
+AGREEMENT_MIN = 0.8  # D15: judge metrics may enter the gate only above this (Phase 6)
 
 
 class _Model(BaseModel):
@@ -287,7 +297,8 @@ class FactResult(_Model):
     kind: str
     text: str
     found: bool
-    judge_only: bool = False  # cross-language text fact: needs the judge (4b-2)
+    judge_only: bool = False  # cross-language text fact: found only by the judge
+    judge_covered: bool | None = None  # judge's answer for a judge_only fact (None: not judged)
     section: str | None = None
     claim: str | None = None
     citation_ok: bool | None = None
@@ -508,6 +519,14 @@ class StageCost(_Model):
     reused: bool  # skipped in this eval run: timing is from the run that produced it
 
 
+class ClaimSupport(_Model):
+    section: str
+    claim: str  # as the judge saw it (action items with owner and due)
+    citations: list[str]  # "seg 0", "slide 3"
+    supported: Supported
+    reason: str
+
+
 class ItemReport(_Model):
     id: str
     run_id: str
@@ -523,6 +542,7 @@ class ItemReport(_Model):
     number_repairs: list[str] = []  # Map number guard (§5.5): "420,500 → 42,500"
     unverified_numbers: list[str] = []  # flagged by the guard in map.json
     unsupported_numbers: list[str] = []  # in notes.json claims, in no transcript or slide
+    support: list[ClaimSupport] = []  # judge answers per cited claim (empty: not judged)
     stages: dict[str, StageCost]
 
 
@@ -648,6 +668,168 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
     )
 
 
+# --- judge (secondary metrics) ------------------------------------------------------------
+
+
+def segment_block(seg: Segment) -> str:
+    """A cited segment as the judge sees it: its transcript only. Reduce also saw Map's notes
+    in the segment's document, but those are derived text; judging against them would let a
+    Map error support itself."""
+    return f"[transcript {clock(seg.t0)}–{clock(seg.t1)}]\n{seg.transcript_text}"
+
+
+def slide_block(slide: Slide) -> str:
+    return f"[{slide_label(slide.slide_id)}]\n{slide_snippet(slide)}"
+
+
+def cited_text(claim: Claim, segments: Mapping[int, Segment], slides: Mapping[int, Slide]) -> str:
+    blocks = []
+    for kind, i in dict.fromkeys((c.kind, c.id) for c in claim.citations):
+        if kind == "seg" and i in segments:
+            blocks.append(segment_block(segments[i]))
+        elif kind == "slide" and i in slides:
+            blocks.append(slide_block(slides[i]))
+    return "\n\n".join(blocks)
+
+
+SECTION_LABEL = {
+    "summary": "Summary",
+    "key_points": "Key point",
+    "decisions": "Decision",
+    "action_items": "Action item",
+    "open_questions": "Open question",
+}
+
+
+def claim_text(claim: Claim, section: str | None = None) -> str:
+    """The claim as the judge sees it: action items carry their owner and due date, and the
+    section comes first when given (an open question or a decision is a claim about what was
+    asked or agreed, not just about its words)."""
+    text = claim.text
+    if isinstance(claim, ActionItem):
+        fields = [
+            f"owner: {claim.owner}" if claim.owner else "",
+            f"due: {claim.due}" if claim.due else "",
+        ]
+        if extra := "; ".join(f for f in fields if f):
+            text = f"{text} ({extra})"
+    return f"{SECTION_LABEL[section]}: {text}" if section else text
+
+
+def judge_item(report: ItemReport, run_dir: Path, judge_: CachedJudge) -> ItemReport:
+    """Add the judge's answers to a scored item: support for every cited claim, coverage for
+    every judge_only fact. Uncited claims aren't judged (they're counted as uncited)."""
+    segments = {s.seg_id: s for s in schemas.load(run_dir, SegmentsFile).segments}
+    slides = {s.slide_id: s for s in schemas.load(run_dir, SlidesFile).slides}
+    sections = claims_by_section(schemas.load(run_dir, NotesDoc))
+    support = []
+    for name, claims in sections.items():
+        for claim in claims:
+            if not claim.citations:
+                continue
+            text = claim_text(claim, name)
+            answer = judge_.support(text, cited_text(claim, segments, slides))
+            support.append(
+                ClaimSupport(
+                    section=name,
+                    claim=text,
+                    citations=[f"{c.kind} {c.id}" for c in claim.citations],
+                    supported=answer.supported,
+                    reason=answer.reason,
+                )
+            )
+    facts = []
+    for f in report.facts:
+        if f.judge_only:
+            claims = [claim_text(c) for name in HOME[f.kind] for c in sections[name]]
+            f = f.model_copy(update={"judge_covered": judge_.coverage(f.text, claims).covered})
+        facts.append(f)
+
+    def count(label: Supported) -> int:
+        return sum(s.supported == label for s in support)
+
+    only = [f for f in facts if f.judge_only]
+    metrics = {
+        **report.metrics,
+        "cited_claims": len(support),
+        "support_rate": round(count("yes") / len(support), 4) if support else None,
+        "support_partial": count("partial"),
+        "support_no": count("no"),
+        "support_unjudged": count("unjudged"),
+        "judge_covered": sum(bool(f.judge_covered) for f in only),
+        "judge_recall": round(sum(bool(f.judge_covered) for f in only) / len(only), 4)
+        if only
+        else None,
+    }
+    return report.model_copy(update={"facts": facts, "support": support, "metrics": metrics})
+
+
+class JudgeCost(_Model):
+    loaded: bool  # False: every answer came from the cache
+    calls: int
+    cached: int
+    seconds: float
+    s_per_audio_hour: float | None
+    peak_mem_gb: float | None
+
+
+def judge_cache(root: Path, name: str) -> Path:
+    return root / JUDGE_CACHE_DIR / f"{name}.json"
+
+
+@contextlib.contextmanager
+def judge_session(models: Any, log: Callable[[str], None]):
+    """A CachedJudge that loads the judge only on its first cache miss, after releasing the
+    pipeline models (§4: it's never resident together with them). Releases it at the end."""
+    with contextlib.ExitStack() as stack:
+
+        def load() -> Generate:
+            if models is None:
+                raise RuntimeError("the judge needs a ModelManager (answers not in the cache)")
+            log("judge: releasing the pipeline models, loading the judge")
+            models.release()
+            models.reset_peak()
+            return stack.enter_context(models.use("judge")).generate
+
+        revision = (
+            models.spec("judge") if models is not None else Config().models["judge"]
+        ).revision
+        cj = CachedJudge(revision, load)
+        try:
+            yield cj
+        finally:
+            cj.save()
+    if models is not None and cj.loaded:
+        models.release("judge")
+
+
+def judge_items(
+    items: Sequence[tuple[ItemReport, Path]],
+    *,
+    root: Path,
+    models: Any,
+    log: Callable[[str], None] = print,
+) -> tuple[list[ItemReport], JudgeCost]:
+    hours = sum(rep.duration_s for rep, _ in items) / 3600
+    t0 = time.perf_counter()
+    with judge_session(models, log) as cj:
+        out = []
+        for rep, run_dir in items:
+            cj.open(judge_cache(root, rep.id))
+            out.append(judge_item(rep, run_dir, cj))
+        peak = models.peak_memory() if models is not None and cj.loaded else None
+    secs = time.perf_counter() - t0
+    log(f"judge: {cj.calls} calls, {cj.hits} cached, {secs:.1f} s")
+    return out, JudgeCost(
+        loaded=cj.loaded,
+        calls=cj.calls,
+        cached=cj.hits,
+        seconds=round(secs, 2),
+        s_per_audio_hour=round(secs / hours, 1) if hours else None,
+        peak_mem_gb=None if peak is None else round(peak / 1e9, 2),
+    )
+
+
 # --- set report, baseline comparison -------------------------------------------------------
 
 
@@ -662,6 +844,7 @@ class Report(_Model):
     summary: dict[str, float | int | None]
     stages: dict[str, dict[str, float | None]]  # stage → s_per_audio_hour, peak_mem_gb
     citation_errors: list[float] = Field(default_factory=list)  # every t_error, for D19
+    judge: JudgeCost | None = None  # eval-only cost, kept out of `stages` and the gate
     baseline: str | None = None
     regressions: list[str] = []
 
@@ -683,6 +866,10 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         return round(sum(f.found for f in of_kind) / len(of_kind), 4) if of_kind else None
 
     gap_min = sum(float(it.metrics.get("gap_minutes") or 0.0) for it in items)
+    judged = [it for it in items if "cited_claims" in it.metrics]
+    cited = total("cited_claims")
+    yes = sum(s.supported == "yes" for it in judged for s in it.support)
+    only = [f for it in judged for f in it.facts if f.judge_only]
     return {
         "items": len(items),
         "facts": len(facts),
@@ -706,6 +893,14 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         "map_numbers_repaired": total("map_numbers_repaired"),
         "map_numbers_unverified": total("map_numbers_unverified"),
         "unsupported_numbers": total("unsupported_numbers"),
+        # judge (secondary, not in the gate): None when the set wasn't judged
+        "support_rate": round(yes / cited, 4) if judged and cited else None,
+        "support_partial": total("support_partial") if judged else None,
+        "support_no": total("support_no") if judged else None,
+        "support_unjudged": total("support_unjudged") if judged else None,
+        "judge_recall": (
+            round(sum(bool(f.judge_covered) for f in only) / len(only), 4) if only else None
+        ),
         "audio_s": round(sum(it.duration_s for it in items), 1),
     }
 
@@ -783,6 +978,8 @@ PCT_KEYS = {
     "recall_decision",
     "recall_action",
     "recall_number",
+    "support_rate",
+    "judge_recall",
 }
 
 
@@ -821,6 +1018,7 @@ def render_markdown(report: Report) -> str:
         "gap_words",
         "wer",
         "slide_alignment",
+        "support_rate",
     ]
     lines += ["| Item | " + " | ".join(keys) + " |", "|---" * (len(keys) + 1) + "|"]
     for it in report.items:
@@ -836,6 +1034,9 @@ def render_markdown(report: Report) -> str:
     ]
     for name, c in report.stages.items():
         lines.append(f"| {name} | {_num(c['s_per_audio_hour'])} | {_num(c['peak_mem_gb'])} |")
+    if j := report.judge:
+        lines.append(f"| judge (eval only) | {_num(j.s_per_audio_hour)} | {_num(j.peak_mem_gb)} |")
+        lines += ["", f"Judge: {j.calls} calls, {j.cached} cached, {j.seconds:g} s."]
 
     errs = report.citation_errors
     if errs:
@@ -846,8 +1047,18 @@ def render_markdown(report: Report) -> str:
         missed = [f for f in it.facts if not f.found and not f.judge_only]
         off = [f for f in it.facts if f.found and not f.citation_ok]
         numbers = it.number_repairs or it.unverified_numbers or it.unsupported_numbers
+        weak = [c for c in it.support if c.supported != "yes"]
+        judged_facts = [f for f in it.facts if f.judge_only and f.judge_covered is not None]
         if not (
-            missed or off or it.made_up or it.uncited or it.gap_texts or it.conflict or numbers
+            missed
+            or off
+            or it.made_up
+            or it.uncited
+            or it.gap_texts
+            or it.conflict
+            or numbers
+            or weak
+            or judged_facts
         ):
             continue
         lines += ["", f"## {it.id} ({it.run_id})", ""]
@@ -862,6 +1073,14 @@ def render_markdown(report: Report) -> str:
         lines += [f"- Map number repaired: {r}" for r in it.number_repairs]
         lines += [f"- Map number unverified: {u}" for u in it.unverified_numbers]
         lines += [f"- number in no source: {n}" for n in it.unsupported_numbers]
+        lines += [
+            f"- support {c.supported} ({', '.join(c.citations)}): {c.claim} · {c.reason}"
+            for c in weak
+        ]
+        lines += [
+            f"- judge {'covered' if f.judge_covered else 'missed'} {f.kind}: {f.text}"
+            for f in judged_facts
+        ]
     return "\n".join(lines) + "\n"
 
 
@@ -954,17 +1173,20 @@ def run_set(
     overrides: Mapping[str, Any] | None = None,
     fresh: bool = False,
     models: Any = None,
+    judge_: bool = True,
     log: Callable[[str], None] = print,
     progress: pipeline.ProgressFn | None = None,
 ) -> Report:
-    """Generate, run and score every item of a set. `models` is a ModelManager (shared, so
-    resident models stay loaded across items)."""
+    """Generate, run and score every item of a set, then judge them (after every pipeline run,
+    so the judge never shares memory with the pipeline models). `models` is a ModelManager
+    (shared, so resident models stay loaded across items)."""
     eval_set = load_set(name, root)
     specs = [s for s in eval_set.items if not items or s.id in items]
     if not specs:
         raise ValueError(f"no items {list(items)} in set {name!r}")
     overrides = dict(overrides or {})
     reports: list[ItemReport] = []
+    run_dirs: list[Path] = []
     config = Config()
     for spec in specs:
         if seed is not None:
@@ -982,7 +1204,13 @@ def run_set(
         pipeline.run(run_dir, config=config, models=models, progress=progress)
         log(f"{spec.id}: pipeline {time.perf_counter() - t0:.1f} s")
         reports.append(score_item(truth, run_dir, since))
+        run_dirs.append(run_dir)
 
+    judge_cost = None
+    if judge_:
+        reports, judge_cost = judge_items(
+            list(zip(reports, run_dirs, strict=True)), root=root, models=models, log=log
+        )
     errors = [f.t_error for it in reports for f in it.facts if f.t_error is not None]
     return Report(
         created_at=datetime.now().astimezone(),
@@ -990,11 +1218,13 @@ def run_set(
         git_sha=git_sha(root),
         overrides=overrides,
         models={k: f"{m.repo}@{m.revision[:7]}" for k, m in config.models.items()},
-        prompts={p: prompt_hash(p)[:12] for p in ("vision", "map", "map_retry", "reduce")},
+        prompts={p: prompt_hash(p)[:12] for p in ("vision", "map", "map_retry", "reduce")}
+        | ({p: prompt_hash(p)[:12] for p in judge.PROMPTS} if judge_ else {}),
         items=reports,
         summary=summarize(reports),
         stages=stage_summary(reports),
         citation_errors=sorted(errors),
+        judge=judge_cost,
     )
 
 
@@ -1015,3 +1245,144 @@ def write_baseline(report: Report, root: Path = Path()) -> Path:
 
 def load_report(path: Path) -> Report:
     return Report.model_validate_json(path.read_bytes())
+
+
+# --- judge calibration (D15) ---------------------------------------------------------------
+
+
+class CalibrationPair(_Model):
+    id: str
+    source: str  # where the claim and citation come from (a quick run, or how it was changed)
+    claim: str
+    cited: list[str]  # keys into Calibration.sources
+    label: Label
+    reason: str
+
+
+class Calibration(_Model):
+    """evals/gen/judge_calibration.json: hand-labeled claim / cited-text pairs (§18, D15)."""
+
+    about: str
+    sources: dict[str, str]  # key → a segment_block / slide_block from a quick run
+    pairs: list[CalibrationPair]
+
+    def cited_text(self, pair: CalibrationPair) -> str:
+        return "\n\n".join(self.sources[k] for k in pair.cited)
+
+
+def load_calibration(root: Path = Path()) -> Calibration:
+    return Calibration.model_validate_json((root / CALIBRATION).read_bytes())
+
+
+class CalibrationResult(_Model):
+    id: str
+    label: Label
+    judge: Supported
+    reason: str
+
+
+class CalibrationReport(_Model):
+    created_at: datetime
+    git_sha: str | None
+    model: str  # repo@revision
+    prompts: dict[str, str]
+    results: list[CalibrationResult]
+    agreement: float  # 3-way label equal (D15 passes at ≥ AGREEMENT_MIN)
+    agreement_binary: float  # yes vs not-yes
+    confusion: dict[str, dict[str, int]]  # label → judge answer → count
+    passed: bool
+    cost: JudgeCost
+
+
+def agreement(results: Sequence[CalibrationResult]) -> tuple[float, float]:
+    """(3-way, yes vs not-yes). "unjudged" disagrees with every label."""
+    if not results:
+        return 0.0, 0.0
+    exact = sum(r.judge == r.label for r in results)
+    binary = sum(
+        r.judge != "unjudged" and (r.judge == "yes") == (r.label == "yes") for r in results
+    )
+    return exact / len(results), binary / len(results)
+
+
+def confusion(results: Sequence[CalibrationResult]) -> dict[str, dict[str, int]]:
+    answers: tuple[Supported, ...] = ("yes", "partial", "no", "unjudged")
+    return {
+        label: {a: sum(r.label == label and r.judge == a for r in results) for a in answers}
+        for label in ("yes", "partial", "no")
+    }
+
+
+def calibrate(
+    *, root: Path = Path(), models: Any = None, log: Callable[[str], None] = print
+) -> CalibrationReport:
+    cal = load_calibration(root)
+    t0 = time.perf_counter()
+    with judge_session(models, log) as cj:
+        cj.open(judge_cache(root, "calibration"))
+        results = []
+        for pair in cal.pairs:
+            answer = cj.support(pair.claim, cal.cited_text(pair))
+            results.append(
+                CalibrationResult(
+                    id=pair.id, label=pair.label, judge=answer.supported, reason=answer.reason
+                )
+            )
+        peak = models.peak_memory() if models is not None and cj.loaded else None
+    secs = time.perf_counter() - t0
+    exact, binary = agreement(results)
+    spec = Config().models["judge"]
+    return CalibrationReport(
+        created_at=datetime.now().astimezone(),
+        git_sha=git_sha(root),
+        model=f"{spec.repo}@{spec.revision[:7]}",
+        prompts={p: prompt_hash(p)[:12] for p in judge.PROMPTS},
+        results=results,
+        agreement=round(exact, 4),
+        agreement_binary=round(binary, 4),
+        confusion=confusion(results),
+        passed=exact >= AGREEMENT_MIN,
+        cost=JudgeCost(
+            loaded=cj.loaded,
+            calls=cj.calls,
+            cached=cj.hits,
+            seconds=round(secs, 2),
+            s_per_audio_hour=None,
+            peak_mem_gb=None if peak is None else round(peak / 1e9, 2),
+        ),
+    )
+
+
+def render_calibration(report: CalibrationReport) -> str:
+    verdict = "pass" if report.passed else "**FAIL**"
+    lines = [
+        f"# Judge calibration (D15) · {report.created_at:%Y-%m-%d %H:%M} · {report.git_sha or '?'}",
+        "",
+        f"Judge `{report.model}`: 3-way agreement {_pct(report.agreement)} ({verdict} at "
+        f"{AGREEMENT_MIN:.0%}), yes vs not-yes {_pct(report.agreement_binary)}.",
+        "",
+        "| Label \\ judge | yes | partial | no | unjudged |",
+        "|---|---|---|---|---|",
+    ]
+    for label, row in report.confusion.items():
+        lines.append(f"| {label} | " + " | ".join(str(n) for n in row.values()) + " |")
+    lines += ["", "## Disagreements", ""]
+    lines += [
+        f"- {r.id}: label {r.label}, judge {r.judge} · {r.reason}"
+        for r in report.results
+        if r.judge != r.label
+    ] or ["- none"]
+    c = report.cost
+    lines += [
+        "",
+        f"Cost: {c.calls} calls, {c.cached} cached, {c.seconds:g} s, peak "
+        f"{_num(c.peak_mem_gb)} GB.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def write_calibration_report(report: CalibrationReport, root: Path = Path()) -> Path:
+    path = root / REPORTS_DIR / f"{report.created_at:%Y%m%d-%H%M%S}-judge-calibration.json"
+    atomic.write_text(path, report.model_dump_json(indent=2) + "\n")
+    atomic.write_text(path.with_suffix(".md"), render_calibration(report))
+    return path

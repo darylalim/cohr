@@ -31,7 +31,6 @@ from cohr.schemas import (
 KEYS = ("summary", "key_points", "decisions", "action_items", "open_questions", "terms")
 _EMPTY = {"", "none", "null", "n/a", "na", "-", "?", "unknown"}
 _JSON_OBJECT = re.compile(r"\{.*\}", re.S)
-_PLACEHOLDER = re.compile(r"\{(target_language|time_range|slides|transcript)\}")
 
 
 # --- prompt and parsing (pure) -------------------------------------------------------------
@@ -45,9 +44,13 @@ def clock(t: float) -> str:
 
 
 def fill(template: str, **values: str) -> str:
-    """Substitute the {placeholders} in one pass, so text inside a value is never substituted
-    (the prompts also contain literal JSON braces, which str.format would trip on)."""
-    return _PLACEHOLDER.sub(lambda m: values[m.group(1)], template)
+    """Substitute the {placeholders} named in `values` in one pass, so text inside a value is
+    never substituted (the prompts also contain literal JSON braces, which str.format would
+    trip on)."""
+    if not values:
+        return template
+    names = re.compile(r"\{(" + "|".join(map(re.escape, values)) + r")\}")
+    return names.sub(lambda m: values[m.group(1)], template)
 
 
 def prompt_values(seg: Segment, slides: list[str], target_language: str) -> dict[str, str]:
