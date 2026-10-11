@@ -3,6 +3,8 @@
 import hashlib
 import re
 import shutil
+import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from importlib.metadata import version
@@ -16,6 +18,7 @@ GB = 1024**3
 MB = 1024**2
 AUDIO_BYTES_PER_HOUR = 200 * MB  # estimate for audio.wav + frames (§12)
 RUN_MARGIN_BYTES = 1 * GB
+UPLOADS_DIR = ".uploads"  # inside runs_dir, so moving an upload into source/ is a rename
 
 
 class DiskSpaceError(RuntimeError):
@@ -26,6 +29,7 @@ class DiskSpaceError(RuntimeError):
 class Source:
     path: Path
     kind: InputKind
+    upload: bool = False  # a staged upload (stage_upload): moved into source/, not linked
 
 
 def slugify(text: str, max_len: int = 40) -> str:
@@ -55,6 +59,25 @@ def check_free_space(directory: Path, needed: int, margin: int = RUN_MARGIN_BYTE
             f"Not enough disk space in {directory}: need {(needed + margin) / GB:.1f} GB "
             f"(including a {margin / GB:.0f} GB margin), {free / GB:.1f} GB free."
         )
+
+
+def stage_upload(runs_dir: Path, filename: str, chunks: Iterable[bytes]) -> Path:
+    """Stream an upload to runs/.uploads/<random>/<name> (§12: written in chunks, never held
+    twice in memory). create_run then moves it into the run's source/."""
+    name = Path(filename).name or "upload"
+    target = runs_dir / UPLOADS_DIR / uuid.uuid4().hex / name
+    target.parent.mkdir(parents=True)
+    with target.open("wb") as f:
+        for chunk in chunks:
+            f.write(chunk)
+    return target
+
+
+def discard_upload(path: Path) -> None:
+    """Remove a staged upload that never became a run."""
+    path.unlink(missing_ok=True)
+    if path.parent.parent.name == UPLOADS_DIR:
+        shutil.rmtree(path.parent, ignore_errors=True)
 
 
 def _stored_name(index: int, path: Path) -> str:
@@ -92,20 +115,23 @@ def create_run(
         original = s.path.resolve()
         stored = _stored_name(i, original)
         target = run_dir / "source" / stored
-        if config.source_mode == "copy":
+        if s.upload:
+            shutil.move(original, target)
+            discard_upload(original)
+        elif config.source_mode == "copy":
             shutil.copy2(original, target)
         else:
             target.symlink_to(original)
-        st = original.stat()
+        st = target.stat()  # follows the link
         inputs.append(
             InputFile(
                 kind=s.kind,
-                path=str(original),
+                path="" if s.upload else str(original),
                 stored=stored,
-                mode=config.source_mode,
+                mode="upload" if s.upload else config.source_mode,
                 size=st.st_size,
                 mtime=st.st_mtime,
-                sha256=sha256_file(original),
+                sha256=sha256_file(target),
             )
         )
 

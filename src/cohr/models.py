@@ -152,6 +152,15 @@ class MlxMemory:
         if mx := self._mx():
             mx.clear_cache()
 
+    def active(self) -> int | None:
+        mx = self._mx()
+        return int(mx.get_active_memory()) if mx else None
+
+    def limit(self) -> int | None:
+        """The GPU working-set limit (26.8 GB measured on the M2 Max 32 GB, §4)."""
+        mx = self._mx()
+        return int(mx.device_info()["max_recommended_working_set_size"]) if mx else None
+
 
 # --- manager -------------------------------------------------------------------------------
 
@@ -210,6 +219,17 @@ class ModelManager:
 
     def loaded(self) -> list[str]:
         return list(self._loaded)
+
+    def set_config(self, config: Config) -> None:
+        """Switch to a run's config before its job (the UI shares one manager). Releases models
+        whose pinned spec changed, and everything when the policy becomes sequential."""
+        with self.lock:
+            old, self.config = self.config, config
+            for name in self.loaded():
+                if config.memory_policy == "sequential" or old.models.get(name) != (
+                    config.models.get(name)
+                ):
+                    self.release(name)
 
     def _load(self, name: str) -> Any:
         loaders = self._loaders if self._loaders is not None else default_loaders()

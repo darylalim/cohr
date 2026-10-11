@@ -13,7 +13,7 @@ import logging
 import threading
 import time
 import traceback
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -144,7 +144,7 @@ def stage_hashes(
     return out
 
 
-StaleReason = Literal["new", "not done", "format", "config", "input", "missing output"]
+StaleReason = Literal["new", "not done", "format", "config", "input", "missing output", "forced"]
 
 
 def stale_reason(
@@ -166,14 +166,30 @@ def stale_reason(
     return None
 
 
+def _check_force(stages: list[Stage], force: Iterable[str]) -> frozenset[str]:
+    names = frozenset(force)
+    if unknown := names - {s.name for s in stages}:
+        raise ValueError(
+            f"unknown stage(s) {sorted(unknown)}; stages are {[s.name for s in stages]}"
+        )
+    return names
+
+
 def _todo(
-    stages: list[Stage], config: Config, manifest: Manifest, run_dir: Path
+    stages: list[Stage],
+    config: Config,
+    manifest: Manifest,
+    run_dir: Path,
+    force: frozenset[str] = frozenset(),
 ) -> dict[str, StaleReason]:
-    """{stage: reason} for the stages that must run. Once one is stale, every later one is too."""
+    """{stage: reason} for the stages that must run. Once one is stale, every later one is too,
+    so forcing a stage (Re-reduce) re-runs everything after it."""
     hashes = stage_hashes(stages, config, manifest)
     todo: dict[str, StaleReason] = {}
     for stage in stages:
         reason = stale_reason(stage, manifest.stages.get(stage.name), hashes[stage.name], run_dir)
+        if reason is None and stage.name in force:
+            reason = "forced"
         if todo and reason is None:
             reason = "input"
         if reason is not None:
@@ -182,13 +198,17 @@ def _todo(
 
 
 def plan(
-    run_dir: Path, stages: list[Stage] | None = None, config: Config | None = None
+    run_dir: Path,
+    stages: list[Stage] | None = None,
+    config: Config | None = None,
+    force: Iterable[str] = (),
 ) -> list[tuple[str, StaleReason]]:
     """Stages that would run, in order, with the reason."""
     stages = stages if stages is not None else default_stages()
+    forced = _check_force(stages, force)
     manifest = schemas.load(run_dir, Manifest)
     config = config or Config.model_validate(manifest.config)
-    return list(_todo(stages, config, manifest, run_dir).items())
+    return list(_todo(stages, config, manifest, run_dir, forced).items())
 
 
 # --- manifest state shared with the heartbeat thread ----------------------------------------
@@ -258,10 +278,13 @@ def run(
     models: "ModelManager | None" = None,
     peak_memory: Callable[[], int | None] | None = None,
     heartbeat_s: float = HEARTBEAT_S,
+    force: Iterable[str] = (),
 ) -> dict[str, Literal["skipped", "done"]]:
-    """Run every stale stage in order. Raises Cancelled, StageFailed, or ModelsMissing (before
-    any stage starts) when a stage that will run needs a model that isn't downloaded."""
+    """Run every stale stage in order, plus the stages in `force` (and everything after them).
+    Raises Cancelled, StageFailed, or ModelsMissing (before any stage starts) when a stage
+    that will run needs a model that isn't downloaded; ValueError for an unknown forced stage."""
     stages = stages if stages is not None else default_stages()
+    forced = _check_force(stages, force)
     cancel = cancel or threading.Event()
     progress = progress or (lambda _event: None)
     manifest = schemas.load(run_dir, Manifest)
@@ -271,7 +294,7 @@ def run(
         manifest.config = config.model_dump(mode="json")
     state = _RunState(run_dir, manifest)
     hashes = stage_hashes(stages, config, manifest)
-    todo = _todo(stages, config, manifest, run_dir)
+    todo = _todo(stages, config, manifest, run_dir, forced)
     needed = [m for s in stages if s.name in todo for m in s.models]
     if needed:
         if models is None:

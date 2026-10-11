@@ -1,0 +1,57 @@
+[server]
+maxUploadSize = 4096                     # MB, §12
+address = "localhost"                    # local only: no LAN access to recordings (§7 Layout)
+fileWatcherType = "none"                 # its sys.modules walk imports transformers' lazy torch modules
+
+[browser]
+gatherUsageStats = false                 # Streamlit sends usage stats by default (checked 1.65)
+
+[theme]
+font = "sans-serif"                      # bundled, offline-safe
+codeFont = "monospace"
+baseRadius = "medium"
+showWidgetBorder = true
+showSidebarBorder = true
+linkUnderline = false
+
+[theme.light]
+primaryColor = "#2F5BD3"                 # white text 5.90:1
+backgroundColor = "#FBFAF7"              # warm paper
+secondaryBackgroundColor = "#F0EEE8"
+textColor = "#1E2024"                    # 15.6:1
+linkColor = "#2A52BE"                    # citations, 6.6:1
+codeBackgroundColor = "#F0EEE8"
+borderColor = "#D9D5CB"
+dataframeBorderColor = "#D9D5CB"
+blueColor = "#2F5BD3"
+greenColor = "#1F7A45"
+orangeColor = "#A8560C"
+violetColor = "#6E46C2"
+redColor = "#C0322B"
+grayColor = "#5E6168"
+chartCategoricalColors = ["#2F5BD3", "#1F7A45", "#A8560C", "#6E46C2", "#C0322B", "#0E7C86", "#5E6168"]
+
+[theme.light.sidebar]
+backgroundColor = "#F0EEE8"
+secondaryBackgroundColor = "#E6E3DB"
+
+[theme.dark]
+primaryColor = "#3D66DD"                 # white text 5.07:1, 3.6:1 vs background
+backgroundColor = "#14161B"              # ink
+secondaryBackgroundColor = "#1E2128"
+textColor = "#E8E6E1"                    # 14.5:1
+linkColor = "#8DAEFF"                    # citations, 8.3:1
+codeBackgroundColor = "#1E2128"
+borderColor = "#343842"
+dataframeBorderColor = "#343842"
+blueColor = "#8DAEFF"
+greenColor = "#5CC98A"
+orangeColor = "#F0A35E"
+violetColor = "#B69CFF"
+redColor = "#FF8A80"
+grayColor = "#A3A7B0"
+chartCategoricalColors = ["#8DAEFF", "#5CC98A", "#F0A35E", "#B69CFF", "#FF8A80", "#4FC7D0", "#A3A7B0"]
+
+[theme.dark.sidebar]
+backgroundColor = "#101216"
+secondaryBackgroundColor = "#1A1D23"

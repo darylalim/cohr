@@ -133,3 +133,28 @@ def test_delete_run_safety(tmp_path: Path, media: Path) -> None:
 )
 def test_slugify(text: str, slug: str) -> None:
     assert storage.slugify(text) == slug
+
+
+def test_upload_is_streamed_then_moved_into_the_run(tmp_path: Path, media: Path) -> None:
+    runs = tmp_path / "runs"
+    staged = storage.stage_upload(runs, "../../evil/Deck.pdf", iter([b"ab", b"cd"]))
+    assert staged.name == "Deck.pdf" and staged.parent.parent == runs / storage.UPLOADS_DIR
+    assert staged.read_bytes() == b"abcd"
+    run_dir = storage.create_run(
+        runs, [Source(media, "audio"), Source(staged, "slides", upload=True)], Config(), now=NOW
+    )
+    manifest = schemas.load(run_dir, Manifest)
+    up = manifest.inputs[1]
+    assert (up.mode, up.path, up.stored, up.size) == ("upload", "", "01-Deck.pdf", 4)
+    assert up.sha256 == hashlib.sha256(b"abcd").hexdigest()
+    stored = run_dir / "source" / "01-Deck.pdf"
+    assert stored.read_bytes() == b"abcd" and not stored.is_symlink()
+    assert list((runs / storage.UPLOADS_DIR).iterdir()) == []  # staging dir removed
+    assert manifest.inputs[0].mode == "link"
+    assert storage.list_runs(runs) == [run_dir]  # .uploads is never listed as a run
+
+
+def test_discard_upload(tmp_path: Path) -> None:
+    staged = storage.stage_upload(tmp_path / "runs", "a.wav", [b"x"])
+    storage.discard_upload(staged)
+    assert not staged.parent.exists()

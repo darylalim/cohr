@@ -751,3 +751,102 @@ force a stage, so 5a adds `force=`.
 
 ### Next
 - Phase 5a in a new session with the §21 prompt.
+
+## 2026-10-11 · Phase 5a (UI without Ask)
+
+### Built
+- `.streamlit/config.toml` exactly as §7, plus `server.fileWatcherType = "none"` (below).
+  `tests/test_theme.py`: light/dark key parity, WCAG contrast (text ≥ 7, link and semantic
+  colors ≥ 4.5, white on primary ≥ 4.5, primary vs background ≥ 3), sidebar darker than main
+  in both modes, no Google Fonts, no telemetry, localhost only.
+- `pipeline.run(force=[…])` / `plan(force=…)`: a forced stage gets reason `forced` and every
+  later stage follows (the existing "once one is stale, the rest are too" rule). No hash
+  changes, so the next plain run skips everything again. Unknown names raise before anything runs.
+- `src/cohr/jobs.py` (no Streamlit): `JobRunner.start(run_dir, force=…)` runs `pipeline.run` in
+  a daemon thread; progress events and a final `_Finished` go through one queue, and
+  `Job.snapshot()` drains it into an immutable `JobState` (one `StageView` per stage).
+  `start` raises `JobBusy` while a job runs; model use is still serialized by the ModelManager
+  lock. Every exception ends the job (`failed` + message) so the UI never hangs.
+  `recover_all(runs_dir)` runs `recover_interrupted` on every run and skips broken manifests.
+- `ModelManager.set_config(config)`: the UI shares one manager, so each job switches it to the
+  run's config. It releases models whose pinned spec changed, and everything when the policy
+  becomes sequential. `MlxMemory.active()` / `limit()` read `mx` only when it's already imported.
+- `storage.stage_upload` / `discard_upload` and `Source(upload=True)`: uploads are streamed in
+  1 MB chunks to `runs/.uploads/<random>/`, which is on the same disk as the run, then
+  `create_run` moves them into `source/` (manifest `mode="upload"`, `path=""`). The filename
+  is reduced to its basename.
+- `render` app mode is now Streamlit markdown: `$`, `[`, `]` and `\` are escaped (`$` would
+  start LaTeX: "$14,500 … $80,000" became math), uncited claims are `:gray[…] :gray-badge[uncited]`,
+  and Decisions / Action items / Open questions get a count badge in green / orange / violet.
+  The portable `notes.md` is unchanged (no FORMAT_VERSION bump).
+- `src/cohr/ui.py`: cached `ModelManager` and `JobRunner` (`make_models` / `make_runner` are
+  swapped by tests), `startup()` (recovery once per process), sidebar (run picker, status
+  line, footer), `job_panel` (one `st.status` per started stage with the progress bar,
+  "Next: …" for pending ones, Cancel), and pure helpers (run rows, status, memory rows,
+  cited times, `audio_clip`).
+- `app.py` + `app_pages/new_run.py`, `notes.py`, `runs.py` per §7. The New run form submits
+  through an `on_click` callback, because the callback runs before the script and so can set the sidebar's current run
+  (`st.session_state[RUN_KEY]`) without the "widget already created" error.
+- Tests: `test_theme.py` (7), `test_jobs.py` (11), `test_ui.py` (6), `test_app.py` (15
+  AppTest: every page with and without runs, one Sources block per segment, pruned run, Re-reduce
+  forces `reduce`, Runs lists the run, New run refuses a missing path and an empty form, a
+  local-path run starts a job and becomes the current run, recovery on app start), plus force,
+  set_config, upload and app-mode render tests. 321 tests.
+
+### Manual checks (Claude in Chrome, real models, `evals/data/gen/clean-en`)
+- New run with a local path + 8 slide paths → run `20261011-103055-meeting`. Stages streamed
+  live (Transcribe "chunk 2/12", Describe slides "slide 2/8", Map "segment 2/2").
+- Cancel landed in Describe slides (Transcribe had just finished): Ingest, Speech detection and
+  Transcribe stayed `done`, Describe slides `cancelled`, the rest never started.
+- Runs → Resume: the first three stages `reused`, the rest ran; "Notes are ready". Per-stage
+  times on this 6-min meeting: transcribe 11.6 s, vision 32.7 s, map 15.6 s, reduce 31.8 s;
+  peaks 5.6 / 8.6 / 11.7 / 16.8 GB (decimal), under the 26.8 GB limit.
+- Notes: `$` amounts render as text, badges show, 2 segment blocks with audio, 8 slide blocks.
+- **D14 = anchors work**: clicking `[5:41](#seg-1)` scrolled the Sources container from 0 to
+  2358 px and put the `4:51–5:51` block at the top.
+- **D13 = shrinks** (measured in an iframe of each width, because `resize_window` didn't change
+  the maximized window's viewport): 420 → notes 377 px (stacked, no horizontal scroll, sidebar
+  hidden on a fresh visit); 800 → 209 / 128 px with the sidebar open, 422 / 271 closed;
+  1280 → 420 / 269; 1512 → 559 / 362; 2560 → 880 (cap holds) / 781. No horizontal scroll at
+  any width.
+- Light and dark: Notes and Runs checked in both; the bar chart uses the theme's categorical
+  colors.
+- **Audio playback not verified in the browser**: the automation tab is a hidden window
+  (`visibilityState = hidden`), and Chrome didn't load media there (readyState 0). The clip
+  endpoint was checked from the shell: 200 and 206 range responses, valid 16 kHz mono WAV,
+  60.0 s for a 60 s segment. Needs one click in a normal window.
+
+### Findings
+- **Streamlit's file watcher tries to import torch.** Its `sys.modules` walk calls
+  `hasattr(m, "__path__")` on transformers' lazy modules (pulled in by mlx-vlm / mlx-audio),
+  which import `transformers.models.*` and fail on `import torch`: 872 tracebacks in the log
+  of one run. It would also reload modules on save and drop the cached JobRunner during a job.
+  Fixed with `server.fileWatcherType = "none"` (the app doesn't need hot reload; the theme test
+  asserts it).
+- `st.audio(path)` reads and hashes the whole file on every call (memory media storage), so
+  ~115 MB/h for each segment block on every rerun. Now one cached WAV clip per segment.
+- **Medium windows with the sidebar open are cramped**: `st.columns` only stacks at
+  ≤ 640 px viewport width, and the sidebar stays open at 800 px, so Sources is 128 px wide.
+  Closing the sidebar fixes it. Options for later, all within the no-CSS rule: Notes uses the
+  drawer for Sources below some size (needs the width, which Python can't see), or a
+  "Sources below notes" toggle on the page. Left open.
+- Streamlit persists the sidebar state per page in localStorage (`stSidebarCollapsed-`), which
+  overrides `initial_sidebar_state="auto"` on later visits.
+- Theme choice from the settings menu is lost on a full URL load (in-app navigation keeps it).
+- Memory figures in the UI are decimal GB (`/1e9`) like the evals, so the limit reads 26.8 GB
+  as in §4; `storage.GB` (GiB) stays for disk sizes.
+- Small: the "Deploy" toolbar button shows in this local-only app (`client.toolbarMode =
+  "minimal"` would hide it; not in §7, left as is). Slide 1's title came back empty from
+  Vision on clean-en (the Sources heading reads "Slide 1"); not a UI issue.
+
+### Decisions (PLAN §20)
+- D13 = the 880 px container shrinks; keep `width=880`. D14 = anchors scroll the Sources panel;
+  no drawer fallback.
+
+### Plan changes
+- Status line; §6 layout (+ `jobs.py`, `ui.py`); §7 config (`fileWatcherType`), Sources panel
+  (anchors, per-segment clips), medium-window finding; §9 5a done; §20 D13, D14.
+
+### Next
+- Phase 5b (Ask) in a new session. Before that, decide the medium-window layout (above) and
+  check audio playback once in a normal browser window.
