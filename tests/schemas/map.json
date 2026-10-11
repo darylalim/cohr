@@ -1,5 +1,5 @@
 {
-  "format_version": 2,
+  "format_version": 3,
   "schema": {
     "$defs": {
       "MapActionItem": {
@@ -40,6 +40,25 @@
         "title": "MapActionItem",
         "type": "object"
       },
+      "NumberRepair": {
+        "additionalProperties": false,
+        "properties": {
+          "original": {
+            "title": "Original",
+            "type": "string"
+          },
+          "repaired": {
+            "title": "Repaired",
+            "type": "string"
+          }
+        },
+        "required": [
+          "original",
+          "repaired"
+        ],
+        "title": "NumberRepair",
+        "type": "object"
+      },
       "SegmentNotes": {
         "additionalProperties": false,
         "properties": {
@@ -62,6 +81,14 @@
               "type": "string"
             },
             "title": "Key Points",
+            "type": "array"
+          },
+          "number_repairs": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/NumberRepair"
+            },
+            "title": "Number Repairs",
             "type": "array"
           },
           "open_questions": {
@@ -89,6 +116,14 @@
               "type": "string"
             },
             "title": "Terms",
+            "type": "array"
+          },
+          "unverified_numbers": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Unverified Numbers",
             "type": "array"
           }
         },

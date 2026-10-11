@@ -300,11 +300,18 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   - Not in the sources, and **exactly one** source number is one digit edit away (one digit
     inserted, dropped or changed, on the digit string without separators) or a factor of 10, 100
     or 1000 away: **repaired**. The digits are replaced in place, keeping the surrounding text
-    and the output's separator style ("$420,500" → "$42,500").
+    and the output's separator style and decimal places ("$420,500" → "$42,500"; "420.500" →
+    "42.500"). The segment's `number_repairs` lists each one (`{original, repaired}`), and the
+    run log names it.
   - Otherwise (no candidate, or more than one): **kept and flagged**, never dropped and never
     guessed. The segment's `unverified_numbers` lists them (`MapFile` v3, §19) and the run log
     warns. An invented year such as `2024` in `2024-11-24` lands here.
-  - Numbers inside `terms` and numbers written as words are not checked. Non-English number
+  - A written number is read every way its separators allow ("42,500" = 42500 or, with a decimal
+    comma, 42.5; thousands as `,` `.` NBSP, or a plain space only as "42 500"), and is kept if
+    any reading is in the sources. With a scale suffix ("42.5k") or plain-space grouping
+    ("42 500", which may also be two numbers) it is only kept or flagged, never repaired.
+  - Digits glued to letters ("Q3", "R7B", "3D") are names, not numbers: not checked. Neither
+    are numbers inside `terms` and numbers written as words. Non-English number
     words in the source are not normalized (English only, like the eval), so a target language
     whose transcript spells numbers out may flag more; the eval's cross-language items show it.
   - The guard does not resolve a speech/slide conflict (§18 `slide-conflict-en`): both values
@@ -947,7 +954,7 @@ invalid-JSON fallback, §5.5); token budget enforced.
   Phase 6); `tests/test_evals.py`. First `quick` numbers recorded; D11 re-check, D12 (a second `quick`
   run with another window), D19. Fix the 4a Map error (owner's due date given to another action item,
   `prompts/map.md`) with the made-up-items count before and after.
-- **4b-1b: Map number guard** (before 4b-2, so the judge's calibration pairs come from cleaner
+- **4b-1b: Map number guard** (done 2026-10-11, NOTES.md; before 4b-2, so the judge's calibration pairs come from cleaner
   output). Move `digits`/`numbers_in` from `evals.py` into `numbers.py` (no behaviour change; the
   eval tests stay green). Guard in `mapper.py` per §5.5, `MapFile` v3 (`unverified_numbers` per
   segment, snapshot regenerated). Unit tests from the 4b-1 cases: 42500/420500, 57000/570000,
@@ -1683,7 +1690,7 @@ Pydantic models for every run file. Stages read and write **only** through them
 | `transcript.json` | `Transcript` | `language`, `runtime`, `items[{chunk_id, t0, t1, text}]` |
 | `slides.json` | `SlidesFile` | `slides[{slide_id, frame_id, t?, t_source, align_score?, title, text_md, tables_md[], chart_notes, visual_notes, raw?}]` |
 | `segments.json` | `SegmentsFile` | `segments[{seg_id, t0, t1, chunk_ids[], transcript_text, slide_ids[]}]`, `unaligned_slide_ids[]` |
-| `map.json` | `MapFile` | `target_language`, `notes[{seg_id, summary, key_points[], decisions[], action_items[{owner?, task, due?}], open_questions[], terms[], raw: bool, unverified_numbers[]}]` (v3: number guard, D20) |
+| `map.json` | `MapFile` | `target_language`, `notes[{seg_id, summary, key_points[], decisions[], action_items[{owner?, task, due?}], open_questions[], terms[], raw: bool, number_repairs[{original, repaired}], unverified_numbers[]}]` (v3: number guard, D20) |
 | `notes.json` | `NotesDoc` | `sections{summary, key_points, decisions, action_items, open_questions}` as lists of `{text, citations[{kind: seg|slide, id, t?}]}` (`t` = refined jump time, seg only; `citations: []` = uncited, §5.6); action items also have `owner?`, `due?`; `passes: 1|2`, `language`, `raw` (R7B reply) (v3: `t` placed at the cited sentence, D19) |
 
 `notes.json` is new: the **parsed** reduce output. `notes.md` is rendered from it, and Notes, Ask,
@@ -1744,7 +1751,7 @@ section.
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 7 | |
 | D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6 | |
 | D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | **0.1 and ±15 s, plus a sentence offset inside the chunk**: chunk `t0` alone was a median 12.5 s early (61% within 15 s); with the offset 98% (53 of 54 errors ≤ 5 s, so 15 s hides nothing). Min score 0.0 = 0.1 > 0.2 (94.6%) > 0.3 (91.1%) |
-| D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | |
+| D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | **Default rule kept**: 8 repairs on `quick`, all to the transcript's value (0 wrong); number recall 81.2% → 87.5%, fact recall 82.3% → 85.3%, made-up 3 → 3, citation accuracy 98.2% → 100%; numbers in no source 6 → 1 (a flagged `3,360` with two candidates). Short numbers are weak evidence (any one-digit number is one edit from the next): watch on `full` |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

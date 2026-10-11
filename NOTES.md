@@ -547,3 +547,69 @@ Run 1 (before the generator fixes below) is not comparable; it found the generat
 
 ### Next
 - Phase 4b-1b in a new session, then 4b-2.
+
+---
+
+## 2026-10-11 · Phase 4b-1b (Map number guard)
+
+### Built
+- `src/cohr/numbers.py`: `digits`/`numbers_in` moved from `evals.py` unchanged (only
+  `test_evals.py`'s import line moved), plus the guard's reading of numbers *as written*:
+  `WRITTEN` (skips digits glued to letters: "Q3", "R7B", "3D"), `readings` (every value the
+  separators allow: "42,500" = 42500 or 42.5), `near` (one digit edit or ×/÷ 10, 100, 1000),
+  `write_like` (repair in the output's separators and decimal places).
+- `mapper.check_numbers` / `guard_numbers` (pure), applied per parsed segment in `run_stage`
+  when `map.number_guard` (default on). Keep if any reading is in the segment's transcript +
+  attached slide text; repair if exactly one source number is near; else keep and flag.
+  `terms` and raw (JSON fallback) segments untouched. Suffixed ("42.5k") and plain-space
+  grouped ("42 500") numbers are only kept or flagged. Repairs logged (info), flags warned.
+- `MapFile` v3: `number_repairs[{original, repaired}]` (not in the 4b-1b plan; needed so the
+  eval can count and check repairs from `map.json`) and `unverified_numbers[]`. Snapshot
+  regenerated.
+- Eval: per item and summary `map_numbers_repaired`, `map_numbers_unverified`,
+  `unsupported_numbers` (numbers in `notes.json` claims in no transcript or slide text), with
+  the values listed per item in the report; summary now also has `recall_decision/action/number`.
+- Tests: `tests/test_numbers.py` (new), guard and stage tests in `test_mapper.py` (all §9 cases
+  plus the two 4b-1b eval cases below), `test_evals.py` end-to-end item with a `map.json`.
+
+### D20: `quick`, same seeds (guard off = `-c map.number_guard=false`)
+| Run | Recall | Number recall | Cit. acc. | Made up | Repaired | Unverified | In no source |
+|---|---|---|---|---|---|---|---|
+| guard off (091204) | 82.3% | 81.2% | 98.2% | 3 | 0 | 0 | 6 |
+| guard on (091454) | 85.3% | 87.5% | 98.3% | 3 | 8 | 2 | 1 |
+| guard on, padding fix, `--fresh` (092133) | 85.3% | 87.5% | 100% | 3 | 8 | 2 | 1 |
+
+Guard off reproduces 4b-1 run 7 exactly (Map is deterministic at the fixed seed). Every repair
+checked against the transcript and `truth.json`: all 8 land on the transcript's value
+($420,500→$42,500, $595,000→$59,500, $2,480,000→$248,000, $1,610,000→$161,000,
+$570,000→$57,000, $540,000→$54,000, 4,246→426, 4,6500→4650). No wrong value. Flagged (correct):
+`3,360` (336 and 330 both near), `2nd` (22 and small numbers near). Fact recall reaches the 85%
+v1 target. **D20: default rule kept.**
+
+### Findings
+- **Padding bug (fixed in session):** Map wrote a malformed "4,6500"; it only reads as 4.65
+  (decimal comma), ×1000 = 4650 is right, but keeping 4 decimal places wrote "4650,0000".
+  Places are now padded only when the repaired value has a fraction. Regression tests added.
+- **Reduce drops repaired facts:** Map now has "4650" signups (clean-en) and "$57,000" budget
+  (pdf-slides-en) right, but R7B leaves both lines out of `notes.json`. Reduce selection, not
+  the guard; candidate for Phase 6 (or the 4b-2 judge's view of omissions).
+- **Short numbers are weak evidence:** any one-digit number is one edit from every other, so a
+  segment whose only small source number happens to be near a Map value gets "repaired" (a
+  unit fixture turned "20 October" into "0 October" when the transcript was "transcript 0").
+  Real transcripts have many small numbers ("one" → 1), so these mostly get flagged. Not seen
+  on `quick`; watch on `full`.
+- **Non-English separators:** source normalization is English-only, so German "42.500" in a
+  transcript is 42.5. Keeping decimal places makes the repair "42.500", which reads right
+  either way. Number words with hyphens ("forty-two") aren't normalized by `digits()` (ASR
+  writes digits, so `quick` isn't affected). Cross-language items (Phase 6) will show more.
+- Slide conflict unchanged (both values are in the sources, as planned).
+
+### Decisions (PLAN §20)
+- D20 = default rule (exactly one candidate, one digit edit or factor 10/100/1000).
+
+### Plan changes
+- §5.5 guard details (readings, names, suffix/space-grouped only flagged, decimal places,
+  `number_repairs`); §9 4b-1b done; §19 `MapFile` v3 field list; §20 D20.
+
+### Next
+- Phase 4b-2 (judge) in a new session.

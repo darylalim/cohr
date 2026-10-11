@@ -35,13 +35,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from cohr import atomic, pipeline, schemas, storage
 from cohr.config import Config, prompt_hash
-from cohr.fuse import tokens
+from cohr.fuse import slide_text, tokens
+from cohr.numbers import digits, numbers_in
 from cohr.reduce import SECTIONS
 from cohr.schemas import (
     ActionItem,
     ChunksFile,
     Claim,
     Manifest,
+    MapFile,
     NotesDoc,
     Slide,
     SlidesFile,
@@ -161,125 +163,6 @@ def gen_hash(root: Path = Path()) -> str:
 
 
 # --- normalization (pure) ------------------------------------------------------------------
-
-_UNITS = {
-    "zero": 0,
-    "one": 1,
-    "two": 2,
-    "three": 3,
-    "four": 4,
-    "five": 5,
-    "six": 6,
-    "seven": 7,
-    "eight": 8,
-    "nine": 9,
-    "ten": 10,
-    "eleven": 11,
-    "twelve": 12,
-    "thirteen": 13,
-    "fourteen": 14,
-    "fifteen": 15,
-    "sixteen": 16,
-    "seventeen": 17,
-    "eighteen": 18,
-    "nineteen": 19,
-}
-_TENS = {
-    "twenty": 20,
-    "thirty": 30,
-    "forty": 40,
-    "fifty": 50,
-    "sixty": 60,
-    "seventy": 70,
-    "eighty": 80,
-    "ninety": 90,
-}
-_ORDINALS = {
-    "first": 1,
-    "second": 2,
-    "third": 3,
-    "fourth": 4,
-    "fifth": 5,
-    "sixth": 6,
-    "seventh": 7,
-    "eighth": 8,
-    "ninth": 9,
-    "tenth": 10,
-    "eleventh": 11,
-    "twelfth": 12,
-    "thirteenth": 13,
-    "fourteenth": 14,
-    "fifteenth": 15,
-    "sixteenth": 16,
-    "seventeenth": 17,
-    "eighteenth": 18,
-    "nineteenth": 19,
-    "twentieth": 20,
-    "thirtieth": 30,
-}
-_SCALES = {"hundred": 100, "thousand": 1_000, "million": 1_000_000}
-_NUMBER_WORDS = set(_UNITS) | set(_TENS) | set(_ORDINALS) | set(_SCALES)
-_WORD = re.compile(r"[a-z]+|\d[\d,]*(?:\.\d+)?|[^\sa-z\d]", re.I)
-_ORDINAL_SUFFIX = re.compile(r"\b(\d+)(?:st|nd|rd|th)\b", re.I)
-_SUFFIXED = re.compile(r"\b(\d+(?:\.\d+)?)\s*(k|m|thousand|million)\b", re.I)
-
-
-def _words_value(words: Sequence[str]) -> int:
-    """'fourteen thousand five hundred' → 14500; 'twenty first' → 21."""
-    total = current = 0
-    for w in words:
-        if w in _UNITS:
-            current += _UNITS[w]
-        elif w in _TENS:
-            current += _TENS[w]
-        elif w in _ORDINALS:
-            current += _ORDINALS[w]
-        elif w == "hundred":
-            current = max(current, 1) * 100
-        else:  # thousand, million
-            total += max(current, 1) * _SCALES[w]
-            current = 0
-    return total + current
-
-
-def digits(text: str) -> str:
-    """Number words and digit forms → plain digits: "$14,500" → "$14500", "fourteen thousand
-    five hundred" → "14500", "the twentieth" → "the 20", "14.5k" → "14500"."""
-    text = _ORDINAL_SUFFIX.sub(r"\1", text)
-    text = _SUFFIXED.sub(
-        lambda m: _fmt(float(m.group(1)) * (1e6 if m.group(2).lower() in "mmillion" else 1e3)),
-        text,
-    )
-    out: list[str] = []
-    run: list[str] = []
-
-    def flush() -> None:
-        if run:
-            out.append(str(_words_value(run)))
-            run.clear()
-
-    for tok in _WORD.findall(text):
-        low = tok.lower()
-        if low in _NUMBER_WORDS and not (low in _SCALES and not run):
-            run.append(low)
-        elif low == "and" and run:
-            continue  # "one hundred and five"
-        else:
-            flush()
-            out.append(tok.replace(",", "") if tok[0].isdigit() else tok)
-    flush()
-    return " ".join(out)
-
-
-def _fmt(v: float) -> str:
-    return str(int(v)) if v == int(v) else str(v)
-
-
-_NUMBER = re.compile(r"\d+(?:\.\d+)?")
-
-
-def numbers_in(text: str) -> set[float]:
-    return {float(m) for m in _NUMBER.findall(digits(text))}
 
 
 def stem(word: str) -> str:
@@ -637,6 +520,9 @@ class ItemReport(_Model):
     uncited: list[str]
     gap_texts: list[str]
     conflict: dict[str, bool] = {}
+    number_repairs: list[str] = []  # Map number guard (§5.5): "420,500 → 42,500"
+    unverified_numbers: list[str] = []  # flagged by the guard in map.json
+    unsupported_numbers: list[str] = []  # in notes.json claims, in no transcript or slide
     stages: dict[str, StageCost]
 
 
@@ -660,6 +546,23 @@ def stage_costs(manifest: Manifest, duration_s: float, since: datetime) -> dict[
 EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
+def unsupported_numbers(
+    claims: Sequence[Claim], transcript: Transcript, slides: Sequence[Slide]
+) -> list[str]:
+    """Numbers in the notes found in no transcript or slide text: did Reduce (or Map, with the
+    guard off) change digits? Values as digits, in first-seen order."""
+    sources = numbers_in(" ".join(i.text for i in transcript.items)).union(
+        *(numbers_in(slide_text(s)) for s in slides)
+    )
+    out: dict[float, None] = {}
+    for c in claims:
+        fields = [c.text, *((c.owner or "", c.due or "") if isinstance(c, ActionItem) else ())]
+        for v in sorted(numbers_in(" ".join(fields))):
+            if v not in sources:
+                out.setdefault(v)
+    return [str(int(v)) if v.is_integer() else str(v) for v in out]
+
+
 def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemReport:
     """Score a finished run against its truth. Reads run files only through schemas."""
     spec = truth.item
@@ -668,6 +571,7 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
     transcript = schemas.load(run_dir, Transcript)
     slides = schemas.load(run_dir, SlidesFile).slides
     doc = schemas.load(run_dir, NotesDoc)
+    map_notes = schemas.load(run_dir, MapFile).notes
     cross = spec.language != spec.target
 
     ids = match_slides(truth.slides, slides)
@@ -680,6 +584,9 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
     scored = [f for f in facts if not f.judge_only]
     found = [f for f in scored if f.found]
     lang = notes_language(doc, {spec.language, spec.target, "en"})
+    repairs = [f"{r.original} → {r.repaired}" for n in map_notes for r in n.number_repairs]
+    unverified = [u for n in map_notes for u in n.unverified_numbers]
+    unsupported = unsupported_numbers(all_claims, transcript, slides)
 
     metrics: dict[str, float | int | None] = {
         "facts": len(scored),
@@ -700,6 +607,9 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
         "wer": round(wer(truth.script_text, " ".join(i.text for i in transcript.items)), 4),
         **slide_metrics(truth.slides, slides, ids),
         "output_language_ok": int(lang == spec.target),
+        "map_numbers_repaired": len(repairs),
+        "map_numbers_unverified": len(unverified),
+        "unsupported_numbers": len(unsupported),
     }
     if spec.slides == "pdf":
         metrics["slide_alignment"] = alignment_accuracy(truth.slides, slides, ids, chunks.chunks)
@@ -731,6 +641,9 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
         uncited=uncited,
         gap_texts=texts,
         conflict=conflict,
+        number_repairs=repairs,
+        unverified_numbers=unverified,
+        unsupported_numbers=unsupported,
         stages=stage_costs(manifest, truth.duration_s, since),
     )
 
@@ -765,6 +678,10 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         vals = [float(v) for it in items if (v := it.metrics.get(key)) is not None]
         return round(sum(vals) / len(vals), 4) if vals else None
 
+    def recall(kind: str) -> float | None:
+        of_kind = [f for f in facts if f.kind == kind]
+        return round(sum(f.found for f in of_kind) / len(of_kind), 4) if of_kind else None
+
     gap_min = sum(float(it.metrics.get("gap_minutes") or 0.0) for it in items)
     return {
         "items": len(items),
@@ -785,6 +702,10 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         "slide_number_recall": mean("slide_number_recall"),
         "slide_alignment": mean("slide_alignment"),
         "output_language_ok": mean("output_language_ok"),
+        **{f"recall_{kind}": recall(kind) for kind in ("decision", "action", "number")},
+        "map_numbers_repaired": total("map_numbers_repaired"),
+        "map_numbers_unverified": total("map_numbers_unverified"),
+        "unsupported_numbers": total("unsupported_numbers"),
         "audio_s": round(sum(it.duration_s for it in items), 1),
     }
 
@@ -924,7 +845,10 @@ def render_markdown(report: Report) -> str:
     for it in report.items:
         missed = [f for f in it.facts if not f.found and not f.judge_only]
         off = [f for f in it.facts if f.found and not f.citation_ok]
-        if not (missed or off or it.made_up or it.uncited or it.gap_texts or it.conflict):
+        numbers = it.number_repairs or it.unverified_numbers or it.unsupported_numbers
+        if not (
+            missed or off or it.made_up or it.uncited or it.gap_texts or it.conflict or numbers
+        ):
             continue
         lines += ["", f"## {it.id} ({it.run_id})", ""]
         lines += [f"- missed {f.kind}: {f.text}" for f in missed]
@@ -935,6 +859,9 @@ def render_markdown(report: Report) -> str:
         lines += [f"- text in a gap: {t}" for t in it.gap_texts]
         if it.conflict:
             lines.append(f"- slide conflict: {json.dumps(it.conflict)}")
+        lines += [f"- Map number repaired: {r}" for r in it.number_repairs]
+        lines += [f"- Map number unverified: {u}" for u in it.unverified_numbers]
+        lines += [f"- number in no source: {n}" for n in it.unsupported_numbers]
     return "\n".join(lines) + "\n"
 
 
