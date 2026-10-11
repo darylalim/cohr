@@ -1093,3 +1093,19 @@ default kept). Seeds 2 and 3 pass `compare()` against the seed-1 baseline.
 ### Next
 - 6b kickoff prompt: near-miss (0/4), slide-conflict in Ask, filler → open questions, Reduce
   dropping facts Map has right; each change compared with `evals/baseline.json`.
+
+## 2026-10-11 · Phase 6b kickoff prompt (no code)
+
+### Plan changes
+- §21 kickoff prompt for 6b; §9 6b bullet points to it.
+- Measurement first: quick plants no open questions, so a Reduce fix that drops every open
+  question would score perfectly on "made-up open questions". 6b first adds planted open
+  questions to the generator (new media → re-baseline before any fix) and asks all three
+  near-miss templates per item (12 per set, not 4).
+- Correction to the 6a entry: on slide-conflict-en the **notes** also use the misspoken
+  $80,000 (baseline `conflict`: slide_value_used false, misspoken_value_used true), not only
+  Ask. So the cause is likely upstream (Map or the documents), and 6b investigates it with
+  the dropped-facts issue before changing a prompt.
+
+### Next
+- Phase 6b in a new session with the §21 prompt.
