@@ -1,0 +1,293 @@
+"""Data contracts for every run file (PLAN §19).
+
+Stages read and write run files only through `load` and `save`. Each file model carries a
+FORMAT_VERSION; changing a model means bumping it and regenerating the snapshots:
+
+    uv run python -m cohr.schemas --write-snapshots
+
+Times are seconds as floats, ids are ints, enums are Literals.
+"""
+
+import argparse
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import Any, ClassVar, Literal
+
+from pydantic import BaseModel, ConfigDict, JsonValue
+
+from cohr import atomic
+
+
+class _Model(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class RunFile(_Model):
+    """A top-level run file. FORMAT_VERSION feeds the owning stage's config hash."""
+
+    FORMAT_VERSION: ClassVar[int]
+    FILENAME: ClassVar[str]
+
+
+# --- manifest.json -------------------------------------------------------------------------
+
+StageStatus = Literal["pending", "running", "done", "failed", "cancelled", "interrupted"]
+InputKind = Literal["audio", "video", "slides"]
+
+
+class InputFile(_Model):
+    kind: InputKind
+    path: str  # original absolute path ("" for uploads)
+    stored: str  # name inside source/
+    mode: Literal["link", "copy", "upload"]
+    size: int
+    mtime: float
+    sha256: str
+
+
+class ModelRef(_Model):
+    repo: str
+    revision: str
+
+
+class StageState(_Model):
+    status: StageStatus = "pending"
+    format_version: int | None = None
+    config_hash: str | None = None  # stage config + prompt + format version
+    input_hash: str | None = None  # chained from the inputs and every earlier stage
+    started_at: datetime | None = None
+    heartbeat_at: datetime | None = None
+    finished_at: datetime | None = None
+    peak_mem_bytes: int | None = None
+    error: str | None = None
+
+
+class Manifest(RunFile):
+    FORMAT_VERSION: ClassVar[int] = 1
+    FILENAME: ClassVar[str] = "manifest.json"
+
+    app_version: str
+    run_id: str
+    created_at: datetime
+    inputs: list[InputFile]
+    config: dict[str, JsonValue]  # Config.model_dump(mode="json"); kept loose on purpose
+    models: dict[str, ModelRef] = {}
+    stages: dict[str, StageState] = {}
+    pruned: bool = False
+
+
+# --- chunks.json (vad) ---------------------------------------------------------------------
+
+
+class Span(_Model):
+    t0: float
+    t1: float
+
+
+class Chunk(Span):
+    chunk_id: int
+
+
+class ChunksFile(RunFile):
+    FORMAT_VERSION: ClassVar[int] = 1
+    FILENAME: ClassVar[str] = "chunks.json"
+
+    chunker: Literal["vad", "silence"]
+    chunks: list[Chunk]
+    gaps: list[Span]
+
+
+# --- frames/frames.json (ingest) -----------------------------------------------------------
+
+
+class Frame(_Model):
+    frame_id: int
+    path: str  # relative to the run dir, e.g. frames/000.png
+    pts: float | None  # seconds into the video; None for slide files
+    phash: str  # hex
+    source: str  # InputFile.stored
+    page: int | None = None  # 1-based page for PDFs
+
+
+class FramesFile(RunFile):
+    FORMAT_VERSION: ClassVar[int] = 1
+    FILENAME: ClassVar[str] = "frames/frames.json"
+
+    frames: list[Frame]
+
+
+# --- transcript.json (transcribe) ----------------------------------------------------------
+
+
+class TranscriptItem(Span):
+    chunk_id: int
+    text: str
+
+
+class Transcript(RunFile):
+    FORMAT_VERSION: ClassVar[int] = 1
+    FILENAME: ClassVar[str] = "transcript.json"
+
+    language: str
+    runtime: Literal["mlx-speech", "mlx-audio"]
+    items: list[TranscriptItem]
+
+
+# --- slides.json (vision) ------------------------------------------------------------------
+
+
+class Slide(_Model):
+    slide_id: int
+    frame_id: int
+    t: float | None
+    t_source: Literal["pts", "aligned", "none"]
+    align_score: float | None = None
+    title: str
+    text_md: str
+    tables_md: list[str]
+    chart_notes: str
+    visual_notes: str
+    raw: str | None = None
+
+
+class SlidesFile(RunFile):
+    FORMAT_VERSION: ClassVar[int] = 1
+    FILENAME: ClassVar[str] = "slides.json"
+
+    slides: list[Slide]
+
+
+# --- segments.json (fuse) ------------------------------------------------------------------
+
+
+class Segment(Span):
+    seg_id: int
+    chunk_ids: list[int]
+    transcript_text: str
+    slide_ids: list[int]
+
+
+class SegmentsFile(RunFile):
+    FORMAT_VERSION: ClassVar[int] = 1
+    FILENAME: ClassVar[str] = "segments.json"
+
+    segments: list[Segment]
+    unaligned_slide_ids: list[int]
+
+
+# --- map.json (map) ------------------------------------------------------------------------
+
+
+class MapActionItem(_Model):
+    owner: str | None = None
+    task: str
+    due: str | None = None
+
+
+class SegmentNotes(_Model):
+    seg_id: int
+    summary: str
+    key_points: list[str]
+    decisions: list[str]
+    action_items: list[MapActionItem]
+    open_questions: list[str]
+    terms: list[str]
+    raw: str
+
+
+class MapFile(RunFile):
+    FORMAT_VERSION: ClassVar[int] = 1
+    FILENAME: ClassVar[str] = "map.json"
+
+    target_language: str
+    notes: list[SegmentNotes]
+
+
+# --- notes.json (reduce) -------------------------------------------------------------------
+
+
+class Citation(_Model):
+    kind: Literal["seg", "slide"]
+    id: int
+    t: float | None = None  # refined jump time, seg citations only (§5.6)
+
+
+class Claim(_Model):
+    text: str
+    citations: list[Citation]  # [] = uncited: kept and flagged, never invented (§5.6)
+
+
+class ActionItem(Claim):
+    owner: str | None = None
+    due: str | None = None
+
+
+class NotesSections(_Model):
+    summary: list[Claim]
+    key_points: list[Claim]
+    decisions: list[Claim]
+    action_items: list[ActionItem]
+    open_questions: list[Claim]
+
+
+class NotesDoc(RunFile):
+    FORMAT_VERSION: ClassVar[int] = 1
+    FILENAME: ClassVar[str] = "notes.json"
+
+    sections: NotesSections
+    passes: Literal[1, 2]
+    language: str
+
+
+# --- I/O -----------------------------------------------------------------------------------
+
+RUN_FILES: tuple[type[RunFile], ...] = (
+    Manifest,
+    ChunksFile,
+    FramesFile,
+    Transcript,
+    SlidesFile,
+    SegmentsFile,
+    MapFile,
+    NotesDoc,
+)
+
+
+def load[M: RunFile](run_dir: Path, model: type[M]) -> M:
+    """Read and validate a run file. Raises pydantic.ValidationError if it doesn't match."""
+    return model.model_validate_json((run_dir / model.FILENAME).read_bytes())
+
+
+def save(run_dir: Path, obj: RunFile) -> None:
+    """Validate-on-write is implicit (pydantic models); the write itself is atomic."""
+    atomic.write_text(run_dir / obj.FILENAME, obj.model_dump_json(indent=2) + "\n")
+
+
+# --- schema snapshots (tests/test_schemas.py) ----------------------------------------------
+
+SNAPSHOT_DIR = Path(__file__).resolve().parents[2] / "tests" / "schemas"
+
+
+def snapshot_name(model: type[RunFile]) -> str:
+    return Path(model.FILENAME).name
+
+
+def snapshot(model: type[RunFile]) -> dict[str, Any]:
+    return {"format_version": model.FORMAT_VERSION, "schema": model.model_json_schema()}
+
+
+def write_snapshots(directory: Path = SNAPSHOT_DIR) -> None:
+    for model in RUN_FILES:
+        text = json.dumps(snapshot(model), indent=2, sort_keys=True) + "\n"
+        atomic.write_text(directory / snapshot_name(model), text)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--write-snapshots", action="store_true", help="regenerate tests/schemas")
+    if parser.parse_args().write_snapshots:
+        write_snapshots()
+        print(f"wrote {len(RUN_FILES)} snapshots to {SNAPSHOT_DIR}")
+    else:
+        parser.print_help()

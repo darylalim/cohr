@@ -1,0 +1,260 @@
+{
+  "format_version": 1,
+  "schema": {
+    "$defs": {
+      "InputFile": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "audio",
+              "video",
+              "slides"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "link",
+              "copy",
+              "upload"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "mtime": {
+            "title": "Mtime",
+            "type": "number"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "stored": {
+            "title": "Stored",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "path",
+          "stored",
+          "mode",
+          "size",
+          "mtime",
+          "sha256"
+        ],
+        "title": "InputFile",
+        "type": "object"
+      },
+      "JsonValue": {},
+      "ModelRef": {
+        "additionalProperties": false,
+        "properties": {
+          "repo": {
+            "title": "Repo",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "repo",
+          "revision"
+        ],
+        "title": "ModelRef",
+        "type": "object"
+      },
+      "StageState": {
+        "additionalProperties": false,
+        "properties": {
+          "config_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Config Hash"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Finished At"
+          },
+          "format_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Format Version"
+          },
+          "heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Heartbeat At"
+          },
+          "input_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Input Hash"
+          },
+          "peak_mem_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Peak Mem Bytes"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Started At"
+          },
+          "status": {
+            "default": "pending",
+            "enum": [
+              "pending",
+              "running",
+              "done",
+              "failed",
+              "cancelled",
+              "interrupted"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "StageState",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "app_version": {
+        "title": "App Version",
+        "type": "string"
+      },
+      "config": {
+        "additionalProperties": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "title": "Config",
+        "type": "object"
+      },
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "inputs": {
+        "items": {
+          "$ref": "#/$defs/InputFile"
+        },
+        "title": "Inputs",
+        "type": "array"
+      },
+      "models": {
+        "additionalProperties": {
+          "$ref": "#/$defs/ModelRef"
+        },
+        "default": {},
+        "title": "Models",
+        "type": "object"
+      },
+      "pruned": {
+        "default": false,
+        "title": "Pruned",
+        "type": "boolean"
+      },
+      "run_id": {
+        "title": "Run Id",
+        "type": "string"
+      },
+      "stages": {
+        "additionalProperties": {
+          "$ref": "#/$defs/StageState"
+        },
+        "default": {},
+        "title": "Stages",
+        "type": "object"
+      }
+    },
+    "required": [
+      "app_version",
+      "run_id",
+      "created_at",
+      "inputs",
+      "config"
+    ],
+    "title": "Manifest",
+    "type": "object"
+  }
+}

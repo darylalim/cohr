@@ -1,0 +1,82 @@
+{
+  "format_version": 1,
+  "schema": {
+    "$defs": {
+      "Chunk": {
+        "additionalProperties": false,
+        "properties": {
+          "chunk_id": {
+            "title": "Chunk Id",
+            "type": "integer"
+          },
+          "t0": {
+            "title": "T0",
+            "type": "number"
+          },
+          "t1": {
+            "title": "T1",
+            "type": "number"
+          }
+        },
+        "required": [
+          "t0",
+          "t1",
+          "chunk_id"
+        ],
+        "title": "Chunk",
+        "type": "object"
+      },
+      "Span": {
+        "additionalProperties": false,
+        "properties": {
+          "t0": {
+            "title": "T0",
+            "type": "number"
+          },
+          "t1": {
+            "title": "T1",
+            "type": "number"
+          }
+        },
+        "required": [
+          "t0",
+          "t1"
+        ],
+        "title": "Span",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "chunker": {
+        "enum": [
+          "vad",
+          "silence"
+        ],
+        "title": "Chunker",
+        "type": "string"
+      },
+      "chunks": {
+        "items": {
+          "$ref": "#/$defs/Chunk"
+        },
+        "title": "Chunks",
+        "type": "array"
+      },
+      "gaps": {
+        "items": {
+          "$ref": "#/$defs/Span"
+        },
+        "title": "Gaps",
+        "type": "array"
+      }
+    },
+    "required": [
+      "chunker",
+      "chunks",
+      "gaps"
+    ],
+    "title": "ChunksFile",
+    "type": "object"
+  }
+}

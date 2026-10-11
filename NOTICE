@@ -1,0 +1,16 @@
+cohr
+Copyright 2026 Daryl Lim
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This is an independent project. It is not affiliated with, endorsed by, or
+sponsored by Cohere. "Cohere", "Command", "Aya" and "North" are names of their
+respective owners and are used here only to identify the models this software runs.
+
+This software downloads and runs third-party machine-learning models at runtime.
+Those models are NOT part of this software and are governed by their own licenses:
+  - Cohere Transcribe 2B, North Micro Vision Instruct 2.4B: Apache-2.0
+  - Silero VAD v6: MIT
+  - Tiny Aya Global 3.35B, Command R7B: CC-BY-NC-4.0 (non-commercial use only)
+With the default configuration, use of this software is therefore limited to
+non-commercial purposes. Check each model's license on its Hugging Face page.

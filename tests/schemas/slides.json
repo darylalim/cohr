@@ -1,0 +1,115 @@
+{
+  "format_version": 1,
+  "schema": {
+    "$defs": {
+      "Slide": {
+        "additionalProperties": false,
+        "properties": {
+          "align_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Align Score"
+          },
+          "chart_notes": {
+            "title": "Chart Notes",
+            "type": "string"
+          },
+          "frame_id": {
+            "title": "Frame Id",
+            "type": "integer"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Raw"
+          },
+          "slide_id": {
+            "title": "Slide Id",
+            "type": "integer"
+          },
+          "t": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T"
+          },
+          "t_source": {
+            "enum": [
+              "pts",
+              "aligned",
+              "none"
+            ],
+            "title": "T Source",
+            "type": "string"
+          },
+          "tables_md": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tables Md",
+            "type": "array"
+          },
+          "text_md": {
+            "title": "Text Md",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "visual_notes": {
+            "title": "Visual Notes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slide_id",
+          "frame_id",
+          "t",
+          "t_source",
+          "title",
+          "text_md",
+          "tables_md",
+          "chart_notes",
+          "visual_notes"
+        ],
+        "title": "Slide",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "slides": {
+        "items": {
+          "$ref": "#/$defs/Slide"
+        },
+        "title": "Slides",
+        "type": "array"
+      }
+    },
+    "required": [
+      "slides"
+    ],
+    "title": "SlidesFile",
+    "type": "object"
+  }
+}
