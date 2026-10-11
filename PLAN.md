@@ -1033,7 +1033,10 @@ compared with a committed baseline:
   in §21.
 - **6b: quality fixes**, each checked against the baseline, which is updated with the reason:
   Reduce turning filler into open questions (4b-2), Reduce dropping facts Map has right
-  (4b-1b: 4650, $57,000), and Ask's near-miss and cross-language limits (§5.7, 5b).
+  (4b-1b: 4650, $57,000), and Ask's near-miss and cross-language limits (§5.7, 5b). 6a
+  measured near-miss at 0 of 4 on every seed and found Ask using the misspoken value on
+  `slide-conflict-en`. Measurement goes first: planted open questions in the generator and
+  three near-miss questions per item, re-baselined. Kickoff prompt in §21.
 - **6c: long meetings.** Inputs over 2 h: two-pass reduce with marker-based citations (§4) and
   the `long-en` item; Ask ranking with FTS5 (§5.7) and "Answer based on the N most relevant
   segments".
@@ -2156,4 +2159,46 @@ Rules from CLAUDE.md apply. Ask me before `cohr eval --set full`, the opt-in mod
 new model downloads or new dependencies. quick runs are fine (~5 min each plus Ask).
 When done: tick the checklist, fill D16 in §20, add a NOTES.md entry, make sure the gate
 passes, and open a PR (ask before pushing). Stop there; 6b is separate.
+```
+
+### Kickoff prompt for Phase 6b (quality fixes)
+```text
+Continue cohr: Phase 6b (quality fixes). Read CLAUDE.md, then PLAN.md §9 (the 6b bullet),
+§5.5–5.7 (Map, Reduce, Ask), §18 (gate, Ask row), §20 (D16) and the latest NOTES.md entry
+(Phase 6a). Work on branch phase-6b-quality.
+Every eval in this phase runs with `-c seed=1` (the baseline's seed) and is compared with
+evals/baseline.json. While iterating, use --item and --no-judge; run full quick (with Ask and
+the judge, ~15 min) before each baseline update. Commit each step separately; a baseline
+update goes in its own commit with the reason and the before/after numbers.
+1. Measurement first (no prompt changes yet):
+   a. Planted open questions: add an `open_question` fact kind to evals/gen (1–2 per item,
+      spoken as a clearly unresolved question, e.g. "One thing we haven't settled: <q>?";
+      the filler "seasonality" lines stay). Score open-question recall (Open questions
+      section, token overlap ≥ 0.6) and made-up open questions (claims in that section
+      matching no planted one). Regenerated media change every metric, so re-baseline right
+      after with the reason "generator: planted open questions", before any fix.
+   b. Near-miss: ask all three NEAR_MISS templates per item (12 per set instead of 4).
+   Ask me whether made-up open questions and near-miss enter the gate; D16's noise for them
+   was measured before this change.
+2. Ask fixes (ask.md / ask.py only; Reduce's hash must not move: test_ask pins it):
+   near-miss (R7B answers with a related number despite the ask.md rule; try e.g. a worked
+   example in the prompt or asking it to name the period/team first). Pass: near-miss up, no
+   Ask metric down beyond its D16 threshold; check German-after-history by eye (report-only).
+3. Reduce: filler → open questions (13 / 11 / 4 over 6a's seeds). Fix in reduce.md (e.g.
+   "only questions someone asked and left open"). Pass: made-up open questions down,
+   open-question recall and every gated metric within D16. This moves Reduce's config hash:
+   update the test_ask pin on purpose, with the reason in the commit.
+4. Find the cause before changing anything, record it in NOTES.md, and fix only if it's clear:
+   a. Reduce dropping facts Map has right (4b-1b: 4650 signups on clean-en, the $57,000
+      budget): in map.json? in the prompt? cut by the fit? left out by R7B?
+   b. The slide-conflict value: on slide-conflict-en both the notes and Ask give the
+      misspoken $80,000, not the slide's $18,000 (baseline: slide_value_used false), despite
+      the slide rule in reduce.md and ask.md. Which value does map.json carry, and does the
+      slide document reach R7B with the right number?
+   Pass: recall_number up / slide_value_used true, nothing gated worse.
+If a fix doesn't pass, revert it and record what was tried (as in 5b), and move on.
+Rules from CLAUDE.md apply. Ask me before `cohr eval --set full`, the opt-in model tests, new
+model downloads or new dependencies. quick runs are fine.
+When done: tick the checklist, record decisions in §20 (new D numbers), add a NOTES.md entry,
+make sure the gate passes, and open a PR (ask before pushing). Stop there; 6c is separate.
 ```
