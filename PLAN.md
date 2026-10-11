@@ -110,8 +110,9 @@ MAP (Tiny Aya Global, once per segment, output in the target language)
 
 REDUCE (Command R7B, RAG template, citations on)
   documents = one per segment (time range + slide ids + map notes + raw transcript excerpt)
+              + one per slide
   ─► final notes with <co>…</co: 0:[i,…]> spans ─► parse ─► refine citation times (no models)
-  ─► notes.json ─► render ─► notes.md (+ notes_raw.txt)
+  ─► notes.json (raw reply kept inside) ─► render ─► notes.md
 
 ASK (Command R7B, same documents) ─► answer with citations
 ```
@@ -129,8 +130,8 @@ transcript.json
 slides.json
 segments.json
 map.json
-notes_raw.txt        R7B output exactly as generated (keep it for debugging)
-notes.json           parsed notes with structured citations (§19); what Notes/Ask/evals read
+notes.json           parsed notes with structured citations (§19); what Notes/Ask/evals read;
+                     `raw` holds R7B's reply exactly as generated (debugging, evals)
 notes.md             rendered from notes.json as a portable file (plain citations + Sources
                      appendix, §5.6); this is what Download gives you
 log.txt              run log (INFO by default, DEBUG via config), §7 job lifecycle
@@ -307,20 +308,31 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
 ### 5.6 Reduce (Command R7B with citations)
 - Use the tokenizer's **`rag`** chat template, which is present in the MLX repo and supports
   `documents` and `enable_citations`. Each document:
-  `{"title": "12:30–17:30 · slides 4,5", "snippet": <map notes + slide text + raw transcript excerpt>}`.
-  Unaligned slides become their own documents (`"title": "slide 7"`).
+  `{"title": "12:30–17:30 · slides 4,5", "snippet": <map notes + raw transcript>}`.
+  **Every slide is its own document** (`"title": "slide 7: <title>"`, snippet = slide text +
+  chart notes), aligned or not: in Phase 0, with slide text inside the segment's document, R7B
+  cited only the segment (Phase 4a). Slide numbers shown to people are `slide_id + 1`.
+- **Over the cap (until two-pass reduce, Phase 6):** if the prompt exceeds `max_input_tokens`,
+  every segment's transcript is trimmed (25% at a time); if it still doesn't fit at 300
+  characters per segment, the stage fails with a clear error. Map notes and slides are never trimmed.
 - **Phase 0:** confirm the exact `apply_chat_template(..., documents=..., chat_template="rag", enable_citations=True)`
   arguments, and the citation format R7B produces (expected: `<co>span</co: 0:[i,j]>`).
 - **Fixed section markers:** the prompt asks for five sections under fixed English markers, whatever
   the target language: `## SUMMARY`, `## KEY_POINTS`, `## DECISIONS`, `## ACTION_ITEMS`,
   `## OPEN_QUESTIONS`. The parser splits on these exact markers, so German or Japanese notes
   parse the same way as English ones. `render.py` shows each heading in the target language from
-  a static table (`SECTION_TITLES[lang][section]`; English if the language is missing). Missing or
-  unknown markers: log them, and put unmatched text in Summary rather than dropping it.
+  a static table (`LABELS[lang][key]`: the five headings plus "Sources", "owner", "due" and
+  "uncited", for all 23 languages; English if the language is missing). Missing or unknown
+  markers: log them, and put unmatched text in Summary rather than dropping it.
+- **Claims:** one per list item (continuation lines join the item; `- none` is skipped) and one
+  per sentence in Summary (`.!?` + space, or `。！？`). A `<co>` span is never split, so its
+  citations stay with the claim that contains it. A claim's citations are its spans' targets,
+  first occurrence of each; the refined `t` comes from the first span citing that segment.
 - **Action item line format:** one item per line, `- [owner: <name or ?>] [due: <date or ?>] <task>`
   (`?` = unknown). The parser fills `owner`/`due` (§19). If a line doesn't match, match the task
   text against `map.json` action items from the cited segments (token overlap ≥ 0.6) and copy their
-  owner and due date; otherwise leave them null.
+  owner and due date; otherwise leave them null. Phase 0 got `Priya: screenshots by 20 October`
+  without an example, so `reduce.md` shows two example lines.
 - Citation parsing: regex `<co>(.*?)</co:\s*([^>]+)>` → list of document indices → `citations[]`.
 - **Citation rules (every claim cites):**
   - A document index outside the documents sent is dropped and logged. It never becomes a link.
@@ -340,6 +352,9 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
     (no in-app anchors, which are dead links outside the app), plus a **Sources** appendix with one
     entry per cited segment (time range, slide ids, first ~200 characters of its transcript) and per
     cited slide (number and title).
+  - Both modes flag uncited claims (`[uncited]` in the target language; the app adds the badge),
+    and action items show `(owner: …; due: …)` when known. Rendering is its own `render` stage
+    (no model), so a label change re-renders without re-running R7B.
 - **Two-pass reduce** for inputs over the 32K cap: see §4. Pass 2 uses `prompts/reduce_pass2.md`;
   the marker resolution is pure Python and unit tested (§8); the `long-en` eval checks it (§18).
 - **Target languages:** the UI lists **R7B's 23 languages** (exact list from the model card,
@@ -888,10 +903,11 @@ PR (§21).
 pinned revisions and a free-disk check before downloads, `transcript.json` and `slides.json`, plus skip logic.
 **Phase 3: fuse + map** (done 2026-10-11, NOTES.md): slide text alignment, `segments.json` and `map.json` (with `open_questions` and the
 invalid-JSON fallback, §5.5); token budget enforced.
-**Phase 4: reduce + render:** `notes.json` and portable `notes.md` with working citations (fixed section
-markers, citation rules, time refinement, action item owner/due, §5.6); CLI end to end on fixtures;
-planted-facts generator and `cohr eval --set quick` (§18) running, including cross-language scoring
-and the uncited-claims metric, first numbers recorded.
+**Phase 4: reduce + render**, split in two PRs:
+- **4a** (done 2026-10-11, NOTES.md): `notes.json` and portable `notes.md` with working citations (fixed section
+  markers, citation rules, time refinement, action item owner/due, §5.6); CLI end to end on fixtures.
+- **4b:** planted-facts generator and `cohr eval --set quick` (§18) running, including cross-language scoring
+  and the uncited-claims metric, first numbers recorded; D11 re-check, D12, D15, D19.
 **Phase 5: Streamlit UI:** "Paper & Ink" theme and adaptive layout (§7) with `test_theme.py`,
 `test_app.py` and the window-width check, all four pages, background job, progress, Ask (follow-ups and answer language, §5.7); upload limit and local
 path input (§12); Runs page shows each run's size, with Delete and Prune media.
@@ -1615,7 +1631,7 @@ Pydantic models for every run file. Stages read and write **only** through them
 | `slides.json` | `SlidesFile` | `slides[{slide_id, frame_id, t?, t_source, align_score?, title, text_md, tables_md[], chart_notes, visual_notes, raw?}]` |
 | `segments.json` | `SegmentsFile` | `segments[{seg_id, t0, t1, chunk_ids[], transcript_text, slide_ids[]}]`, `unaligned_slide_ids[]` |
 | `map.json` | `MapFile` | `target_language`, `notes[{seg_id, summary, key_points[], decisions[], action_items[{owner?, task, due?}], open_questions[], terms[], raw: bool}]` (v2) |
-| `notes.json` | `NotesDoc` | `sections{summary, key_points, decisions, action_items, open_questions}` as lists of `{text, citations[{kind: seg|slide, id, t?}]}` (`t` = refined jump time, seg only; `citations: []` = uncited, §5.6); action items also have `owner?`, `due?`; `passes: 1|2`, `language` |
+| `notes.json` | `NotesDoc` | `sections{summary, key_points, decisions, action_items, open_questions}` as lists of `{text, citations[{kind: seg|slide, id, t?}]}` (`t` = refined jump time, seg only; `citations: []` = uncited, §5.6); action items also have `owner?`, `due?`; `passes: 1|2`, `language`, `raw` (R7B reply) (v2) |
 
 `notes.json` is new: the **parsed** reduce output. `notes.md` is rendered from it, and Notes, Ask,
 Search and the evals read `notes.json`, never by re-parsing Markdown.

@@ -1,5 +1,5 @@
 {
-  "format_version": 1,
+  "format_version": 2,
   "schema": {
     "$defs": {
       "ActionItem": {
@@ -169,6 +169,10 @@
         "title": "Passes",
         "type": "integer"
       },
+      "raw": {
+        "title": "Raw",
+        "type": "string"
+      },
       "sections": {
         "$ref": "#/$defs/NotesSections"
       }
@@ -176,7 +180,8 @@
     "required": [
       "sections",
       "passes",
-      "language"
+      "language",
+      "raw"
     ],
     "title": "NotesDoc",
     "type": "object"
