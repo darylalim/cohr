@@ -19,3 +19,5 @@ Slides shown:
 
 Transcript:
 {transcript}
+
+Write every JSON string value in {target_language}. Return only the JSON object.
