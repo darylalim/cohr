@@ -2,7 +2,8 @@
 
 Quality evaluation for cohr (PLAN §18). Synthetic "planted-facts" meetings: every decision,
 action item (owner + due date) and number is known with the second it's spoken, so the main
-metrics are exact checks with no human labels and no LLM judge.
+metrics are exact checks with no human labels and no LLM judge. A local judge
+(Qwen3-4B on MLX) adds secondary metrics that stay out of the release gate.
 
 ## Run
 
@@ -23,6 +24,12 @@ uv run cohr eval --set quick      # ~10 min on an M2 Max; models must be downloa
 - `--baseline PATH` compares with an earlier report (exit 1 on a regression, §18 thresholds).
   `evals/baseline.json` is committed from Phase 6 on; `--update-baseline` rewrites it.
 
+- After every item has run, the judge (`src/cohr/judge.py`) answers its questions; answers are
+  cached in `evals/data/judge/<item>.json`, so re-scoring loads no model. `--no-judge` skips it.
+- `uv run cohr eval --calibrate-judge` runs only the judge on the 30 hand-labeled pairs in
+  `evals/gen/judge_calibration.json` and reports its agreement with the labels (D15). Don't
+  tune the judge prompts on these pairs.
+
 Generate one item by hand: `uv run python -m evals.gen clean-en evals/data/gen/clean-en`.
 
 ## Sets
@@ -39,6 +46,10 @@ or its slide), uncited claims, made-up decisions/action items (a real task with 
 else's owner or due date counts), VAD speech F1 and words transcribed in non-speech gaps,
 WER, slide titles/cells/numbers, slide alignment (`pdf-slides-en`), output language, and
 seconds per audio hour and peak memory per stage. Matching rules: `src/cohr/evals.py`.
+
+Judge (secondary): **support rate**, the share of cited claims whose cited transcript and
+slides state them ("yes"; partial, no and unjudged are counted apart), and **judge recall** for
+cross-language text facts. Its cost is reported as its own row.
 
 ## Data
 

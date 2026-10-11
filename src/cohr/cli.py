@@ -126,6 +126,8 @@ def cmd_eval(args: argparse.Namespace) -> int:
     from cohr import evals  # pulls in the eval dependency group lazily
 
     root = Path(args.root)
+    if args.calibrate_judge:
+        return _calibrate_judge(root)
     try:
         overrides = dict(evals.parse_override(o) for o in args.config)
         report = evals.run_set(
@@ -136,6 +138,7 @@ def cmd_eval(args: argparse.Namespace) -> int:
             overrides=overrides,
             fresh=args.fresh,
             models=ModelManager(Config()),
+            judge_=not args.no_judge,
             log=lambda msg: print(msg, file=sys.stderr),
             progress=_print_progress,
         )
@@ -158,6 +161,24 @@ def cmd_eval(args: argparse.Namespace) -> int:
     if args.update_baseline:
         print(f"baseline updated: {evals.write_baseline(report, root)}", file=sys.stderr)
     return 1 if report.regressions else 0
+
+
+def _calibrate_judge(root: Path) -> int:
+    from cohr import evals
+
+    try:
+        report = evals.calibrate(
+            root=root, models=ModelManager(Config()), log=lambda m: print(m, file=sys.stderr)
+        )
+    except FileNotFoundError as e:
+        raise SystemExit(f"error: {e}") from e
+    except ModelsMissing as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    path = evals.write_calibration_report(report, root)
+    print(evals.render_calibration(report))
+    print(f"report: {path} (+ .md)", file=sys.stderr)
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -208,6 +229,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="config override, e.g. fuse.window_s=120 (repeatable)",
     )
     p.add_argument("--fresh", action="store_true", help="new runs instead of reusing stages")
+    p.add_argument(
+        "--no-judge",
+        action="store_true",
+        help="skip the judge metrics (support rate, judge recall)",
+    )
+    p.add_argument(
+        "--calibrate-judge",
+        action="store_true",
+        help="only run the judge on evals/gen/judge_calibration.json (D15)",
+    )
     p.add_argument("--baseline", help="report to compare with (default evals/baseline.json)")
     p.add_argument(
         "--update-baseline", action="store_true", help="write this report as the baseline"

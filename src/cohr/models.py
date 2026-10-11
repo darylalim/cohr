@@ -157,7 +157,7 @@ class MlxMemory:
 
 
 def default_loaders() -> dict[str, Loader]:
-    from cohr import asr, mapper, reduce, vad, vision
+    from cohr import asr, judge, mapper, reduce, vad, vision
 
     return {
         "vad": vad.load,
@@ -165,6 +165,7 @@ def default_loaders() -> dict[str, Loader]:
         "vision": vision.load,
         "map": mapper.load,
         "reduce": reduce.load,
+        "judge": judge.load,  # eval only (§18)
     }
 
 
