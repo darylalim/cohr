@@ -1787,4 +1787,34 @@ Continue cohr: Phase <N> (<name>). Read CLAUDE.md, then PLAN.md sections <list>,
 NOTES.md entry. Work on branch phase-<N>-<slug>. Follow the phase's acceptance criteria in §9.
 When done: tick the checklist, update §20 and NOTES.md, make sure the gate passes, and open a PR
 (ask before pushing).
+```
 
+### Kickoff prompt for Phase 4b-1
+```text
+Continue cohr: Phase 4b-1 (evals without the judge). Read CLAUDE.md, then PLAN.md sections
+§9 (the 4b-1 bullet), §18 (all of it except the Judge subsection, AMI and FLEURS), §5.4, §5.5, §5.6
+(citation refinement), §19, §20 (D11, D12, D19) and §8. Then read the two latest NOTES.md entries:
+the 4a entry has the Map due-date error, and the 4b planning entry has the split.
+Work on branch phase-4b-1-evals. Follow the 4b-1 acceptance criteria in §9:
+1. Planted-facts generator in evals/gen/. The same seed must give the same script and truth.json.
+   It uses `say` voices, PIL slides and ffmpeg noise/tones/silence, and builds the four quick
+   variants (clean-en, noisy-en, pdf-slides-en, slide-conflict-en). Generated audio and slides go
+   only to gitignored paths (evals/data/). Never commit them.
+2. Exact metrics: fact recall, citation accuracy (refined t within ±15 s, or the right slide),
+   uncited claims, made-up items, VAD gap text, WER, slides, output language, and cost.
+   Cross-language exact-field scoring gets code and unit tests only; those variants run in
+   Phase 6.
+3. `cohr eval --set quick`: writes reports to evals/reports/ and compares against a baseline.
+   Don't commit evals/baseline.json; that waits for Phase 6.
+4. tests/test_evals.py as listed in §18 "Tests". No models in these tests.
+5. Run quick and record the first numbers. Then decide D11 (on pdf-slides-en), D12 (do a second
+   quick run with another Fuse window) and D19 (look at the citation error distribution, not just
+   the pass rate).
+6. Fix the Map due-date error in prompts/map.md. Record the made-up-items count before and after,
+   both from quick runs on the same seed.
+Running `cohr eval --set quick` is fine. Ask me before anything in `full`, before `pytest -m
+models`, and before new model downloads. Eval deps (jiwer, pyyaml, lingua) are already installed.
+Check the license of any new dependency (§11).
+When done: tick the checklist, update §20 and NOTES.md, make sure the gate passes, and open a PR
+(ask before pushing). Stop there; 4b-2 (the judge) is a separate session.
+```
