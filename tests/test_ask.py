@@ -12,8 +12,9 @@ from tests.conftest import fake_manager, make_run
 from tests.test_reduce import FakeR7B, _items, _map, _segments, _slide
 
 # Reduce's config hash: Ask must not move it (no re-runs of existing notes). Moved on purpose
-# only by Reduce changes: 6c reduce.md (one fact per item).
-REDUCE_HASH = "18ab5e711b5600225ede31e718e0fffa3c8aa0d00f0ec7f35c415c299b82fe0b"
+# only by Reduce changes: 6c reduce.md (one fact per item); 6c two-pass (reduce_pass2 in
+# the prompt list, NotesDoc v4).
+REDUCE_HASH = "84cee7aabc42d950aa98abf5f48f173a3a04c012e8566b3f48d83bdcff48d6c2"
 
 
 def sources() -> Sources:
@@ -86,7 +87,7 @@ def test_history_answers_carry_no_citation_markup() -> None:
     model = lm("<|START_RESPONSE|><co>We approved the 14,500 budget.</co: 0:[0]><|END_RESPONSE|>")
     first = ask.ask(model, "What was approved?", [], sources(), Config(), sure("en"))
     assert first.turn() == Turn("What was approved?", "We approved the 14,500 budget.")
-    model.reply = "<co>Priya</co: 0:[1]> owns it."
+    model.replies = ["<co>Priya</co: 0:[1]> owns it."]
     ask.ask(model, "Who owns that?", [first.turn()], sources(), Config(), sure("en"))
     sent = model.instructions[-1]
     assert "A: We approved the 14,500 budget." in sent

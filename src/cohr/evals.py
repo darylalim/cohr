@@ -82,6 +82,8 @@ MAX_RISE: dict[str, float] = {
     "uncited_claims": 0,  # noise 0
     "gap_words_per_min": 0.0,  # noise 0
 }
+# How a pass-2 citation of a group resolved (reduce.span_targets; report-only).
+PASS2 = ("marker", "claim", "group", "uncited")
 MAX_STAGE_SLOWDOWN = 0.25  # noisiest stage: reduce, 10.5%
 
 GEN_DIR = Path("evals") / "gen"
@@ -670,6 +672,9 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
         "map_numbers_repaired": len(repairs),
         "map_numbers_unverified": len(unverified),
         "unsupported_numbers": len(unsupported),
+        "reduce_groups": len(doc.two_pass.groups) if doc.two_pass else 0,
+        # two-pass (§4, D26): how pass-2 citations of a group resolved
+        **{f"pass2_{k}": (doc.two_pass.resolved.get(k, 0) if doc.two_pass else 0) for k in PASS2},
     }
     if spec.slides == "pdf":
         metrics["slide_alignment"] = alignment_accuracy(truth.slides, slides, ids, chunks.chunks)
@@ -1330,6 +1335,8 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         "map_numbers_repaired": total("map_numbers_repaired"),
         "map_numbers_unverified": total("map_numbers_unverified"),
         "unsupported_numbers": total("unsupported_numbers"),
+        "reduce_groups": total("reduce_groups"),
+        **{f"pass2_{k}": total(f"pass2_{k}") for k in PASS2},
         # judge (secondary, not in the gate): None when the set wasn't judged
         "support_rate": round(yes / cited, 4) if judged and cited else None,
         "support_partial": total("support_partial") if judged else None,

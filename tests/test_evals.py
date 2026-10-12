@@ -33,6 +33,7 @@ from cohr.schemas import (
     Manifest,
     MapFile,
     NotesDoc,
+    NotesGroup,
     NotesSections,
     NumberRepair,
     SegmentNotes,
@@ -42,6 +43,7 @@ from cohr.schemas import (
     StageState,
     Transcript,
     TranscriptItem,
+    TwoPass,
 )
 from evals.gen import build as gen_build
 from evals.gen.script import (
@@ -573,6 +575,26 @@ def test_score_item_end_to_end(tmp_path: Path) -> None:
     md = evals.render_markdown(full)
     assert "citation off by -20 s" in md and "| map | 360 | 9 |" in md
     assert "Map number repaired: 4,090 → 409" in md and "number in no source: 3100" in md
+    assert m["reduce_groups"] == 0 and m["pass2_group"] == 0  # one pass
+
+    two = schemas.load(run_dir, NotesDoc).model_copy(
+        update={
+            "passes": 2,
+            "two_pass": TwoPass(
+                groups=[NotesGroup(seg_ids=[0], slide_ids=[0], raw="")] * 2,
+                resolved={"marker": 3, "group": 1},
+            ),
+        }
+    )
+    schemas.save(run_dir, two)
+    m2 = evals.score_item(truth, run_dir).metrics
+    assert (m2["reduce_groups"], m2["pass2_marker"], m2["pass2_claim"], m2["pass2_group"]) == (
+        2,
+        3,
+        0,
+        1,
+    )
+    assert evals.summarize([rep, evals.score_item(truth, run_dir)])["pass2_marker"] == 3
     path = evals.write_report(full, tmp_path)
     assert evals.load_report(path) == full
     assert json.loads(path.read_text())["summary"]["facts"] == 2

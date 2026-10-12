@@ -241,16 +241,34 @@ class NotesSections(_Model):
     open_questions: list[Claim]
 
 
+class NotesGroup(_Model):
+    """One pass-1 group of a two-pass reduce (§4): consecutive segments and their slides."""
+
+    seg_ids: list[int]
+    slide_ids: list[int]
+    raw: str  # R7B's pass-1 reply for the group
+
+
+class TwoPass(_Model):
+    groups: list[NotesGroup]
+    # How each pass-2 citation of a group resolved (§4): "marker" ([seg-N] markers in the
+    # cited span), "claim" (the best-matching pass-1 claim's citations), "group" (every
+    # segment of the group), "uncited" (it matched an uncited pass-1 claim: nothing invented).
+    resolved: dict[str, int]
+
+
 class NotesDoc(RunFile):
     # v3: a seg citation's `t` is placed inside the chunk at the cited sentence (D19), so
     # older runs re-run Reduce (same reply at temperature 0, new jump times).
-    FORMAT_VERSION: ClassVar[int] = 3
+    # v4: two_pass (pass-1 groups and how pass-2 citations resolved, §4).
+    FORMAT_VERSION: ClassVar[int] = 4
     FILENAME: ClassVar[str] = "notes.json"
 
     sections: NotesSections
     passes: Literal[1, 2]
     language: str
     raw: str  # R7B's reply with citation markup, as generated (debugging, evals)
+    two_pass: TwoPass | None = None  # passes == 2 only
 
 
 # --- I/O -----------------------------------------------------------------------------------

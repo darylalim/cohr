@@ -1,5 +1,5 @@
 {
-  "format_version": 3,
+  "format_version": 4,
   "schema": {
     "$defs": {
       "ActionItem": {
@@ -105,6 +105,37 @@
         "title": "Claim",
         "type": "object"
       },
+      "NotesGroup": {
+        "additionalProperties": false,
+        "description": "One pass-1 group of a two-pass reduce (\u00a74): consecutive segments and their slides.",
+        "properties": {
+          "raw": {
+            "title": "Raw",
+            "type": "string"
+          },
+          "seg_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Seg Ids",
+            "type": "array"
+          },
+          "slide_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Slide Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "seg_ids",
+          "slide_ids",
+          "raw"
+        ],
+        "title": "NotesGroup",
+        "type": "object"
+      },
       "NotesSections": {
         "additionalProperties": false,
         "properties": {
@@ -153,6 +184,31 @@
         ],
         "title": "NotesSections",
         "type": "object"
+      },
+      "TwoPass": {
+        "additionalProperties": false,
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/$defs/NotesGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "resolved": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Resolved",
+            "type": "object"
+          }
+        },
+        "required": [
+          "groups",
+          "resolved"
+        ],
+        "title": "TwoPass",
+        "type": "object"
       }
     },
     "additionalProperties": false,
@@ -175,6 +231,17 @@
       },
       "sections": {
         "$ref": "#/$defs/NotesSections"
+      },
+      "two_pass": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/TwoPass"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
       }
     },
     "required": [

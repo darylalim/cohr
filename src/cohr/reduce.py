@@ -6,9 +6,16 @@ The reply uses fixed English section markers; citations `<co>span</co: 0:[i,j]>`
 back to segments and slides. Invalid document indices are dropped, claims without a valid
 citation are kept with `citations: []`, and segment citations get a refined jump time from
 the best-matching transcript chunk.
+
+Over `max_input_tokens`, two passes (§4): pass 1 is a normal cited reduce per group of
+consecutive segments, written into a group summary with inline markers `[seg-N]` /
+`[slide-N]`; pass 2 cites the group summaries, and each of its citations resolves back to
+segments and slides (markers in the span, else the best-matching pass-1 claim, else every
+segment of the group). Final citations never point at a group.
 """
 
 import re
+from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -26,6 +33,7 @@ from cohr.schemas import (
     MapActionItem,
     MapFile,
     NotesDoc,
+    NotesGroup,
     NotesSections,
     Segment,
     SegmentNotes,
@@ -34,16 +42,20 @@ from cohr.schemas import (
     SlidesFile,
     Transcript,
     TranscriptItem,
+    TwoPass,
 )
 
 SECTIONS = ("summary", "key_points", "decisions", "action_items", "open_questions")
 ACTION_MATCH_MIN = 0.6  # token overlap for the map.json owner/due fallback (§5.6)
 MIN_TRANSCRIPT_CHARS = 300  # below this per segment, trimming can't make the input fit
+GROUP_FILL = 0.75  # D26: a pass-1 group's prompt fills up to this share of max_input_tokens
+CLAIM_MATCH_MIN = 0.5  # pass-2 span → pass-1 claim token overlap, when the span has no marker
 
 _WRAPPER = re.compile(r"<\|[A-Z_]+\|>")
 _HEADING = re.compile(r"^[ \t]*#{1,6}[ \t]*(.+?)[ \t]*$")
 _CITE = re.compile(r"<co>(.*?)</co:\s*([^>]+)>", re.S)
 _STRAY_TAG = re.compile(r"</?co\b[^>]*>")
+_MARKER = re.compile(r"\s*\[(seg|slide)-(\d+)\]")  # two-pass group summaries (§4)
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
 _NEW_ITEM = re.compile(r"\n(?=[ \t]*(?:[-*•]|\d+[.)])\s)")
 _NEW_SENTENCE = re.compile(r"(?<=[.!?])\s+|(?<=[。！？])|\n")
@@ -195,7 +207,7 @@ class RawClaim:
 
 
 def _clean(text: str) -> str:
-    text = _BULLET.sub("", _STRAY_TAG.sub("", text))
+    text = _BULLET.sub("", _MARKER.sub("", _STRAY_TAG.sub("", text)))
     return " ".join(text.split())
 
 
@@ -335,6 +347,15 @@ class ReduceStats:
     dropped: int = 0
     unknown_markers: list[str] = field(default_factory=list)
     missing_markers: list[str] = field(default_factory=list)
+    prompt_tokens: int = 0
+    trimmed: int | None = None  # characters per segment, when transcripts were trimmed
+    # two-pass only (§4)
+    groups: int = 0
+    pass1_uncited: int = 0
+    resolved: Counter[str] = field(default_factory=Counter)
+
+
+Resolver = Callable[[RawClaim], tuple[Claim, int]]  # → claim, dropped citation indices
 
 
 def build_notes(
@@ -344,13 +365,19 @@ def build_notes(
     map_notes: Mapping[int, SegmentNotes],
     language: str,
 ) -> tuple[NotesDoc, ReduceStats]:
+    return notes_from_reply(reply, lambda raw: resolve(raw, targets, refine), map_notes, language)
+
+
+def notes_from_reply(
+    reply: str, resolver: Resolver, map_notes: Mapping[int, SegmentNotes], language: str
+) -> tuple[NotesDoc, ReduceStats]:
     split = split_sections(strip_wrapper(reply))
     stats = ReduceStats(unknown_markers=split.unknown, missing_markers=split.missing)
     out: dict[str, list[Any]] = {}
     for name in SECTIONS:
         section: list[Any] = []
         for raw in claims(split.sections[name], sentences=name == "summary"):
-            claim, dropped = resolve(raw, targets, refine)
+            claim, dropped = resolver(raw)
             stats.claims += 1
             stats.dropped += dropped
             stats.uncited += not claim.citations
@@ -372,6 +399,222 @@ def segment_refiner(
         return refine_time(span, chunks, seg.t0, min_score)
 
     return refine
+
+
+# --- two-pass (pure, given a model for token counts) ----------------------------------------
+
+
+@dataclass
+class Group:
+    segments: list[Segment]
+    slides: list[Slide]  # the slides aligned to its segments
+
+
+def aligned_slides(segments: Sequence[Segment], slides: Sequence[Slide]) -> list[Slide]:
+    ids = {i for seg in segments for i in seg.slide_ids}
+    return [s for s in slides if s.slide_id in ids]
+
+
+def make_groups(
+    lm: Any,
+    instruction: str,
+    segments: Sequence[Segment],
+    notes: Mapping[int, SegmentNotes],
+    slides: Sequence[Slide],
+    budget: int,
+) -> list[Group]:
+    """Consecutive segments whose pass-1 prompt (with their aligned slides) stays within
+    `budget` tokens; a segment over it on its own is its own group (trimmed by fit_prompt)."""
+    out: list[list[Segment]] = []
+    current: list[Segment] = []
+    for seg in segments:
+        trial = [*current, seg]
+        docs, _ = documents(trial, notes, aligned_slides(trial, slides))
+        if current and lm.count_tokens(lm.prompt(instruction, docs)) > budget:
+            out.append(current)
+            current = [seg]
+        else:
+            current = trial
+    if current:
+        out.append(current)
+    return [Group(g, aligned_slides(g, slides)) for g in out]
+
+
+def marker(c: Citation) -> str:
+    return f"[seg-{c.id}]" if c.kind == "seg" else f"[slide-{c.id + 1}]"
+
+
+def _marked(text: str, claim: Claim) -> str:
+    return " ".join([text, *(marker(c) for c in claim.citations)])
+
+
+def group_title(group: Group) -> str:
+    first, last = group.segments[0], group.segments[-1]
+    title = f"{clock(first.t0)}–{clock(last.t1)}"
+    if group.slides:
+        title += " · slides " + ",".join(str(s.slide_id + 1) for s in group.slides)
+    return title
+
+
+def group_snippet(doc: NotesDoc) -> str:
+    """Pass-1 notes as a pass-2 document: every claim followed by its citation markers."""
+    s = doc.sections
+    actions = [
+        _marked(f"[owner: {a.owner or '?'}] [due: {a.due or '?'}] {a.text}", a)
+        for a in s.action_items
+    ]
+    lines = [f"Summary: {' '.join(_marked(c.text, c) for c in s.summary)}"] if s.summary else []
+    lines += _bullets("Key points", [_marked(c.text, c) for c in s.key_points])
+    lines += _bullets("Decisions", [_marked(c.text, c) for c in s.decisions])
+    lines += _bullets("Action items", actions)
+    lines += _bullets("Open questions", [_marked(c.text, c) for c in s.open_questions])
+    return "\n".join(lines)
+
+
+@dataclass
+class PassOne:
+    """What a pass-2 group document cites: its segments and pass-1 claims."""
+
+    seg_ids: list[int]
+    claims: list[Claim]
+
+
+def all_claims(doc: NotesDoc) -> list[Claim]:
+    return [c for name in SECTIONS for c in getattr(doc.sections, name)]
+
+
+def span_targets(span: str, group: PassOne, known: set[Target]) -> tuple[list[Target], str, int]:
+    """Where a pass-2 span citing a group points (§4), how it resolved, and how many markers
+    named no known segment or slide: the markers in the span; else the citations of the
+    best-matching pass-1 claim (overlap ≥ CLAIM_MATCH_MIN, none if that claim is uncited);
+    else every segment of the group (coarse but valid)."""
+    marks: list[Target] = [
+        ("seg", int(n)) if kind == "seg" else ("slide", int(n) - 1)
+        for kind, n in _MARKER.findall(span)
+    ]
+    valid = [m for m in marks if m in known]
+    if valid:
+        return valid, "marker", len(marks) - len(valid)
+    text = _MARKER.sub("", span)
+    best, score = None, 0.0
+    for claim in group.claims:
+        s = _match_score(text, claim.text)
+        if s > score:
+            best, score = claim, s
+    if best is not None and score >= CLAIM_MATCH_MIN:
+        found: list[Target] = [(c.kind, c.id) for c in best.citations]
+        return found, "claim" if found else "uncited", len(marks)
+    return [("seg", i) for i in group.seg_ids], "group", len(marks)
+
+
+Source = PassOne | Target  # what a pass-2 document index cites
+
+
+def pass2_resolver(
+    sources: Sequence[Source], known: set[Target], refine: Refine, resolved: Counter[str]
+) -> Resolver:
+    """resolve() for pass 2: group citations become segment and slide citations, refined
+    against the resolved segments with the pass-2 span (§5.6); `resolved` counts the paths."""
+
+    def resolver(raw: RawClaim) -> tuple[Claim, int]:
+        citations: list[Citation] = []
+        seen: set[Target] = set()
+        dropped = 0
+        for span, indices in raw.spans:
+            text = _MARKER.sub("", span)
+            for i in indices:
+                if not 0 <= i < len(sources):
+                    dropped += 1
+                    continue
+                src = sources[i]
+                if isinstance(src, PassOne):
+                    found, how, unknown = span_targets(span, src, known)
+                    resolved[how] += 1
+                    dropped += unknown
+                else:
+                    found = [src]
+                for kind, target_id in found:
+                    if (kind, target_id) in seen:
+                        continue
+                    seen.add((kind, target_id))
+                    t = refine(target_id, text) if kind == "seg" else None
+                    citations.append(Citation(kind=kind, id=target_id, t=t))
+        return Claim(text=raw.text, citations=citations), dropped
+
+    return resolver
+
+
+Generate = Callable[[str], str]  # prompt → reply
+Report = Callable[[float, str], None]  # progress (0–1), message
+
+
+def two_pass(
+    lm: Any,
+    instructions: tuple[str, str],
+    segments: Sequence[Segment],
+    notes: Mapping[int, SegmentNotes],
+    slides: Sequence[Slide],
+    unaligned: Sequence[Slide],
+    refine: Refine,
+    max_tokens: int,
+    generate: Generate,
+    report: Report,
+    language: str,
+) -> tuple[NotesDoc, ReduceStats]:
+    """Pass 1 per group of consecutive segments, pass 2 over the group summaries and the
+    slides aligned to no segment (§4)."""
+    pass1, pass2 = instructions
+    groups = make_groups(lm, pass1, segments, notes, slides, int(max_tokens * GROUP_FILL))
+    stats = ReduceStats(groups=len(groups))
+    docs: list[dict[str, str]] = []
+    sources: list[Source] = []
+    kept: list[NotesGroup] = []
+    for k, group in enumerate(groups):
+        prompt, targets, size, limit = fit_prompt(
+            lm, pass1, group.segments, notes, group.slides, max_tokens
+        )
+        if limit is not None:
+            stats.trimmed = min(limit, stats.trimmed or limit)
+        report(0.1 + 0.8 * k / len(groups), f"part {k + 1}/{len(groups)}, {size} tokens")
+        reply = generate(prompt)
+        doc, part = build_notes(reply, targets, refine, notes, language)
+        stats.pass1_uncited += part.uncited
+        stats.dropped += part.dropped
+        docs.append({"title": group_title(group), "snippet": group_snippet(doc)})
+        sources.append(PassOne([s.seg_id for s in group.segments], all_claims(doc)))
+        kept.append(
+            NotesGroup(
+                seg_ids=[s.seg_id for s in group.segments],
+                slide_ids=[s.slide_id for s in group.slides],
+                raw=reply,
+            )
+        )
+    for slide in unaligned:
+        title = slide_label(slide.slide_id) + (f": {slide.title}" if slide.title else "")
+        docs.append({"title": title, "snippet": slide_snippet(slide)})
+        sources.append(("slide", slide.slide_id))
+    prompt = lm.prompt(pass2, docs)
+    size = lm.count_tokens(prompt)
+    if size > max_tokens:
+        raise ReduceTooLong(
+            f"the {len(groups)} part summaries are {size} tokens, over the {max_tokens} cap"
+        )
+    report(0.9, f"{len(docs)} part summaries and slides, {size} tokens")
+    reply = generate(prompt)
+    known: set[Target] = {("seg", s.seg_id) for s in segments}
+    known |= {("slide", s.slide_id) for s in [*slides, *unaligned]}
+    resolved: Counter[str] = Counter()
+    doc, final = notes_from_reply(
+        reply, pass2_resolver(sources, known, refine, resolved), notes, language
+    )
+    doc = doc.model_copy(
+        update={"passes": 2, "two_pass": TwoPass(groups=kept, resolved=dict(resolved))}
+    )
+    final.groups, final.trimmed = stats.groups, stats.trimmed
+    final.pass1_uncited, final.dropped = stats.pass1_uncited, final.dropped + stats.dropped
+    final.resolved = resolved
+    final.prompt_tokens = size
+    return doc, final
 
 
 # --- model (MLX) ---------------------------------------------------------------------------
@@ -430,8 +673,9 @@ def fit_prompt(
     slides: Sequence[Slide],
     max_tokens: int,
 ) -> tuple[str, list[Target], int, int | None]:
-    """The prompt within max_tokens: transcripts are trimmed (25% at a time) when the whole
-    meeting doesn't fit. Two-pass reduce (Phase 6) replaces this for inputs over the cap."""
+    """The prompt within max_tokens: transcripts are trimmed (25% at a time) when the
+    documents don't fit. Reduce trims only a two-pass group that's over the cap on its own
+    (one very long segment); Ask trims the whole meeting until ranking (§5.7)."""
     limit: int | None = None
     while True:
         docs, targets = documents(segments, notes, slides, limit)
@@ -444,7 +688,7 @@ def fit_prompt(
         if limit < MIN_TRANSCRIPT_CHARS:
             raise ReduceTooLong(
                 f"the notes input is {size} tokens, over the {max_tokens} cap even with "
-                "trimmed transcripts; two-pass reduce for long meetings is not built yet"
+                f"transcripts trimmed to {MIN_TRANSCRIPT_CHARS} characters per segment"
             )
 
 
@@ -462,19 +706,51 @@ def run_stage(ctx: StageContext) -> None:
         )
         schemas.save(ctx.run_dir, NotesDoc(sections=empty, passes=1, language=language, raw=""))
         return
-    instruction = fill(load_prompt("reduce"), target_language=language_name(language))
-    with ctx.model("reduce") as lm:
-        prompt, targets, size, limit = fit_prompt(
-            lm, instruction, segments, map_notes, slides, cfg.max_input_tokens
-        )
-        if limit is not None:
-            ctx.log.warning("reduce: transcripts trimmed to %d characters per segment", limit)
-        ctx.report(0.1, f"{len(targets)} documents, {size} tokens")
-        reply = lm.generate(
+    name = language_name(language)
+    instruction = fill(load_prompt("reduce"), target_language=name)
+    refine = segment_refiner(segments, items, cfg.citation_min_score)
+
+    def generate(prompt: str) -> str:
+        return lm.generate(
             prompt, max_tokens=cfg.max_tokens, temperature=cfg.temperature, seed=ctx.config.seed
         )
-    refine = segment_refiner(segments, items, cfg.citation_min_score)
-    doc, stats = build_notes(reply, targets, refine, map_notes, language)
+
+    with ctx.model("reduce") as lm:
+        docs, targets = documents(segments, map_notes, slides)
+        prompt = lm.prompt(instruction, docs)
+        size = lm.count_tokens(prompt)
+        if size <= cfg.max_input_tokens:
+            ctx.report(0.1, f"{len(targets)} documents, {size} tokens")
+            doc, stats = build_notes(generate(prompt), targets, refine, map_notes, language)
+            stats.prompt_tokens = size
+        else:
+            ctx.log.info(
+                "reduce: %d tokens over the %d cap, two passes", size, cfg.max_input_tokens
+            )
+            in_segments = aligned_slides(segments, slides)
+            unaligned = [s for s in slides if s not in in_segments]
+            doc, stats = two_pass(
+                lm,
+                (instruction, fill(load_prompt("reduce_pass2"), target_language=name)),
+                segments,
+                map_notes,
+                in_segments,
+                unaligned,
+                refine,
+                cfg.max_input_tokens,
+                generate,
+                ctx.report,
+                language,
+            )
+    if stats.trimmed is not None:
+        ctx.log.warning("reduce: transcripts trimmed to %d characters per segment", stats.trimmed)
+    if stats.groups:
+        ctx.log.info(
+            "reduce: two passes, %d groups, %d uncited in pass 1, pass-2 citations %s",
+            stats.groups,
+            stats.pass1_uncited,
+            dict(stats.resolved),
+        )
     if stats.unknown_markers:
         ctx.log.warning(
             "reduce: unknown section markers %s (text kept in summary)", stats.unknown_markers
@@ -487,8 +763,8 @@ def run_stage(ctx: StageContext) -> None:
         "reduce: %d claims, %d uncited, %d documents, %d prompt tokens",
         stats.claims,
         stats.uncited,
-        len(targets),
-        size,
+        len(doc.two_pass.groups) if doc.two_pass else len(targets),
+        stats.prompt_tokens,
     )
     schemas.save(ctx.run_dir, doc)
 
@@ -499,6 +775,6 @@ STAGE = Stage(
     outputs=(NotesDoc.FILENAME,),
     format_version=NotesDoc.FORMAT_VERSION,
     config_keys=("seed", "target_language", "reduce", "models.reduce"),
-    prompts=("reduce",),
+    prompts=("reduce", "reduce_pass2"),
     models=("reduce",),
 )
