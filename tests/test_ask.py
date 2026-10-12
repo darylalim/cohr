@@ -20,8 +20,8 @@ from tests.test_reduce import FakeR7B, _items, _map, _segments, _slide
 
 # Reduce's config hash: Ask must not move it (no re-runs of existing notes). Moved on purpose
 # only by Reduce changes: 6c reduce.md (one fact per item); 6c two-pass (reduce_pass2 in
-# the prompt list, NotesDoc v4).
-REDUCE_HASH = "84cee7aabc42d950aa98abf5f48f173a3a04c012e8566b3f48d83bdcff48d6c2"
+# the prompt list, NotesDoc v4; reduce_part for long-meeting pass 1).
+REDUCE_HASH = "36f4a1b3719df25d80aac9fd6dd8a0985c1de1f6f8be51af7cec0f522ac1cbfb"
 
 
 def sources() -> Sources:
@@ -157,6 +157,16 @@ def test_follow_ups_rank_with_the_last_turn() -> None:
     fitted = ask.fit(lm(), "And who owns that?", history, "en", src, full - 500)
     assert fitted.ranked and fitted.turns_dropped == 0
     assert fitted.targets[0] == ("seg", 1)  # only the last turn's terms match anything
+
+
+def test_ranking_sends_at_most_max_ranked_documents(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(ask, "MAX_RANKED", 2)
+    src = topic_sources()
+    fitted = ask.fit(lm(), "hiring cloud tickets", [], "en", src, 10**6 - 1)
+    assert not fitted.ranked  # under the cap: everything, MAX_RANKED doesn't apply
+    cap = ask.fit(lm(), "hiring cloud tickets", [], "en", src, 10**9).tokens - 1
+    fitted = ask.fit(lm(), "hiring cloud tickets", [], "en", src, cap)
+    assert fitted.ranked and len(fitted.targets) == 2
 
 
 def test_scope_text() -> None:

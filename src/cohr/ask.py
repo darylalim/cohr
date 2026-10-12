@@ -54,6 +54,9 @@ _CJK = re.compile(r"[぀-ヿ㐀-鿿가-힯]")
 _WORD = re.compile(r"[^\W\d_]+")
 _TERM = re.compile(r"[^\W_]+")
 TRIGRAM = 3  # FTS5's trigram tokenizer matches terms of at least 3 characters
+# Over the cap, at most this many top-ranked documents (6c long-en): filling the whole 32K cap
+# (~60 documents) took ~100 s per answer and R7B fell into citing document after document.
+MAX_RANKED = 12
 
 
 class AskError(RuntimeError):
@@ -230,7 +233,8 @@ def fit(
     """The prompt within max_tokens. Every document if they fit (history dropped
     oldest-first as needed); else the documents ranked for the question and the last turn
     (a follow-up like "who owns that?" has few terms of its own), the best that fit with
-    the history added greedily and sent in meeting order, so indices map like Reduce's."""
+    the history added greedily (at most MAX_RANKED) and sent in meeting order, so indices
+    map like Reduce's."""
     history = list(history)[-HISTORY_TURNS:]
     docs, targets = reduce.documents(sources.segments, sources.notes, sources.slides)
     for dropped in range(len(history) + 1):
@@ -245,6 +249,8 @@ def fit(
         chosen: list[int] = []
         best: tuple[str, int] | None = None
         for i in order:
+            if len(chosen) == MAX_RANKED:
+                break
             trial = sorted([*chosen, i])
             prompt = lm.prompt(text, [docs[k] for k in trial])
             size = lm.count_tokens(prompt)

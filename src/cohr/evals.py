@@ -29,6 +29,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -961,6 +962,14 @@ def _label(fact: TruthFact) -> tuple[str, str]:
     return NUMBER_LABELS[label]
 
 
+def _action_question(fact: TruthFact, by_due: bool) -> str:
+    if not by_due:
+        return f"What does {fact.owner} need to do?"
+    due = fact.due or ""
+    due = f"the {due}" if due.startswith("end of") else due
+    return f"What does {fact.owner} need to do by {due}?"
+
+
 def sample(facts: list[TruthFact], n: int) -> list[TruthFact]:
     """At most n facts, evenly spread over the meeting (all of them when there are ≤ n)."""
     if len(facts) <= n:
@@ -971,14 +980,23 @@ def sample(facts: list[TruthFact], n: int) -> list[TruthFact]:
 def ask_questions(truth: Truth) -> list[AskQuestion]:
     """The item's Ask questions, deterministic from truth.json."""
     numbers = sample([f for f in truth.facts if f.kind == "number"], ASK_SAMPLE["number"])
-    actions = sample([f for f in truth.facts if f.kind == "action"], ASK_SAMPLE["action"])
+    # long-en gives owners several tasks: the question names the due date too, and is asked
+    # only when owner and due pick out one task.
+    all_actions = [f for f in truth.facts if f.kind == "action"]
+    owners = Counter(f.owner for f in all_actions)
+    pairs = Counter((f.owner, f.due) for f in all_actions)
+    actions = [f for f in all_actions if pairs[(f.owner, f.due)] == 1]
+    actions = sample(actions, ASK_SAMPLE["action"])
     out = [
         AskQuestion(id=f"n-{f.id}", kind="number", question=f"What is {_label(f)[0]}?", fact=f.id)
         for f in numbers
     ]
     out += [
         AskQuestion(
-            id=f"a-{f.id}", kind="action", question=f"What does {f.owner} need to do?", fact=f.id
+            id=f"a-{f.id}",
+            kind="action",
+            question=_action_question(f, owners[f.owner] > 1),
+            fact=f.id,
         )
         for f in actions
     ]

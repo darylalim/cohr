@@ -285,21 +285,23 @@ DISCUSSION = (
     "There's some seasonality in {topic}, so I wouldn't read too much into one period.",
     "For context, the way we measure {topic} hasn't changed since the spring.",
 )
-# Long meetings only: more talk per topic than DISCUSSION holds (no facts, numbers or dates).
+# Long meetings only: more talk per topic than DISCUSSION holds. Statements about the past or
+# the data only: no intention, request, offer or question, which Map would list as a decision,
+# action item or open question (6c: "I'd like us to keep an eye on …" became 36 decisions).
 MORE_DISCUSSION = (
-    "I spent some time with the {topic} team, and they seem comfortable with where things are.",
+    "I spent some time with the {topic} numbers, and they look about the way they did before.",
     "Nothing about {topic} surprised me this time, which is a nice change.",
-    "If anyone wants the detailed breakdown of {topic}, I'm happy to share it after the call.",
     "We had a long thread about {topic} in the chat, but it mostly went in circles.",
-    "I'd like us to keep an eye on {topic} without overreacting to it.",
     "The way {topic} is reported is a bit confusing, and I keep having to explain it.",
     "Some of the context on {topic} lives in old documents that nobody reads anymore.",
-    "Overall I'd call {topic} steady, and I'm not worried about it.",
+    "Overall, {topic} has been steady.",
     "I checked {topic} against what we heard from the field, and it lines up.",
-    "We could spend a whole meeting on {topic}, but let's keep it short today.",
-    "Somebody asked whether {topic} is still the right thing to track, which is fair.",
     "I don't have much to add on {topic} beyond what's on the slide.",
     "My impression is that {topic} moves slowly, so small changes don't mean much.",
+    "The {topic} chart on this slide looks like the chart we used last time.",
+    "People in the field mention {topic} now and then, but not often.",
+    "The {topic} figures come from the same source as before.",
+    "I remember when {topic} was much harder to read than it is now.",
 )
 YES = ("Sure, I can do that.", "Yes, no problem.", "OK, will do.")
 CLOSING = ("That's everything for today. Thanks, everyone.", "Thanks, bye.")

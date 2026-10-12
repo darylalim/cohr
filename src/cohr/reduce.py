@@ -48,8 +48,15 @@ from cohr.schemas import (
 SECTIONS = ("summary", "key_points", "decisions", "action_items", "open_questions")
 ACTION_MATCH_MIN = 0.6  # token overlap for the map.json owner/due fallback (§5.6)
 MIN_TRANSCRIPT_CHARS = 300  # below this per segment, trimming can't make the input fit
-GROUP_FILL = 0.75  # D26: a pass-1 group's prompt fills up to this share of max_input_tokens
+# D26: a pass-1 group's prompt fills up to this share of max_input_tokens. 0.75 (the plan's
+# default) gave long-en 2 groups of ~23K tokens whose notes ran past the output budget; 0.4
+# gives ~12K-token groups that finish (recall 37.5 → 53.8%, 6c).
+GROUP_FILL = 0.4
 CLAIM_MATCH_MIN = 0.5  # pass-2 span → pass-1 claim token overlap, when the span has no marker
+# Two-pass output budget (6c long-en): with 2048 tokens, pass 1 on a ~23K-token group spent
+# them on key points before DECISIONS/ACTION_ITEMS. The long-meeting prompts also list those
+# before KEY_POINTS (figures only); this raises the floor for both passes.
+TWO_PASS_MAX_TOKENS = 4096
 
 _WRAPPER = re.compile(r"<\|[A-Z_]+\|>")
 _HEADING = re.compile(r"^[ \t]*#{1,6}[ \t]*(.+?)[ \t]*$")
@@ -464,10 +471,10 @@ def group_snippet(doc: NotesDoc) -> str:
         for a in s.action_items
     ]
     lines = [f"Summary: {' '.join(_marked(c.text, c) for c in s.summary)}"] if s.summary else []
-    lines += _bullets("Key points", [_marked(c.text, c) for c in s.key_points])
     lines += _bullets("Decisions", [_marked(c.text, c) for c in s.decisions])
     lines += _bullets("Action items", actions)
     lines += _bullets("Open questions", [_marked(c.text, c) for c in s.open_questions])
+    lines += _bullets("Key points", [_marked(c.text, c) for c in s.key_points])
     return "\n".join(lines)
 
 
@@ -710,9 +717,9 @@ def run_stage(ctx: StageContext) -> None:
     instruction = fill(load_prompt("reduce"), target_language=name)
     refine = segment_refiner(segments, items, cfg.citation_min_score)
 
-    def generate(prompt: str) -> str:
+    def generate(prompt: str, max_tokens: int = cfg.max_tokens) -> str:
         return lm.generate(
-            prompt, max_tokens=cfg.max_tokens, temperature=cfg.temperature, seed=ctx.config.seed
+            prompt, max_tokens=max_tokens, temperature=cfg.temperature, seed=ctx.config.seed
         )
 
     with ctx.model("reduce") as lm:
@@ -731,14 +738,17 @@ def run_stage(ctx: StageContext) -> None:
             unaligned = [s for s in slides if s not in in_segments]
             doc, stats = two_pass(
                 lm,
-                (instruction, fill(load_prompt("reduce_pass2"), target_language=name)),
+                (
+                    fill(load_prompt("reduce_part"), target_language=name),
+                    fill(load_prompt("reduce_pass2"), target_language=name),
+                ),
                 segments,
                 map_notes,
                 in_segments,
                 unaligned,
                 refine,
                 cfg.max_input_tokens,
-                generate,
+                lambda prompt: generate(prompt, max(cfg.max_tokens, TWO_PASS_MAX_TOKENS)),
                 ctx.report,
                 language,
             )
@@ -775,6 +785,6 @@ STAGE = Stage(
     outputs=(NotesDoc.FILENAME,),
     format_version=NotesDoc.FORMAT_VERSION,
     config_keys=("seed", "target_language", "reduce", "models.reduce"),
-    prompts=("reduce", "reduce_pass2"),
+    prompts=("reduce", "reduce_part", "reduce_pass2"),
     models=("reduce",),
 )

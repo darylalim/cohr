@@ -663,6 +663,9 @@ def test_planted_texts_stay_distinguishable() -> None:
         for text in (*DECISIONS, *MORE_DECISIONS, *TASKS, *MORE_TASKS):
             assert not evals.content(q) & evals.content(text), (q, text)
     assert not any(numbers_in(t) for t in MORE_DISCUSSION)
+    # Long-meeting filler states nothing Map could list as a decision, task or question.
+    cues = ("?", "let's", "we should", "i'd like", "happy to", "will ", "keep an eye", "asked")
+    assert not [t for t in MORE_DISCUSSION if any(c in t.casefold() for c in cues)]
 
 
 def test_long_meeting_facts_are_unique() -> None:
@@ -685,7 +688,9 @@ def test_long_meeting_ask_sample() -> None:
     spec = evals.load_set("long", ROOT).items[0]
     script = generate(spec.seed, gen_build.variant(spec))
     facts = [
-        TruthFact(id=f.id, kind=f.kind, text=f.text, owner=f.owner, value=f.value, t0=0, t1=1)
+        TruthFact(
+            id=f.id, kind=f.kind, text=f.text, owner=f.owner, due=f.due, value=f.value, t0=0, t1=1
+        )
         for f in script.facts
     ]
     qs = evals.ask_questions(Truth.model_construct(facts=facts))
@@ -698,6 +703,9 @@ def test_long_meeting_ask_sample() -> None:
         "near_miss": 3,
     }
     assert qs[0].question.endswith("for the North region?")
+    actions = [q.question for q in qs if q.kind == "action"]
+    assert all(" need to do by " in q for q in actions)  # owners repeat in long-en
+    assert len(set(actions)) == len(actions)
     assert "in der Region" in next(q.question for q in qs if q.kind == "de_alone")
     assert evals.sample(facts[:3], 12) == facts[:3]
 

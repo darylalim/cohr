@@ -547,6 +547,8 @@ def test_stage_runs_two_passes_over_the_cap(
     doc = schemas.load(run_dir, NotesDoc)
     assert doc.passes == 2 and doc.two_pass is not None and len(doc.two_pass.groups) == 2
     assert lm.instructions[-1].startswith("Write meeting notes in English for a long meeting")
+    assert lm.instructions[-2].startswith("Write notes in English for one part of a long meeting")
+    assert [c["max_tokens"] for c in lm.calls] == [reduce.TWO_PASS_MAX_TOKENS] * 3
     assert [d["title"] for d in lm.docs[-1]][2:] == ["slide 2: Plan", "slide 3: Retention"]
     assert "two passes, 2 groups" in caplog.text
 

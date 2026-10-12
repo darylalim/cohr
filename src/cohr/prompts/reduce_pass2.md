@@ -3,14 +3,15 @@ Write meeting notes in {target_language} for a long meeting from the documents. 
 Use exactly these five section markers, in English and in this order, each on its own line, whatever language the notes are in:
 
 ## SUMMARY
-## KEY_POINTS
 ## DECISIONS
 ## ACTION_ITEMS
 ## OPEN_QUESTIONS
+## KEY_POINTS
 
 Rules:
 - Under SUMMARY, write 2 to 4 sentences about the whole meeting. Under the other markers, write one item per line starting with "- ".
-- Keep every decision, action item and open question from the parts. Merge items only when two parts state the same thing.
+- Keep every decision, action item, open question and figure from the parts, one per item. Merge items only when two parts state the same thing.
+- Under KEY_POINTS, list only figures: one number per item with what it measures, in one short sentence. Leave out remarks without a number.
 - After each statement you take from a part, copy its markers, such as [seg-3], exactly as they appear.
 - Every claim must be supported by the documents. Do not add anything they don't state.
 - Keep names and numbers exactly as they appear in the documents. When a slide and a part disagree on a name or number, use the slide.
