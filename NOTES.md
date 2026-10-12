@@ -1309,3 +1309,22 @@ recall 89.7%, citation 96.7%, uncited 0, made-up 2 / 0, support 95.5%, Ask 98.1%
 ### Next
 - 6b-2 (Map fixes) kickoff prompt. Carry-overs: Map's bundled key points; two-pass pass 2
   losing decisions on long-en; near-miss under the cap; German after history on long-en.
+
+## 2026-10-12 · Phase 6b-2 kickoff prompt (no code)
+
+### Plan changes
+- §21 kickoff prompt for 6b-2 (Map fixes); §9 6b-2 bullet updated and points to it.
+- Measurement first (step 0): each planted fact's path transcript → Map → notes, Map key points
+  per segment, and whether Map replies hit `map.max_tokens` (1024). It decides the order of
+  the fixes.
+- 6b-2 takes 6c's Map carry-over (bundled key points that Reduce copies, step 1) before the 6b
+  items (dense segments, due-date misread, slide-conflict value). Value-changing guards need
+  the user's approval first, like D20.
+- long-en (step 5): Map changes change it. One full run checks whether two-pass pass 2 still
+  drops about a third of pass 1's decisions; Reduce-only reruns fix it if so; at most two long
+  runs; report-only re-baseline.
+- Not in 6b-2: Ask near-miss under the cap (4/12 vs 7/12) and long-en German-after-history,
+  left for 6e's long-meeting check.
+
+### Next
+- Phase 6b-2 in a new session with the §21 prompt.
