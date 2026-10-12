@@ -70,8 +70,8 @@ FRAME_S = 0.01  # VAD F1 frame size
 # open questions. Report-only (not here): the one-question-per-item Ask rates (follow-up,
 # German alone and after history: 25-point steps on quick) and the judge metrics (D15).
 MAX_DROP: dict[str, float] = {
-    "fact_recall": 0.059,  # noise 2.94 points
-    "citation_accuracy": 0.03,  # noise 0
+    "fact_recall": 0.059,  # D16 noise 2.94 points; 6c: 5.9 (89.7, 85.3, 83.8%), kept (user)
+    "citation_accuracy": 0.069,  # D25: noise 3.4 points (96.7, 96.6, 100%)
     "ask_accuracy": 0.05,  # noise 0; Ask has no PLAN default: fact recall's
     "ask_citation_accuracy": 0.03,  # noise 0; citation accuracy's default
     "ask_near_miss": 0.167,  # D24: noise 8.3 points (7, 7, 6 of 12)

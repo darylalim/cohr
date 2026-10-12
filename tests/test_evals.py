@@ -327,8 +327,8 @@ def test_baseline_thresholds() -> None:
     assert compare(report(fact_recall=0.85), old) == []  # −5 points: within −5.9 (D16)
     assert compare(report(fact_recall=0.841), old) == []  # exactly −5.9
     assert "fact_recall" in compare(report(fact_recall=0.84), old)[0]
-    assert compare(report(citation_accuracy=0.92), old) == []
-    assert "citation_accuracy" in compare(report(citation_accuracy=0.91), old)[0]
+    assert compare(report(citation_accuracy=0.881), old) == []  # D25: −6.9 allowed
+    assert "citation_accuracy" in compare(report(citation_accuracy=0.88), old)[0]
     assert compare(report(made_up_items=2), old) == []  # D16: +2 allowed (noise 1)
     assert "made_up_items" in compare(report(made_up_items=3), old)[0]
     ask = report(ask_accuracy=0.98, ask_citation_accuracy=1.0, ask_near_miss=7 / 12)
