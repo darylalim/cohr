@@ -17,6 +17,8 @@ Phase 5a done 2026-10-11 (UI without Ask: theme, job layer, New run / Notes / Ru
 Phase 5b done 2026-10-11 (Ask page and drawer, Notes Beside/Below toggle; D22, D23; browser
 checks passed).
 Phase 6a done 2026-10-11 (Ask eval, D16 thresholds, first committed `evals/baseline.json`).
+Phase 6b done 2026-10-11 (planted open questions, 3 near-misses per item; Ask near-miss 0/12 →
+7/12; Map open-question rule, made-up open questions 5 → 0; D24).
 Hub metadata verified 2026-10-04 and 2026-10-10; packages, licenses and Streamlit config checked
 2026-10-05.
 
@@ -1031,7 +1033,7 @@ compared with a committed baseline:
   same media with pipeline seeds 1–3 (`-c seed=N`; `--seed` changes the generated meetings).
   Then commit `evals/baseline.json`, with `compare()` using the D16 thresholds. Kickoff prompt
   in §21.
-- **6b: quality fixes**, each checked against the baseline, which is updated with the reason:
+- **6b: quality fixes** (done 2026-10-11, NOTES.md), each checked against the baseline, which is updated with the reason:
   Reduce turning filler into open questions (4b-2), Reduce dropping facts Map has right
   (4b-1b: 4650, $57,000), and Ask's near-miss and cross-language limits (§5.7, 5b). 6a
   measured near-miss at 0 of 4 on every seed and found Ask using the misspoken value on
@@ -1660,7 +1662,8 @@ exact checks with no human labels and no LLM judge.
 | Notes: **made-up items** | Decisions/action items in the notes that match no planted fact. An action item with the right task but another owner or due date counts (it states something not said); a real task with no owner stated doesn't (incomplete, not made up) | Exact (count) |
 | Notes: **support rate** | Share of claims whose cited segments support them | LLM judge (secondary) |
 | Output language | Notes are in the target language | `lingua-language-detector` |
-| Ask | Planted-fact questions from templates (`evals.ask_questions`): answer contains the fact *and* cites its segment (±15 s) or slide; plus follow-up, German alone / after history and near-miss rates (rule in NOTES.md, 6a) | Exact |
+| Ask | Planted-fact questions from templates (`evals.ask_questions`): answer contains the fact *and* cites its segment (±15 s) or slide; plus follow-up, German alone / after history and near-miss rates (rule in NOTES.md, 6a; three near-misses per item from 6b, one per `NEAR_MISS` template) | Exact |
+| Notes: **open questions** | Planted open questions (6b, 1–2 per item) found under Open questions (token overlap ≥ 0.6): open-question recall, kept out of fact recall; **made-up open questions** = claims there matching no planted one | Exact |
 | Realism (`full` only) | Coverage of the **AMI** reference decisions/actions | LLM judge |
 | Cost | Seconds per audio hour per stage; peak memory per stage | Measured |
 
@@ -1734,10 +1737,11 @@ committed or redistributed.
   `evals/README.md`. Synthetic-only `quick` reports don't need it.
 - It compares with the committed `evals/baseline.json` and **fails (exit 1)** if:
   fact recall drops > 5.9 points, citation accuracy drops > 3 points, Ask accuracy drops > 5
-  points, Ask citation accuracy drops > 3 points, made-up items rise by > 2, uncited claims
-  or the VAD gap text rate increase, or any stage gets > 25% slower (D16; tables `MAX_DROP` /
-  `MAX_RISE` in `evals.py`). Report-only: the judge metrics and the one-question-per-item Ask
-  rates (follow-up, German, near-miss).
+  points, Ask citation accuracy drops > 3 points, near-miss drops > 16.7 points (2 of 12),
+  made-up items or made-up open questions rise by > 2, uncited claims or the VAD gap text
+  rate increase, or any stage gets > 25% slower (D16, D24; tables `MAX_DROP` / `MAX_RISE` in
+  `evals.py`). Report-only: the judge metrics and the one-question-per-item Ask rates
+  (follow-up, German).
 - `cohr eval --update-baseline` rewrites the baseline. Only commit it with the reason in the commit
   message (e.g. "new reduce prompt: recall +4, accuracy −1").
 - **Release gate:** before `uv version --bump` (§16), run `full` and attach the report summary to
@@ -1843,6 +1847,7 @@ section.
 | D21 | Notes layout in medium windows (§7) | Two columns; close the sidebar | Options within the no-CSS rule (NOTES.md 2026-10-11 5a finding) | Before 5b | **Beside/Below toggle** in the Notes header, default Beside, per session. Rejected: Sources always in the drawer (undoes D14, loses side-by-side on wide screens), a "close the sidebar" hint only, `initial_sidebar_state="collapsed"` on Notes (localStorage overrides it). Built in 5b |
 | D22 | Ask history format (§5.7) | R7B's multi-turn `rag` messages | Manual check on clean-en: follow-ups cited and answered | Phase 5b | **Folded into one user turn** (Reduce's `prompt()`), language line last. Native multi-turn: 4 of 6 answers were a new tool call, no answer. Native + `<|START_RESPONSE|>` prefill: answered, but follow-ups lost their citations. Folded: every English answer cited, jump times inside the truth spans |
 | D23 | Ask answer-language detection (§5.7) | lingua, fallback = target language | lingua confidences on sample questions in 9 languages | Phase 5b | **≥ 2 words (or CJK), confidence ≥ 0.2, lead ≥ 0.05**: "Priya?" read as Indonesian at 0.56 and "Wat is het budget?" tied nl/en at 0.25; full sentences scored 0.25–1.0 with a clear lead |
+| D24 | 6b gate additions (§18) | Report-only (6a) | Same rule as D16 on the 6b media and final config: 3 `quick` runs, pipeline seeds 1–3 | Phase 6b | **Near-miss −16.7 points (noise 8.3: 7, 7, 6 of 12), made-up open questions +2 (noise 1: 0, 1, 0)**. Also measured: citation accuracy noise 7.1 (92.9 / 96.6 / 100%), above its D16 gate of 3; left at 3 (baseline seed 1 is the low point), revisit in 6c |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

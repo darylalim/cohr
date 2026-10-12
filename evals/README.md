@@ -43,7 +43,8 @@ Generate one item by hand: `uv run python -m evals.gen clean-en evals/data/gen/c
 
 Fact recall (right section), citation accuracy (refined jump time within ±15 s of the fact,
 or its slide), uncited claims, made-up decisions/action items (a real task with someone
-else's owner or due date counts), VAD speech F1 and words transcribed in non-speech gaps,
+else's owner or due date counts), open-question recall and made-up open questions (planted
+open questions vs. the Open questions section), VAD speech F1 and words transcribed in non-speech gaps,
 WER, slide titles/cells/numbers, slide alignment (`pdf-slides-en`), output language, and
 seconds per audio hour and peak memory per stage. Matching rules: `src/cohr/evals.py`.
 
