@@ -674,8 +674,8 @@ def fit_prompt(
     max_tokens: int,
 ) -> tuple[str, list[Target], int, int | None]:
     """The prompt within max_tokens: transcripts are trimmed (25% at a time) when the
-    documents don't fit. Reduce trims only a two-pass group that's over the cap on its own
-    (one very long segment); Ask trims the whole meeting until ranking (§5.7)."""
+    documents don't fit: only a two-pass group over the cap on its own (one very long
+    segment)."""
     limit: int | None = None
     while True:
         docs, targets = documents(segments, notes, slides, limit)

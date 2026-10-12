@@ -7,7 +7,14 @@ import pytest
 from cohr import ask, pipeline, reduce, schemas
 from cohr.ask import Answer, Sources, Turn
 from cohr.config import Config, ReduceConfig
-from cohr.schemas import MapFile, SegmentsFile, SlidesFile, Transcript
+from cohr.schemas import (
+    MapFile,
+    Segment,
+    SegmentsFile,
+    SlidesFile,
+    Transcript,
+    TranscriptItem,
+)
 from tests.conftest import fake_manager, make_run
 from tests.test_reduce import FakeR7B, _items, _map, _segments, _slide
 
@@ -48,13 +55,13 @@ def test_instruction_puts_the_question_and_language_last() -> None:
 
 
 def test_history_is_dropped_oldest_first() -> None:
-    (_, _, base, _), _ = ask.fit(lm(), "Q", [], "en", sources(), 10**9)
+    base = ask.fit(lm(), "Q", [], "en", sources(), 10**9).tokens
     history = turns(3)
     one_turn = ask.instruction("Q", history[2:], "en")
     cap = base + len(one_turn) - len(ask.instruction("Q", [], "en"))
     model = lm()
-    (_, _, size, limit), dropped = ask.fit(model, "Q", history, "en", sources(), cap)
-    assert dropped == 2 and limit is None and size <= cap
+    fitted = ask.fit(model, "Q", history, "en", sources(), cap)
+    assert fitted.turns_dropped == 2 and not fitted.ranked and fitted.tokens <= cap
     sent = model.instructions[-1]
     assert history[2].question in sent  # the newest turn stays
     assert history[0].question not in sent and history[1].question not in sent
@@ -63,22 +70,107 @@ def test_history_is_dropped_oldest_first() -> None:
 def test_only_the_last_three_turns_are_sent() -> None:
     history = turns(5)
     model = lm()
-    _, dropped = ask.fit(model, "Q", history, "en", sources(), 10**9)
-    assert dropped == 0
+    assert ask.fit(model, "Q", history, "en", sources(), 10**9).turns_dropped == 0
     sent = model.instructions[-1]
     assert [t.question in sent for t in history] == [False, False, True, True, True]
 
 
-def test_documents_alone_over_the_cap_trim_transcripts() -> None:
-    segs = [s.model_copy(update={"transcript_text": "word " * 400}) for s in _segments()]
-    src = Sources(segments=segs, notes=_map(), slides=[], items=_items())
-    model = lm()
-    (_, _, size, limit), dropped = ask.fit(model, "Q", turns(2), "en", src, 2500)
-    assert dropped == 2 and limit is not None and size <= 2500
-    assert "Earlier questions" not in model.instructions[-1]
+# --- ranking over the cap (§5.7, D27) ------------------------------------------------------
+
+TOPICS = [
+    "The support queue has 390 open tickets this week.",
+    "Cloud costs: the monthly bill is $11,800.",
+    "Hiring: 75 candidates are in the pipeline.",
+]
 
 
-def test_too_long_even_trimmed_is_a_clear_error() -> None:
+def topic_sources() -> Sources:
+    segs = [
+        Segment(
+            seg_id=k,
+            t0=100.0 * k,
+            t1=100.0 * k + 90,
+            chunk_ids=[k],
+            transcript_text=f"{text} " + "filler words " * 20,
+            slide_ids=[],
+        )
+        for k, text in enumerate(TOPICS)
+    ]
+    items = [
+        TranscriptItem(chunk_id=k, t0=100.0 * k, t1=100.0 * k + 90, text=text)
+        for k, text in enumerate(TOPICS)
+    ]
+    return Sources(segments=segs, notes={}, slides=[_slide(0, "Hiring plan")], items=items)
+
+
+def test_query_terms() -> None:
+    assert ask.query_terms("What is the monthly cloud bill?") == (
+        ["monthly", "cloud", "bill"],
+        False,
+    )
+    assert ask.query_terms("Who owns item 7?") == (["owns", "item", "7"], False)
+    assert ask.query_terms("予算は いくら？") == (["予算は", "いくら"], True)
+    assert ask.query_terms("予算") == ([], True)  # under 3 characters: trigram can't match
+
+
+def test_rank_by_bm25_then_meeting_order() -> None:
+    docs, _ = reduce.documents(topic_sources().segments, {}, topic_sources().slides)
+    assert ask.rank("How many candidates are in the hiring pipeline?", docs)[:2] == [2, 3]
+    assert ask.rank("cloud bill", docs) == [1, 0, 2, 3]
+    assert ask.rank("the", docs) == [0, 1, 2, 3]  # no terms: meeting order
+
+
+def test_rank_cjk_with_trigrams() -> None:
+    docs = [
+        {"title": "0:00–1:00", "snippet": "サポートの未処理チケットは390件です。"},
+        {"title": "1:00–2:00", "snippet": "来四半期の予算は14,500ドルに決まりました。"},
+    ]
+    assert ask.rank("来四半期の予算はいくらですか？", docs) == [1, 0]
+
+
+def test_documents_over_the_cap_are_ranked_and_sent_in_meeting_order() -> None:
+    src = topic_sources()
+    question = "What is the cloud bill and the hiring pipeline?"
+    cap = ask.fit(lm(), question, [], "en", src, 10**9).tokens - 200  # one segment too many
+    fitted = ask.fit(lm(), question, [], "en", src, cap)
+    assert fitted.ranked and fitted.tokens <= cap
+    assert fitted.targets == [("seg", 1), ("seg", 2), ("slide", 0)]  # meeting order
+    assert TOPICS[0] not in fitted.prompt
+    assert fitted.prompt.index(TOPICS[1]) < fitted.prompt.index(TOPICS[2])
+
+
+def test_ranked_answers_cite_through_the_documents_sent() -> None:
+    src = topic_sources()
+    cap = ask.fit(lm(), "Q", [], "en", src, 10**9).tokens - 200
+    model = lm("<co>75 candidates</co: 0:[1]> are in the pipeline.")
+    config = Config(reduce=ReduceConfig(max_input_tokens=cap))
+    answer = ask.ask(model, "How many hiring candidates?", [], src, config, sure("en"))
+    assert answer.ranked is not None and ("seg", 2) in answer.ranked
+    assert [(c.kind, c.id) for c in answer.claims[0].citations] == [answer.ranked[1]]
+    assert answer.scope() == "Answer based on the 2 most relevant segments and 1 slide"
+
+
+def test_follow_ups_rank_with_the_last_turn() -> None:
+    src = topic_sources()
+    history = [Turn("What is the cloud bill?", "The monthly bill is $11,800.")]
+    full = ask.fit(lm(), "And who owns that?", history, "en", src, 10**9).tokens
+    fitted = ask.fit(lm(), "And who owns that?", history, "en", src, full - 500)
+    assert fitted.ranked and fitted.turns_dropped == 0
+    assert fitted.targets[0] == ("seg", 1)  # only the last turn's terms match anything
+
+
+def test_scope_text() -> None:
+    def scope(ranked: list[reduce.Target] | None) -> str | None:
+        return Answer("q", [], "en", 1, 0, ranked, 0, "").scope()
+
+    assert scope(None) is None
+    assert scope([("seg", 3)]) == "Answer based on the 1 most relevant segment"
+    assert scope([("seg", 1), ("seg", 3), ("slide", 2), ("slide", 4)]) == (
+        "Answer based on the 2 most relevant segments and 2 slides"
+    )
+
+
+def test_too_long_for_even_one_document_is_a_clear_error() -> None:
     with pytest.raises(ask.AskError, match="too long for Ask"):
         ask.fit(lm(), "Q", [], "en", sources(), 10)
 

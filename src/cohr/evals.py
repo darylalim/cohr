@@ -1165,7 +1165,7 @@ def _answer_entry(a: ask.Answer) -> dict[str, Any]:
         "language": a.language,
         "prompt_tokens": a.prompt_tokens,
         "turns_dropped": a.turns_dropped,
-        "transcript_limit": a.transcript_limit,
+        "ranked": a.ranked,
         "dropped_citations": a.dropped_citations,
         "raw": a.raw,
     }
@@ -1178,7 +1178,7 @@ def _answer_from(question: str, entry: Mapping[str, Any]) -> ask.Answer:
         language=entry["language"],
         prompt_tokens=entry["prompt_tokens"],
         turns_dropped=entry["turns_dropped"],
-        transcript_limit=entry["transcript_limit"],
+        ranked=[tuple(t) for t in r] if (r := entry.get("ranked")) is not None else None,
         dropped_citations=entry["dropped_citations"],
         raw=entry["raw"],
     )

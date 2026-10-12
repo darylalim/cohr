@@ -71,7 +71,7 @@ def answer(*claims: Claim, language: str = "en") -> Answer:
         language=language,
         prompt_tokens=100,
         turns_dropped=0,
-        transcript_limit=None,
+        ranked=None,
         dropped_citations=0,
         raw="",
     )
