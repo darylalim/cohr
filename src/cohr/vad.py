@@ -26,6 +26,11 @@ from cohr.schemas import Chunk, ChunksFile, Span
 
 SR = 16000
 SILERO_HOP_S = 512 / SR  # one speech probability per 512 samples at 16 kHz
+# mlx-audio's Silero keeps one MLX array per 512-sample window until the input ends: 2.3 h of
+# audio went over Metal's buffer limit ("Resource limit (499000) exceeded", 6c long-en). So
+# detection runs per 10-minute block (a whole number of windows); runs cut at a block edge
+# touch and are merged again by merge_runs.
+SILERO_BLOCK_S = 600
 ENERGY_HOP_S = 0.032  # same frame length for the silence fallback
 NOISE_FLOOR_PERCENTILE = 10  # quietest ~10% of 1 s windows (§5.1a)
 NOISE_MARGIN_DB = 6.0
@@ -182,18 +187,23 @@ class SileroVad:
         self.model = model
 
     def detect(self, audio: np.ndarray, cfg: VadConfig) -> Detection:
-        out = self.model.generate(
-            audio,
-            sample_rate=SR,
-            threshold=cfg.threshold,
-            min_speech_duration_ms=cfg.min_speech_ms,
-            min_silence_duration_ms=cfg.min_silence_ms,
-            speech_pad_ms=cfg.pad_ms,
-            return_seconds=True,
-        )
-        probs = np.asarray(out.probabilities, dtype=np.float32).reshape(-1)
-        runs = [(float(t["start"]), float(t["end"])) for t in out.timestamps]
-        return Detection(runs=runs, scores=probs, hop_s=SILERO_HOP_S)
+        block = int(SILERO_BLOCK_S * SR)
+        runs: list[Run] = []
+        probs: list[np.ndarray] = []
+        for start in range(0, max(len(audio), 1), block):
+            out = self.model.generate(
+                audio[start : start + block],
+                sample_rate=SR,
+                threshold=cfg.threshold,
+                min_speech_duration_ms=cfg.min_speech_ms,
+                min_silence_duration_ms=cfg.min_silence_ms,
+                speech_pad_ms=cfg.pad_ms,
+                return_seconds=True,
+            )
+            offset = start / SR
+            probs.append(np.asarray(out.probabilities, dtype=np.float32).reshape(-1))
+            runs += [(float(t["start"]) + offset, float(t["end"]) + offset) for t in out.timestamps]
+        return Detection(runs=runs, scores=np.concatenate(probs), hop_s=SILERO_HOP_S)
 
 
 def load(path: Path) -> SileroVad:
