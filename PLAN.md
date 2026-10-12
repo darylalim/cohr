@@ -1039,9 +1039,16 @@ compared with a committed baseline:
   measured near-miss at 0 of 4 on every seed and found Ask using the misspoken value on
   `slide-conflict-en`. Measurement goes first: planted open questions in the generator and
   three near-miss questions per item, re-baselined. Kickoff prompt in §21.
-- **6c: long meetings.** Inputs over 2 h: two-pass reduce with marker-based citations (§4) and
-  the `long-en` item; Ask ranking with FTS5 (§5.7) and "Answer based on the N most relevant
-  segments".
+- **6c: long meetings.** First, from 6b: Reduce bundling several facts into one claim (one
+  citation for 3–4 facts) and the citation-accuracy gate (noise 7.1 points on the 6b media, gate
+  3; D25), since citation accuracy is how two-pass is judged. Then inputs over 2 h: two-pass
+  reduce with marker-based citations (§4, D26), checked first on `quick` with a lowered cap, then
+  on the `long-en` item (own `long` set); Ask ranking with FTS5 (§5.7, D17, D27) and "Answer
+  based on the N most relevant segments". Kickoff prompt in §21.
+- **6b-2: Map fixes** (after 6c, from 6b): Map dropping facts on long, dense segments (~280 s,
+  7 topics: ~7 key points kept), the due-date misread ("22nd" → "2nd"), and the slide-conflict
+  value (Map repeats the misspoken number although the slide is in its input). Map prompt
+  changes move every metric: one re-baseline per kept change.
 - **6d: languages.** "Other (beta)" target languages with translation that keeps citations
   (§5.6); the `xling-{es,ja}` and `en → {de,ar}` items; optional regional Map models (§5.5):
   `map_model_by_lang` filled only for languages that pass D18 (may stay empty).
@@ -1840,7 +1847,7 @@ section.
 | D14 | Anchors scroll the Sources panel (§7) | Anchors | Click check; fallback = drawer buttons | Phase 5 | **Anchors work**: clicking `[5:41](#seg-1)` scrolled the Sources container 0 → 2358 px and brought its block to the top; no drawer needed |
 | D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4b-2 | **Pass, no margin**: 3-way 80.0% (24/30), yes vs not-yes 96.7% (29/30). All 12 "yes" right; 4 of 8 "partial" judged "no" (an added detail read as a contradiction), 1 "partial" judged "yes", 1 "no" judged "partial". Support rate counts only "yes", so the partial/no confusion barely moves it. Judge metrics stay out of the gate until D16 (Phase 6) |
 | D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 `quick` runs, same media, pipeline seeds 1–3 (`-c seed=N`): threshold = max(default, 2× noise), Ask metrics included | Phase 6a | **Recall −5.9 (noise 2.9), made-up +2 (noise 1), rest at defaults** (citation −3, uncited and gap text no rise, stages +25%: noisiest Reduce 10.5%); Ask accuracy −5 and Ask citation −3 (noise 0, defaults borrowed from recall/citation). Report-only (user, 6a): follow-up and German after history (noise 25 points: one question per item), German alone and near-miss (25-point steps), support rate (noise 9.1, D15 no margin). Open questions not counted as made up: 13 / 11 / 4 over the seeds. Baseline = seed 1 |
-| D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 7 | |
+| D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 6c (Ask ranking needs it; was Phase 7) | |
 | D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6d | |
 | D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | **0.1 and ±15 s, plus a sentence offset inside the chunk**: chunk `t0` alone was a median 12.5 s early (61% within 15 s); with the offset 98% (53 of 54 errors ≤ 5 s, so 15 s hides nothing). Min score 0.0 = 0.1 > 0.2 (94.6%) > 0.3 (91.1%) |
 | D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | **Default rule kept**: 8 repairs on `quick`, all to the transcript's value (0 wrong); number recall 81.2% → 87.5%, fact recall 82.3% → 85.3%, made-up 3 → 3, citation accuracy 98.2% → 100%; numbers in no source 6 → 1 (a flagged `3,360` with two candidates). Short numbers are weak evidence (any one-digit number is one edit from the next): watch on `full` |
@@ -1848,6 +1855,9 @@ section.
 | D22 | Ask history format (§5.7) | R7B's multi-turn `rag` messages | Manual check on clean-en: follow-ups cited and answered | Phase 5b | **Folded into one user turn** (Reduce's `prompt()`), language line last. Native multi-turn: 4 of 6 answers were a new tool call, no answer. Native + `<|START_RESPONSE|>` prefill: answered, but follow-ups lost their citations. Folded: every English answer cited, jump times inside the truth spans |
 | D23 | Ask answer-language detection (§5.7) | lingua, fallback = target language | lingua confidences on sample questions in 9 languages | Phase 5b | **≥ 2 words (or CJK), confidence ≥ 0.2, lead ≥ 0.05**: "Priya?" read as Indonesian at 0.56 and "Wat is het budget?" tied nl/en at 0.25; full sentences scored 0.25–1.0 with a clear lead |
 | D24 | 6b gate additions (§18) | Report-only (6a) | Same rule as D16 on the 6b media and final config: 3 `quick` runs, pipeline seeds 1–3 | Phase 6b | **Near-miss −16.7 points (noise 8.3: 7, 7, 6 of 12), made-up open questions +2 (noise 1: 0, 1, 0)**. Also measured: citation accuracy noise 7.1 (92.9 / 96.6 / 100%), above its D16 gate of 3; left at 3 (baseline seed 1 is the low point), revisit in 6c |
+| D25 | Citation-accuracy gate after the bundling fix (§18) | −3 (D16) | Reduce bundling fix first (one fact per claim), then D16's rule on 3 `quick` runs (seeds 1–3): max(3, 2 × noise) | Phase 6c | |
+| D26 | Two-pass reduce grouping (§4) | Groups of consecutive segments filling ~75% of `max_input_tokens` | `quick` with a lowered cap forcing 2–3 groups vs single pass on the same media: citation accuracy within D25, no uncited rise, every pass-2 citation resolves; then `long-en` | Phase 6c | |
+| D27 | Ask ranking under the cap (§5.7) | FTS5 BM25 over segment + slide documents, question terms OR'ed, top-ranked that fit | Ask accuracy on `quick` with a lowered cap vs the full-document baseline, and on `long-en`'s question sample | Phase 6c | |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).
@@ -2206,4 +2216,66 @@ Rules from CLAUDE.md apply. Ask me before `cohr eval --set full`, the opt-in mod
 model downloads or new dependencies. quick runs are fine.
 When done: tick the checklist, record decisions in §20 (new D numbers), add a NOTES.md entry,
 make sure the gate passes, and open a PR (ask before pushing). Stop there; 6c is separate.
+```
+
+### Kickoff prompt for Phase 6c (long meetings)
+```text
+Continue cohr: Phase 6c (long meetings). Read CLAUDE.md, then PLAN.md §4 (two-pass reduce),
+§5.6–5.7 (Reduce, Ask, long meetings), §9 (the 6c bullet), §18 (gate, long-en), §20 (D16, D17,
+D24–D27) and the latest NOTES.md entry (Phase 6b). Work on branch phase-6c-long.
+Quick evals run with `-c seed=1` against evals/baseline.json (iterate with --item, --no-judge,
+--no-ask; full quick with Ask + judge, ~12 min, before each baseline update). Commit each step
+separately; a baseline update goes in its own commit with the reason and before/after numbers.
+A lowered cap (`-c reduce.max_input_tokens=N`) forces two-pass Reduce and Ask ranking on the
+5-minute quick items: use it as the fast loop, and long-en only to confirm.
+0. From 6b, before any long-meeting work (citation accuracy is how two-pass is judged):
+   a. Reduce bundling: on the 6b media Reduce writes run-on key points with 3–4 facts and one
+      citation ("Support Queue: 390 open tickets … New logo … Laura to send contract …"), so
+      the earlier facts land 19–35 s off. Fix in reduce.md (e.g. one fact per item). Pass:
+      citation accuracy up or equal, fact recall and every gated metric within their gate.
+      This moves Reduce's hash: update the test_ask pin on purpose, with the reason.
+   b. D25: run seeds 2 and 3 on the result (seed 1 is the baseline run) and show me the
+      citation-accuracy noise with a threshold by D16's rule; I decide before it goes into
+      MAX_DROP.
+1. Two-pass reduce (§4, D26; reduce.py + prompts/reduce_pass2.md):
+   - Over `max_input_tokens`: pass 1 = a normal cited reduce per group of consecutive segments
+     (with the slides aligned to them); its citations are written into the group summary as
+     inline markers [seg-N] / [slide-N]. Pass 2 cites group summaries; each pass-2 citation
+     resolves to the markers inside the cited span, falling back to every segment of that group
+     when the span has none (coarse but valid, never invented). Time refinement runs after
+     resolution, against the resolved segments (§5.6). NotesDoc.passes = 2; anything new on
+     disk goes through schemas.py (FORMAT_VERSION bump + snapshots if NotesDoc changes).
+   - Under the cap nothing changes: same notes for a single-pass run (the pin may move only by
+     the prompt list; say so in the commit).
+   - Unit tests (no models): grouping under the cap, marker writing and resolution (markers in
+     span, none in span → group fallback, out-of-range dropped and logged), citations survive
+     both passes (CLAUDE.md rule), uncited claims stay uncited.
+   - Check on quick with a cap forcing 2–3 groups vs single pass: citation accuracy within D25,
+     no uncited rise, every citation resolves; record the fact-recall cost and pick the group
+     size (D26).
+2. Ask ranking (§5.7, D17, D27; ask.py, pure ranking function):
+   - D17 first: `PRAGMA compile_options` in uv's Python shows FTS5 (stdlib sqlite3, no new
+     dependency). If it's missing, stop and ask me.
+   - Over the cap: rank segment and slide documents for the question with an in-memory FTS5
+     table (BM25; `trigram` tokenizer for zh/ja/ko questions), send the top-ranked ones that fit
+     with the history, in meeting order, citation indices mapped as today. The Answer records how
+     many were sent; the Ask page says "Answer based on the N most relevant segments".
+   - Unit tests: ranking order, fit under the cap with history, index mapping, CJK tokenizer.
+   - Check on quick with a lowered cap vs the full-document baseline (Ask accuracy, citation,
+     near-miss within their gates).
+3. long-en (§18): a `long` set (evals/sets/long.yaml), one item, ~2.5 h, audio + PDF deck
+   (a 2.5 h screen recording is large; vision is the slowest stage). Sections repeat the quick
+   structure with new facts: every fact stays distinguishable (decision and task texts unique
+   after `content()`, numbers distinct and > 31; widen word lists or ranges as needed), and
+   quick scripts stay identical (test: same truth for the quick specs). Any evals/gen change
+   regenerates quick media: if quick metrics move, re-baseline with the reason. The Ask eval
+   on long-en asks a fixed, deterministic sample (e.g. 12 number, 6 action, the follow-up,
+   2 German, 3 near-miss), not every fact. One long run is ~40 min of pipeline plus generation
+   and Ask: tell me before each, at most three. Commit its report as evals/baseline-long.json,
+   report-only (one run: no noise measured).
+If a fix doesn't pass, revert it and record what was tried, and move on.
+Rules from CLAUDE.md apply. Ask me before `cohr eval --set full`, the opt-in model tests, new
+model downloads or new dependencies. quick runs are fine.
+When done: tick the checklist, fill D17 and D25–D27 in §20, add a NOTES.md entry, make sure the
+gate passes, and open a PR (ask before pushing). Stop there; 6b-2 (Map fixes) is separate.
 ```
