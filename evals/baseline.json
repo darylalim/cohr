@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-11T16:01:35.208006-10:00",
+  "created_at": "2026-10-12T06:24:16.669184-10:00",
   "set": "quick",
-  "git_sha": "9fa5c7d",
+  "git_sha": "9d4416c",
   "overrides": {
     "seed": 1
   },
@@ -17,7 +17,7 @@
     "vision": "7fad52bf1b0a",
     "map": "73fbac4aaf41",
     "map_retry": "413335f44c4c",
-    "reduce": "76f78c300081",
+    "reduce": "c1d304379433",
     "judge": "9376307c9b8d",
     "judge_coverage": "e5750994ae0f",
     "judge_retry": "4b4aaa239c8a",
@@ -33,10 +33,10 @@
       "duration_s": 357.88,
       "metrics": {
         "facts": 17,
-        "facts_found": 13,
-        "fact_recall": 0.7647,
-        "citation_accuracy": 0.7692,
-        "claims": 18,
+        "facts_found": 16,
+        "fact_recall": 0.9412,
+        "citation_accuracy": 0.9375,
+        "claims": 22,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": 0,
@@ -55,9 +55,9 @@
         "map_numbers_repaired": 4,
         "map_numbers_unverified": 0,
         "unsupported_numbers": 0,
-        "recall_decision": 0.5,
+        "recall_decision": 1.0,
         "recall_action": 0.8,
-        "recall_number": 0.875,
+        "recall_number": 1.0,
         "recall_open_question": 1.0,
         "ask_questions": 19,
         "ask_accuracy": 1.0,
@@ -67,7 +67,7 @@
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
         "ask_near_miss": 0.6667,
-        "cited_claims": 18,
+        "cited_claims": 22,
         "support_rate": 1.0,
         "support_partial": 0,
         "support_no": 0,
@@ -85,8 +85,8 @@
           "judge_covered": null,
           "section": "key_points",
           "claim": "Support Queue: 390 open tickets (up from 233 last week). Seasonality expected. New logo on website approved. Laura to send contract to legal by Friday.",
-          "citation_ok": false,
-          "t_error": 34.87,
+          "citation_ok": true,
+          "t_error": -2.22,
           "slide_cited": false
         },
         {
@@ -124,8 +124,8 @@
           "judge_covered": null,
           "section": "key_points",
           "claim": "Site Speed: 950 ms page load time (up from 820 last release). Dashboard updated on Monday. Seasonality expected.",
-          "citation_ok": false,
-          "t_error": 19.3,
+          "citation_ok": true,
+          "t_error": -2.31,
           "slide_cited": false
         },
         {
@@ -151,7 +151,7 @@
           "section": "key_points",
           "claim": "Quarterly Budget: $42,500 approved (down from $59,500 last quarter). No changes to measurement since spring. Trend aligns with expectations.",
           "citation_ok": true,
-          "t_error": 0.92,
+          "t_error": -1.44,
           "slide_cited": false
         },
         {
@@ -163,8 +163,8 @@
           "judge_covered": null,
           "section": "key_points",
           "claim": "Cloud Costs: $11,800 monthly bill (down from $7700 last month). Seasonality expected. Victor to write release notes by end of next week.",
-          "citation_ok": false,
-          "t_error": 30.6,
+          "citation_ok": true,
+          "t_error": -0.15,
           "slide_cited": false
         },
         {
@@ -190,7 +190,7 @@
           "section": "key_points",
           "claim": "Revenue: $354,000 monthly recurring revenue (up from $134,000 last month). No changes to measurement since spring. Trend aligns with expectations.",
           "citation_ok": true,
-          "t_error": -0.45,
+          "t_error": -2.19,
           "slide_cited": false
         },
         {
@@ -203,7 +203,7 @@
           "section": "key_points",
           "claim": "Retention: 34% week-2 return rate for trial users (down from 82% last month). Seasonality expected. Maria to prepare customer survey by end of next week.",
           "citation_ok": true,
-          "t_error": 0.22,
+          "t_error": -1.44,
           "slide_cited": false
         },
         {
@@ -241,8 +241,8 @@
           "judge_covered": null,
           "section": "key_points",
           "claim": "Hiring: 75 candidates in pipeline (down from 85 last month). Seasonality expected. No changes to measurement since spring.",
-          "citation_ok": true,
-          "t_error": -0.03,
+          "citation_ok": false,
+          "t_error": -163.66,
           "slide_cited": false
         },
         {
@@ -262,26 +262,26 @@
           "id": "f15",
           "kind": "decision",
           "text": "move the weekly sync to Thursdays",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "decisions",
+          "claim": "Weekly sync moved to Thursdays.",
+          "citation_ok": true,
+          "t_error": 0.6,
           "slide_cited": false
         },
         {
           "id": "f16",
           "kind": "number",
           "text": "New trial signups: 4,650",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "key_points",
+          "claim": "Trial signups: increased from 2,600 last month to 4,650 this month. Dashboard for trial signups updated on Monday.",
+          "citation_ok": true,
+          "t_error": -1.68,
           "slide_cited": false
         },
         {
@@ -301,13 +301,13 @@
           "id": "f18",
           "kind": "decision",
           "text": "publish the roadmap to customers",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "decisions",
+          "claim": "Publish the roadmap to customers.",
+          "citation_ok": true,
+          "t_error": -0.01,
           "slide_cited": false
         }
       ],
@@ -399,6 +399,24 @@
           "reason": "The cited text states the number of candidates in pipeline is 75, compared to 85 last month, and mentions seasonality and unchanged measurement since spring."
         },
         {
+          "section": "key_points",
+          "claim": "Key point: Trial signups: increased from 2,600 last month to 4,650 this month. Dashboard for trial signups updated on Monday.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of new trial signups this month is 4,650 compared with 2,600 last month, and that the dashboard for trial signups was updated on Monday."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Decision to publish the roadmap to customers.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The meeting explicitly states the decision to publish the roadmap to customers."
+        },
+        {
           "section": "decisions",
           "claim": "Decision: Use new logo on the website.",
           "citations": [
@@ -442,6 +460,24 @@
           ],
           "supported": "yes",
           "reason": "The meeting explicitly states that the decision is to keep the onboarding checklist."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Weekly sync moved to Thursdays.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The meeting explicitly states the decision to move the weekly sync to Thursdays."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Publish the roadmap to customers.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The meeting explicitly states the decision to publish the roadmap to customers."
         },
         {
           "section": "action_items",
@@ -794,49 +830,49 @@
           "seconds": 1.52,
           "s_per_audio_hour": 15.3,
           "peak_mem_gb": null,
-          "reused": false
+          "reused": true
         },
         "vad": {
           "seconds": 2.77,
           "s_per_audio_hour": 27.8,
           "peak_mem_gb": 0.05,
-          "reused": false
+          "reused": true
         },
         "transcribe": {
           "seconds": 10.47,
           "s_per_audio_hour": 105.3,
           "peak_mem_gb": 5.63,
-          "reused": false
+          "reused": true
         },
         "vision": {
-          "seconds": 39.86,
-          "s_per_audio_hour": 400.9,
-          "peak_mem_gb": 8.59,
-          "reused": false
+          "seconds": 34.88,
+          "s_per_audio_hour": 350.9,
+          "peak_mem_gb": 4.5,
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
-          "seconds": 14.86,
-          "s_per_audio_hour": 149.5,
-          "peak_mem_gb": 11.68,
-          "reused": false
+          "seconds": 14.8,
+          "s_per_audio_hour": 148.9,
+          "peak_mem_gb": 7.54,
+          "reused": true
         },
         "reduce": {
-          "seconds": 25.48,
-          "s_per_audio_hour": 256.3,
-          "peak_mem_gb": 16.76,
-          "reused": false
+          "seconds": 36.51,
+          "s_per_audio_hour": 367.3,
+          "peak_mem_gb": 5.92,
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -1668,49 +1704,49 @@
           "seconds": 1.37,
           "s_per_audio_hour": 13.6,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "vad": {
           "seconds": 2.02,
           "s_per_audio_hour": 20.2,
           "peak_mem_gb": 15.41,
-          "reused": false
+          "reused": true
         },
         "transcribe": {
           "seconds": 11.56,
           "s_per_audio_hour": 115.3,
           "peak_mem_gb": 16.82,
-          "reused": false
+          "reused": true
         },
         "vision": {
-          "seconds": 38.06,
-          "s_per_audio_hour": 379.8,
-          "peak_mem_gb": 16.67,
-          "reused": false
+          "seconds": 31.74,
+          "s_per_audio_hour": 316.8,
+          "peak_mem_gb": 12.53,
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
-          "seconds": 11.25,
-          "s_per_audio_hour": 112.2,
-          "peak_mem_gb": 16.19,
-          "reused": false
+          "seconds": 11.32,
+          "s_per_audio_hour": 113.0,
+          "peak_mem_gb": 12.06,
+          "reused": true
         },
         "reduce": {
-          "seconds": 24.52,
-          "s_per_audio_hour": 244.7,
-          "peak_mem_gb": 16.76,
-          "reused": false
+          "seconds": 24.87,
+          "s_per_audio_hour": 248.2,
+          "peak_mem_gb": 5.92,
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -1724,7 +1760,7 @@
         "facts_found": 15,
         "fact_recall": 0.8824,
         "citation_accuracy": 1.0,
-        "claims": 21,
+        "claims": 20,
         "uncited_claims": 0,
         "made_up_items": 1,
         "made_up_open_questions": 0,
@@ -1756,9 +1792,9 @@
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
         "ask_near_miss": 0.0,
-        "cited_claims": 21,
-        "support_rate": 0.8571,
-        "support_partial": 1,
+        "cited_claims": 20,
+        "support_rate": 0.9,
+        "support_partial": 0,
         "support_no": 2,
         "support_unjudged": 0,
         "judge_covered": 0,
@@ -2164,15 +2200,6 @@
           "reason": "The meeting explicitly states the decision to freeze new features until the beta ships."
         },
         {
-          "section": "decisions",
-          "claim": "Decision: Approval of $57,000 quarterly budget.",
-          "citations": [
-            "seg 1"
-          ],
-          "supported": "partial",
-          "reason": "The cited text states the approved budget for next quarter is $57,000 and that the decision is to freeze new features until the beta ships, but does not explicitly state approval of the $57,000 quarterly budget as a decision."
-        },
-        {
           "section": "action_items",
           "claim": "Action item: Record the onboarding video by Monday. (owner: Kenji; due: Monday)",
           "citations": [
@@ -2529,49 +2556,49 @@
           "seconds": 0.3,
           "s_per_audio_hour": 3.1,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "vad": {
           "seconds": 2.0,
           "s_per_audio_hour": 20.2,
           "peak_mem_gb": 15.43,
-          "reused": false
+          "reused": true
         },
         "transcribe": {
           "seconds": 11.13,
           "s_per_audio_hour": 112.2,
           "peak_mem_gb": 16.83,
-          "reused": false
+          "reused": true
         },
         "vision": {
-          "seconds": 38.97,
-          "s_per_audio_hour": 392.7,
-          "peak_mem_gb": 16.73,
-          "reused": false
+          "seconds": 31.8,
+          "s_per_audio_hour": 320.5,
+          "peak_mem_gb": 12.53,
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
-          "seconds": 11.47,
-          "s_per_audio_hour": 115.6,
-          "peak_mem_gb": 16.19,
-          "reused": false
+          "seconds": 11.53,
+          "s_per_audio_hour": 116.2,
+          "peak_mem_gb": 12.06,
+          "reused": true
         },
         "reduce": {
-          "seconds": 22.69,
-          "s_per_audio_hour": 228.7,
-          "peak_mem_gb": 16.76,
-          "reused": false
+          "seconds": 22.49,
+          "s_per_audio_hour": 226.7,
+          "peak_mem_gb": 5.92,
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -2582,10 +2609,10 @@
       "duration_s": 350.12,
       "metrics": {
         "facts": 17,
-        "facts_found": 13,
-        "fact_recall": 0.7647,
-        "citation_accuracy": 0.9231,
-        "claims": 19,
+        "facts_found": 15,
+        "fact_recall": 0.8824,
+        "citation_accuracy": 0.9333,
+        "claims": 21,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": 0,
@@ -2605,7 +2632,7 @@
         "map_numbers_unverified": 0,
         "unsupported_numbers": 0,
         "recall_decision": 0.75,
-        "recall_action": 0.6,
+        "recall_action": 1.0,
         "recall_number": 0.875,
         "recall_open_question": 0.5,
         "ask_questions": 19,
@@ -2616,8 +2643,8 @@
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
         "ask_near_miss": 0.6667,
-        "cited_claims": 19,
-        "support_rate": 0.8947,
+        "cited_claims": 21,
+        "support_rate": 0.9048,
         "support_partial": 0,
         "support_no": 2,
         "support_unjudged": 0,
@@ -2681,26 +2708,26 @@
           "id": "f5",
           "kind": "action",
           "text": "send the contract to legal",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "Send the contract to legal.",
+          "citation_ok": true,
+          "t_error": 1.44,
           "slide_cited": false
         },
         {
           "id": "f6",
           "kind": "action",
           "text": "write the release notes",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "Write the release notes by Wednesday.",
+          "citation_ok": true,
+          "t_error": 0.06,
           "slide_cited": false
         },
         {
@@ -3060,6 +3087,24 @@
         },
         {
           "section": "action_items",
+          "claim": "Action item: Send the contract to legal. (owner: Nadia; due: 18 November)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states Nadia will send the contract to legal by the 18th of November."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Write the release notes by Wednesday. (owner: Grace; due: Wednesday)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "Grace will write the release notes by Wednesday is directly stated in the transcript."
+        },
+        {
+          "section": "action_items",
           "claim": "Action item: Book the venue for the offsite by Friday. (owner: Omar; due: Friday)",
           "citations": [
             "seg 1"
@@ -3383,49 +3428,49 @@
           "seconds": 1.39,
           "s_per_audio_hour": 14.3,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "vad": {
           "seconds": 2.1,
           "s_per_audio_hour": 21.6,
           "peak_mem_gb": 15.41,
-          "reused": false
+          "reused": true
         },
         "transcribe": {
           "seconds": 11.01,
           "s_per_audio_hour": 113.3,
           "peak_mem_gb": 16.83,
-          "reused": false
+          "reused": true
         },
         "vision": {
-          "seconds": 40.04,
-          "s_per_audio_hour": 411.7,
-          "peak_mem_gb": 16.66,
-          "reused": false
+          "seconds": 31.73,
+          "s_per_audio_hour": 326.3,
+          "peak_mem_gb": 12.53,
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
-          "seconds": 10.44,
-          "s_per_audio_hour": 107.3,
-          "peak_mem_gb": 16.19,
-          "reused": false
+          "seconds": 10.5,
+          "s_per_audio_hour": 107.9,
+          "peak_mem_gb": 12.06,
+          "reused": true
         },
         "reduce": {
-          "seconds": 23.25,
-          "s_per_audio_hour": 239.1,
-          "peak_mem_gb": 16.76,
-          "reused": false
+          "seconds": 24.45,
+          "s_per_audio_hour": 251.4,
+          "peak_mem_gb": 5.92,
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     }
@@ -3433,8 +3478,8 @@
   "summary": {
     "items": 4,
     "facts": 68,
-    "fact_recall": 0.8235,
-    "citation_accuracy": 0.9286,
+    "fact_recall": 0.8971,
+    "citation_accuracy": 0.9672,
     "uncited_claims": 0,
     "made_up_items": 2,
     "made_up_open_questions": 0,
@@ -3448,15 +3493,15 @@
     "slide_number_recall": 1.0,
     "slide_alignment": 1.0,
     "output_language_ok": 1.0,
-    "recall_decision": 0.8125,
-    "recall_action": 0.7,
-    "recall_number": 0.9062,
+    "recall_decision": 0.9375,
+    "recall_action": 0.8,
+    "recall_number": 0.9375,
     "recall_open_question": 0.8,
     "map_numbers_repaired": 10,
     "map_numbers_unverified": 1,
     "unsupported_numbers": 0,
-    "support_rate": 0.9398,
-    "support_partial": 1,
+    "support_rate": 0.9545,
+    "support_partial": 0,
     "support_no": 4,
     "support_unjudged": 0,
     "judge_recall": null,
@@ -3484,58 +3529,65 @@
       "peak_mem_gb": 16.83
     },
     "vision": {
-      "s_per_audio_hour": 396.2,
-      "peak_mem_gb": 16.73
+      "s_per_audio_hour": 328.6,
+      "peak_mem_gb": 12.53
     },
     "fuse": {
       "s_per_audio_hour": 0.0,
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 121.2,
-      "peak_mem_gb": 16.19
+      "s_per_audio_hour": 121.6,
+      "peak_mem_gb": 12.06
     },
     "reduce": {
-      "s_per_audio_hour": 242.2,
-      "peak_mem_gb": 16.76
+      "s_per_audio_hour": 273.5,
+      "peak_mem_gb": 5.92
     },
     "render": {
       "s_per_audio_hour": 0.0,
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 905.1,
+      "s_per_audio_hour": 869.2,
       "peak_mem_gb": 16.83
     }
   },
   "citation_errors": [
+    -163.66,
     -77.44,
+    -2.31,
+    -2.22,
+    -2.19,
+    -1.68,
+    -1.44,
+    -1.44,
     -1.21,
     -0.96,
     -0.87,
     -0.54,
     -0.52,
-    -0.45,
     -0.42,
     -0.4,
     -0.32,
     -0.2,
+    -0.15,
     -0.14,
     -0.14,
     -0.04,
     -0.03,
-    -0.03,
     -0.02,
     -0.02,
     -0.02,
     -0.02,
+    -0.01,
     -0.01,
     -0.01,
     0.01,
+    0.06,
     0.1,
     0.18,
     0.2,
-    0.22,
     0.24,
     0.34,
     0.35,
@@ -3544,6 +3596,7 @@
     0.39,
     0.39,
     0.58,
+    0.6,
     0.65,
     0.67,
     0.71,
@@ -3552,7 +3605,6 @@
     0.84,
     0.84,
     0.87,
-    0.92,
     0.94,
     0.96,
     1.0,
@@ -3560,34 +3612,30 @@
     1.09,
     1.33,
     1.39,
+    1.44,
     1.5,
     1.55,
     1.95,
     2.5,
     2.97,
-    4.12,
-    19.3,
-    30.6,
-    34.87
+    4.12
   ],
   "judge": {
-    "loaded": true,
-    "calls": 43,
-    "cached": 40,
-    "seconds": 92.92,
-    "s_per_audio_hour": 234.6,
-    "peak_mem_gb": 3.4
-  },
-  "ask": {
-    "loaded": true,
-    "calls": 57,
-    "cached": 19,
-    "seconds": 517.41,
-    "s_per_audio_hour": 1306.3,
+    "loaded": false,
+    "calls": 0,
+    "cached": 88,
+    "seconds": 0.01,
+    "s_per_audio_hour": 0.0,
     "peak_mem_gb": null
   },
-  "baseline": "evals/baseline.json",
-  "regressions": [
-    "citation_accuracy dropped 5.4% (0.9825 → 0.9286)"
-  ]
+  "ask": {
+    "loaded": false,
+    "calls": 0,
+    "cached": 76,
+    "seconds": 0.03,
+    "s_per_audio_hour": 0.1,
+    "peak_mem_gb": null
+  },
+  "baseline": null,
+  "regressions": []
 }
