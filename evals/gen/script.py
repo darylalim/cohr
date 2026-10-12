@@ -8,6 +8,11 @@ lists, so the truth is exact. The same seed and variant always give the same scr
 Numbers are kept apart so a value in the notes can only mean one fact: every number spoken or
 shown (facts, previous values, due-date days, misspoken values) is distinct, and fact values
 are never in 1–31, so they can't be confused with a date.
+
+Long meetings (`long-en`, 6c) repeat the topic loop once per region, with more discussion per
+topic. The region is in the spoken metric, the fact label and the slide title, so a topic that
+comes back stays unambiguous; extra decisions, tasks and questions come from MORE_* lists used
+only when a variant needs more than the quick lists hold, so quick scripts are unchanged.
 """
 
 import random
@@ -139,6 +144,24 @@ DECISIONS = (
     "publish the roadmap to customers",
     "retire the old mobile app",
 )
+# Long meetings only (more than the lists above hold). Every planted text in all lists differs
+# from every other by more than the matcher's 0.6 token overlap (test).
+MORE_DECISIONS = (
+    "adopt quarterly planning cycles",
+    "close the Denver office",
+    "standardize on Postgres for analytics",
+    "cancel the trade show booth",
+    "require two reviewers for every merge",
+    "sunset the free tier",
+    "rebuild the help center search",
+    "raise the referral bonus",
+    "pause the podcast series",
+    "build an engineering hub in Lisbon",
+    "switch the newsletter to monthly issues",
+    "replace the intranet wiki with Notion",
+    "introduce annual billing discounts",
+    "consolidate the design tools",
+)
 DECISION_LINES = (
     "We decided to {d}.",
     "OK, so the decision is to {d}.",
@@ -156,6 +179,22 @@ TASKS = (
     "review the security audit",
     "record the onboarding video",
 )
+MORE_TASKS = (
+    "migrate the staging database",
+    "reconcile the vendor invoices",
+    "schedule the board presentation",
+    "clean up the shared drive",
+    "interview the shortlisted engineers",
+    "renew the domain certificates",
+    "finish the incident postmortem",
+    "order laptops for the new starters",
+    "configure the error alerts",
+    "proofread the marketing emails",
+    "collect quotes from moving companies",
+    "test the backup restore",
+    "organize the team lunch",
+    "summarize the competitor research",
+)
 # Asked and left unresolved: what Reduce's Open questions section should hold (6b). No numbers,
 # and no words shared with the decisions or tasks, so a match can only mean this question.
 OPEN_QUESTIONS = (
@@ -166,6 +205,14 @@ OPEN_QUESTIONS = (
     "rename the company blog",
     "run the user conference online",
     "sponsor the local hackathon",
+)
+MORE_OPEN_QUESTIONS = (
+    "allow pets at work",
+    "join the industry alliance",
+    "accept bitcoin",
+    "add a weekend support shift",
+    "disclose salary bands internally",
+    "try a shorter work week",
 )
 OPEN_QUESTION_LINES = (
     "One thing we haven't settled: should we {q}?",
@@ -238,6 +285,22 @@ DISCUSSION = (
     "There's some seasonality in {topic}, so I wouldn't read too much into one period.",
     "For context, the way we measure {topic} hasn't changed since the spring.",
 )
+# Long meetings only: more talk per topic than DISCUSSION holds (no facts, numbers or dates).
+MORE_DISCUSSION = (
+    "I spent some time with the {topic} team, and they seem comfortable with where things are.",
+    "Nothing about {topic} surprised me this time, which is a nice change.",
+    "If anyone wants the detailed breakdown of {topic}, I'm happy to share it after the call.",
+    "We had a long thread about {topic} in the chat, but it mostly went in circles.",
+    "I'd like us to keep an eye on {topic} without overreacting to it.",
+    "The way {topic} is reported is a bit confusing, and I keep having to explain it.",
+    "Some of the context on {topic} lives in old documents that nobody reads anymore.",
+    "Overall I'd call {topic} steady, and I'm not worried about it.",
+    "I checked {topic} against what we heard from the field, and it lines up.",
+    "We could spend a whole meeting on {topic}, but let's keep it short today.",
+    "Somebody asked whether {topic} is still the right thing to track, which is fair.",
+    "I don't have much to add on {topic} beyond what's on the slide.",
+    "My impression is that {topic} moves slowly, so small changes don't mean much.",
+)
 YES = ("Sure, I can do that.", "Yes, no problem.", "OK, will do.")
 CLOSING = ("That's everything for today. Thanks, everyone.", "Thanks, bye.")
 TOPIC_INTROS = ("Let's start with {topic}.", "Next topic is {topic}.", "Let's move on to {topic}.")
@@ -257,6 +320,8 @@ class Variant:
     gap_s: float = 12.0
     conflict: bool = False  # one money fact misspoken in speech, correct on the slide
     open_questions: tuple[int, int] = (1, 2)  # how many are planted: random in this range
+    regions: tuple[str, ...] = ()  # long meetings: the topic loop once per region (6c)
+    discussion: int = 4  # discussion lines per topic
 
 
 @dataclass(frozen=True)
@@ -345,21 +410,45 @@ class _Picker:
         return f"{month} {day}", f"the {ORDINALS[day]} of {month}"
 
 
+def _pool(base: tuple[str, ...], more: tuple[str, ...], n: int) -> tuple[str, ...]:
+    """The quick list, or with the long-meeting extras when it holds fewer than n."""
+    return base if n <= len(base) else base + more
+
+
+def _discussion(rng: random.Random, n: int) -> list[str]:
+    """n discussion lines: a sample of DISCUSSION (quick), or shuffled rounds of every line."""
+    if n <= len(DISCUSSION):
+        return rng.sample(DISCUSSION, n)
+    pool = DISCUSSION + MORE_DISCUSSION
+    out: list[str] = []
+    while len(out) < n:
+        out += rng.sample(pool, len(pool))
+    return out[:n]
+
+
 def generate(seed: int, variant: Variant) -> Script:
     """The meeting for this seed and variant. Same inputs → same script."""
     p = _Picker(seed)
     rng = p.rng
-    topics = rng.sample(TOPICS, variant.topics)
+    regions: tuple[str | None, ...] = variant.regions or (None,)
+    topics: list[Topic] = []
+    for _ in regions:
+        topics += rng.sample(TOPICS, variant.topics)
+    region = [r for r in regions for _ in range(variant.topics)]
     if variant.conflict and not any(t.unit == "money" for t in topics):
         topics[0] = next(t for t in TOPICS if t.unit == "money")
     conflict_topic = (
         next(k for k, t in enumerate(topics) if t.unit == "money") if variant.conflict else None
     )
-    decisions = rng.sample(DECISIONS, variant.decisions)
-    tasks = rng.sample(TASKS, variant.actions)
-    owners = rng.sample(OWNERS, variant.actions)
+    decisions = rng.sample(_pool(DECISIONS, MORE_DECISIONS, variant.decisions), variant.decisions)
+    tasks = rng.sample(_pool(TASKS, MORE_TASKS, variant.actions), variant.actions)
+    owners = (
+        rng.sample(OWNERS, variant.actions)
+        if variant.actions <= len(OWNERS)
+        else [rng.choice(OWNERS) for _ in range(variant.actions)]
+    )
     # Spread decisions and actions over the topics, at most two of each per topic.
-    slots = [k for k in range(variant.topics) for _ in range(2)]
+    slots = [k for k in range(len(topics)) for _ in range(2)]
     decision_topic = sorted(rng.sample(slots, variant.decisions))
     action_topic = sorted(rng.sample(slots, variant.actions))
 
@@ -367,9 +456,9 @@ def generate(seed: int, variant: Variant) -> Script:
     # they were before 6b.
     q_rng = random.Random(f"{seed}-open-questions")
     n_questions = q_rng.randint(*variant.open_questions)
-    questions = q_rng.sample(OPEN_QUESTIONS, n_questions)
+    questions = q_rng.sample(_pool(OPEN_QUESTIONS, MORE_OPEN_QUESTIONS, n_questions), n_questions)
     question_topic = dict(
-        zip(q_rng.sample(range(variant.topics), n_questions), questions, strict=True)
+        zip(q_rng.sample(range(len(topics)), n_questions), questions, strict=True)
     )
 
     script = Script(project=rng.choice(PROJECTS))
@@ -390,8 +479,9 @@ def generate(seed: int, variant: Variant) -> Script:
 
     gaps = list(variant.gaps)
     for k, topic in enumerate(topics):
+        where = f" for the {region[k]} region" if region[k] else ""
         intro = TOPIC_INTROS[0] if k == 0 else rng.choice(TOPIC_INTROS[1:])
-        say(intro.format(topic=topic.title.lower()), k)
+        say(intro.format(topic=topic.title.lower() + where), k)
 
         if k == conflict_topic:
             teen = rng.choice(sorted(TEEN_TO_TY))
@@ -401,12 +491,13 @@ def generate(seed: int, variant: Variant) -> Script:
             value = p.value(topic.lo, topic.hi, topic.step)
             said = value
         prev = p.value(topic.lo, topic.hi, topic.step)
-        line = say(f"The {topic.metric} is {spoken(topic, said)}.", k)
+        line = say(f"The {topic.metric}{where} is {spoken(topic, said)}.", k)
+        label = f"{topic.label} ({region[k]})" if region[k] else topic.label
         script.facts.append(
             PlannedFact(
                 id=next_id(),
                 kind="number",
-                text=f"{topic.label}: {display(topic, value)}",
+                text=f"{label}: {display(topic, value)}",
                 line=line,
                 topic=k,
                 value=float(value),
@@ -415,7 +506,7 @@ def generate(seed: int, variant: Variant) -> Script:
             )
         )
         say(f"That's compared with {spoken(topic, prev)} last {topic.period}.", k)
-        for text in rng.sample(DISCUSSION, 4):
+        for text in _discussion(rng, variant.discussion):
             say(text.format(topic=topic.title.lower()), k)
         if k in question_topic:
             q = question_topic[k]
@@ -444,7 +535,7 @@ def generate(seed: int, variant: Variant) -> Script:
 
         script.slides.append(
             SlideSpec(
-                title=topic.title,
+                title=f"{topic.title} ({region[k]})" if region[k] else topic.title,
                 bullets=topic.bullets,
                 table=(
                     ("Metric", "Value"),

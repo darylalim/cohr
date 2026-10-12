@@ -91,6 +91,9 @@ SETS_DIR = Path("evals") / "sets"
 DATA_DIR = Path("evals") / "data"
 REPORTS_DIR = Path("evals") / "reports"
 BASELINE = Path("evals") / "baseline.json"
+# The release gate (§18) fails only on these sets; others (long, 6c: one run, no noise
+# measured) compare with their own baseline, report-only.
+GATED_SETS = ("quick", "full")
 JUDGE_CACHE_DIR = DATA_DIR / "judge"  # judge answers per item (gitignored with evals/data)
 CALIBRATION = GEN_DIR / "judge_calibration.json"
 AGREEMENT_MIN = 0.8  # D15: judge metrics may enter the gate only above this (Phase 6)
@@ -119,6 +122,9 @@ class ItemSpec(_Model):
     gap_s: float = 12.0
     background_noise: float = 0.0  # pink noise amplitude under the speech
     conflict: bool = False  # a misspoken number, correct on the slide (§5.5)
+    regions: list[str] = []  # long meetings: the topic loop once per region (6c)
+    discussion: int = 4  # discussion lines per topic
+    open_questions: tuple[int, int] = (1, 2)  # how many are planted: random in this range
 
 
 class EvalSet(_Model):
@@ -940,14 +946,32 @@ class AskQuestion(_Model):
     after: list[str] = []  # earlier question ids whose turns are the history, oldest first
 
 
+_REGION = re.compile(r"^(.*) \((\w+)\)$")  # long meetings: "Open tickets (North)"
+ASK_SAMPLE = {"number": 12, "action": 6}  # long meetings: most questions asked per kind (6c)
+
+
 def _label(fact: TruthFact) -> tuple[str, str]:
-    return NUMBER_LABELS[fact.text.rsplit(": ", 1)[0]]
+    """(English, German) question label; a long meeting's region names which one."""
+    label = fact.text.rsplit(": ", 1)[0]
+    if label in NUMBER_LABELS:  # "Page load (ms)" is a quick label, not a region
+        return NUMBER_LABELS[label]
+    if m := _REGION.match(label):
+        en, de = NUMBER_LABELS[m.group(1)]
+        return f"{en} for the {m.group(2)} region", f"{de} in der Region {m.group(2)}"
+    return NUMBER_LABELS[label]
+
+
+def sample(facts: list[TruthFact], n: int) -> list[TruthFact]:
+    """At most n facts, evenly spread over the meeting (all of them when there are ≤ n)."""
+    if len(facts) <= n:
+        return facts
+    return [facts[i * len(facts) // n] for i in range(n)]
 
 
 def ask_questions(truth: Truth) -> list[AskQuestion]:
     """The item's Ask questions, deterministic from truth.json."""
-    numbers = [f for f in truth.facts if f.kind == "number"]
-    actions = [f for f in truth.facts if f.kind == "action"]
+    numbers = sample([f for f in truth.facts if f.kind == "number"], ASK_SAMPLE["number"])
+    actions = sample([f for f in truth.facts if f.kind == "action"], ASK_SAMPLE["action"])
     out = [
         AskQuestion(id=f"n-{f.id}", kind="number", question=f"What is {_label(f)[0]}?", fact=f.id)
         for f in numbers
@@ -1753,9 +1777,16 @@ def write_report(report: Report, root: Path = Path()) -> Path:
     return path
 
 
+def baseline_path(set_name: str, root: Path = Path()) -> Path:
+    """evals/baseline.json for quick; evals/baseline-<set>.json for any other set."""
+    return root / (
+        BASELINE if set_name == "quick" else BASELINE.with_name(f"baseline-{set_name}.json")
+    )
+
+
 def write_baseline(report: Report, root: Path = Path()) -> Path:
-    """Rewrite evals/baseline.json. Commit it only with the reason (§18); not before Phase 6."""
-    path = root / BASELINE
+    """Rewrite the set's baseline. Commit it only with the reason (§18)."""
+    path = baseline_path(report.set, root)
     atomic.write_text(path, report.model_dump_json(indent=2) + "\n")
     return path
 

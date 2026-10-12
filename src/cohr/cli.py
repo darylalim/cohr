@@ -152,7 +152,7 @@ def cmd_eval(args: argparse.Namespace) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 1
 
-    baseline = Path(args.baseline) if args.baseline else root / evals.BASELINE
+    baseline = Path(args.baseline) if args.baseline else evals.baseline_path(report.set, root)
     if baseline.is_file() and not args.update_baseline:
         report.baseline = str(baseline)
         report.regressions = evals.compare(report, evals.load_report(baseline))
@@ -161,7 +161,7 @@ def cmd_eval(args: argparse.Namespace) -> int:
     print(f"report: {path} (+ .md)", file=sys.stderr)
     if args.update_baseline:
         print(f"baseline updated: {evals.write_baseline(report, root)}", file=sys.stderr)
-    return 1 if report.regressions else 0
+    return 1 if report.regressions and report.set in evals.GATED_SETS else 0
 
 
 def _calibrate_judge(root: Path) -> int:
@@ -245,7 +245,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="only run the judge on evals/gen/judge_calibration.json (D15)",
     )
-    p.add_argument("--baseline", help="report to compare with (default evals/baseline.json)")
+    p.add_argument(
+        "--baseline",
+        help="report to compare with (default evals/baseline.json; baseline-<set>.json for "
+        "other sets)",
+    )
     p.add_argument(
         "--update-baseline", action="store_true", help="write this report as the baseline"
     )

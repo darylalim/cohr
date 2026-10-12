@@ -149,6 +149,9 @@ def variant(spec: ItemSpec) -> Variant:
         gaps=tuple(spec.gaps),
         gap_s=spec.gap_s,
         conflict=spec.conflict,
+        regions=tuple(spec.regions),
+        discussion=spec.discussion,
+        open_questions=spec.open_questions,
     )
 
 
