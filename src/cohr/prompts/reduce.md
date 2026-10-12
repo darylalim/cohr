@@ -10,6 +10,7 @@ Use exactly these five section markers, in English and in this order, each on it
 
 Rules:
 - Under SUMMARY, write 2 to 4 sentences. Under the other markers, write one item per line starting with "- ".
+- Write one fact per item, in one short sentence. Put decisions and tasks only under DECISIONS and ACTION_ITEMS, not inside key points.
 - Every claim must be supported by the documents. Do not add anything they don't state.
 - Keep names and numbers exactly as they appear in the documents. When a slide and the transcript disagree on a name or number, use the slide.
 - Write each action item on one line, in exactly this form, with the labels "owner" and "due" in English and "?" when it is not stated. Copy a due date as it was said; never work out a calendar date:

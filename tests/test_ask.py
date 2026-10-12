@@ -11,8 +11,9 @@ from cohr.schemas import MapFile, SegmentsFile, SlidesFile, Transcript
 from tests.conftest import fake_manager, make_run
 from tests.test_reduce import FakeR7B, _items, _map, _segments, _slide
 
-# Reduce's config hash before Phase 5b: Ask must not move it (no re-runs of existing notes).
-REDUCE_HASH = "bc243656d5a2b39c8087857bcb67ee36ad82435698811232789290da2fe4123e"
+# Reduce's config hash: Ask must not move it (no re-runs of existing notes). Moved on purpose
+# only by Reduce changes: 6c reduce.md (one fact per item).
+REDUCE_HASH = "18ab5e711b5600225ede31e718e0fffa3c8aa0d00f0ec7f35c415c299b82fe0b"
 
 
 def sources() -> Sources:
