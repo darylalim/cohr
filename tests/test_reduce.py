@@ -1,5 +1,7 @@
-"""PLAN §5.6: documents, section markers, citation rules, time refinement, action items."""
+"""PLAN §5.6: documents, section markers, citation rules, time refinement, action items;
+§4 two-pass reduce."""
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -7,6 +9,8 @@ import pytest
 from cohr import reduce, schemas
 from cohr.config import Config, ReduceConfig
 from cohr.schemas import (
+    Citation,
+    Claim,
     MapActionItem,
     MapFile,
     NotesDoc,
@@ -289,8 +293,10 @@ def test_build_notes_without_markers_keeps_everything_in_summary() -> None:
 
 
 class FakeR7B:
-    def __init__(self, reply: str, tokens_per_char: float = 0.0):
-        self.reply = reply
+    """Replies in order (the last one repeats); tokens = characters × tokens_per_char."""
+
+    def __init__(self, reply: str | list[str], tokens_per_char: float = 0.0):
+        self.replies = [reply] if isinstance(reply, str) else list(reply)
         self.tokens_per_char = tokens_per_char
         self.instructions: list[str] = []
         self.docs: list[list[dict[str, str]]] = []
@@ -306,7 +312,7 @@ class FakeR7B:
 
     def generate(self, prompt: str, *, max_tokens: int, temperature: float, seed: int) -> str:
         self.calls.append({"max_tokens": max_tokens, "temperature": temperature, "seed": seed})
-        return self.reply
+        return self.replies[min(len(self.calls), len(self.replies)) - 1]
 
 
 def _run(tmp_path: Path, config: Config, slides: list[Slide] | None = None) -> Path:
@@ -340,23 +346,23 @@ def test_stage_writes_notes(tmp_path: Path) -> None:
     assert len(lm.docs[0]) == 5
 
 
-def test_stage_trims_transcripts_to_fit(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
-    long = Config(reduce=ReduceConfig(max_input_tokens=3000))
+def test_stage_trims_a_group_over_the_cap(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    long = Config(reduce=ReduceConfig(max_input_tokens=6000))
     run_dir = _run(tmp_path, long, slides=[])
-    segs = [s.model_copy(update={"transcript_text": "word " * 400}) for s in _segments()]
+    segs = [s.model_copy(update={"transcript_text": "word " * 1000}) for s in _segments()]
     schemas.save(run_dir, SegmentsFile(segments=segs, unaligned_slide_ids=[]))
     lm = FakeR7B(REPLY, tokens_per_char=1.0)
     reduce.run_stage(ctx_for(run_dir, "reduce", fake_manager(long, tmp_path, reduce=lm)))
-    assert len(lm.docs) > 1
-    assert all(len(d["snippet"]) < 2000 for d in lm.docs[-1])
+    assert len(lm.calls) == 3  # one segment per group, each trimmed, then pass 2
     assert "transcripts trimmed" in caplog.text
+    assert schemas.load(run_dir, NotesDoc).passes == 2
 
 
 def test_stage_fails_when_trimming_cannot_fit(tmp_path: Path) -> None:
     tiny = Config(reduce=ReduceConfig(max_input_tokens=10))
     run_dir = _run(tmp_path, tiny)
     lm = FakeR7B(REPLY, tokens_per_char=1.0)
-    with pytest.raises(reduce.ReduceTooLong, match="two-pass"):
+    with pytest.raises(reduce.ReduceTooLong, match="over the 10 cap"):
         reduce.run_stage(ctx_for(run_dir, "reduce", fake_manager(tiny, tmp_path, reduce=lm)))
     assert lm.calls == []
 
@@ -368,3 +374,188 @@ def test_stage_with_nothing_to_summarize_loads_no_model(tmp_path: Path) -> None:
     reduce.run_stage(ctx_for(run_dir, "reduce", manager))
     assert schemas.load(run_dir, NotesDoc).sections.summary == []
     assert manager.loaded() == []
+
+
+# --- two-pass (§4) -------------------------------------------------------------------------
+
+
+class PartsR7B(FakeR7B):
+    """100 tokens per segment document, so the cap decides how many segments share a group."""
+
+    def count_tokens(self, text: str) -> int:
+        return 100 * text.count("Transcript:")
+
+
+PASS1 = [
+    # group 0: seg 0 and slide 0 → documents [seg 0, slide 0]
+    "## SUMMARY\n<co>The team approved the 14,500 budget.</co: 0:[0,1]>\n"
+    "## KEY_POINTS\n- <co>Welcome to the Atlas sync</co: 0:[0]>\n- An unsupported remark\n"
+    "## DECISIONS\n- none\n## ACTION_ITEMS\n- none\n## OPEN_QUESTIONS\n- none",
+    # group 1: seg 1 → documents [seg 1]
+    "## SUMMARY\n<co>Beta launch is on 3 November.</co: 0:[0]>\n## KEY_POINTS\n- none\n"
+    "## DECISIONS\n- <co>Launch the beta on 3 November</co: 0:[0]>\n"
+    "## ACTION_ITEMS\n- [owner: Tom] [due: ?] <co>Write release notes</co: 0:[0]>\n"
+    "## OPEN_QUESTIONS\n- none",
+]
+# Pass-2 documents: [group 0, group 1, slide 1 (aligned to no segment)].
+PASS2 = (
+    "## SUMMARY\n<co>The team approved the 14,500 budget [seg-0] [slide-1]</co: 0:[0]>. "
+    "<co>The beta launches on 3 November</co: 0:[1]>. Nothing cited here.\n"
+    "## KEY_POINTS\n- <co>An unsupported remark</co: 0:[0]>\n- <co>The plan slide</co: 0:[2]>\n"
+    "- <co>Something vague entirely</co: 0:[1]>\n- Bad <co>index</co: 0:[9]>\n"
+    "- <co>Ghost part [seg-7]</co: 0:[1]>\n"
+    "## DECISIONS\n- <co>Launch the beta on 3 November [seg-1]</co: 0:[1]>\n"
+    "## ACTION_ITEMS\n- [owner: Tom] [due: ?] <co>Write release notes</co: 0:[1]>\n"
+    "## OPEN_QUESTIONS\n- none"
+)
+
+
+def _two_pass(lm: FakeR7B, max_tokens: int = 150) -> tuple[NotesDoc, reduce.ReduceStats]:
+    progress: list[str] = []
+    return reduce.two_pass(
+        lm,
+        ("pass 1", "pass 2"),
+        _segments(),
+        _map(),
+        [_slide(0, "Q4 Budget")],
+        [_slide(1, "Plan")],
+        _refine(),
+        max_tokens,
+        lambda prompt: lm.generate(prompt, max_tokens=1, temperature=0.0, seed=0),
+        lambda _f, msg: progress.append(msg),
+        "en",
+    )
+
+
+def _cites(claim: Claim) -> list[tuple[str, int]]:
+    return [(c.kind, c.id) for c in claim.citations]
+
+
+def test_groups_fill_the_budget_with_consecutive_segments() -> None:
+    segs = [*_segments(), _segments()[1].model_copy(update={"seg_id": 2})]
+    slides = [_slide(0, "Q4 Budget")]
+    lm = PartsR7B("")
+    groups = reduce.make_groups(lm, "x", segs, _map(), slides, budget=200)
+    assert [[s.seg_id for s in g.segments] for g in groups] == [[0, 1], [2]]
+    assert [[s.slide_id for s in g.slides] for g in groups] == [[0], []]
+    # a segment over the budget on its own is still a group of one
+    alone = reduce.make_groups(lm, "x", segs, _map(), slides, budget=50)
+    assert [[s.seg_id for s in g.segments] for g in alone] == [[0], [1], [2]]
+
+
+def test_group_snippet_writes_citation_markers() -> None:
+    doc, _ = reduce.build_notes(PASS1[1], [("seg", 1)], _refine(), _map(), "en")
+    snippet = reduce.group_snippet(doc)
+    assert snippet.splitlines() == [
+        "Summary: Beta launch is on 3 November. [seg-1]",
+        "Decisions:",
+        "- Launch the beta on 3 November [seg-1]",
+        "Action items:",
+        "- [owner: Tom] [due: ?] Write release notes [seg-1]",
+    ]
+    slide_doc, _ = reduce.build_notes(PASS1[0], [("seg", 0), ("slide", 0)], _refine(), {}, "en")
+    lines = reduce.group_snippet(slide_doc).splitlines()
+    assert lines[0] == "Summary: The team approved the 14,500 budget. [seg-0] [slide-1]"
+    assert "- An unsupported remark" in lines  # uncited in pass 1: no marker
+
+
+def test_span_targets_markers_then_claim_then_group() -> None:
+    known: set[reduce.Target] = {("seg", 0), ("seg", 1), ("slide", 0)}
+    group = reduce.PassOne(
+        [0, 1],
+        [
+            Claim(text="Budget approved at 14,500", citations=[Citation(kind="seg", id=1)]),
+            Claim(text="Someone mentioned the weather", citations=[]),
+        ],
+    )
+    assert reduce.span_targets("Budget [seg-0] [slide-1] [seg-9]", group, known) == (
+        [("seg", 0), ("slide", 0)],
+        "marker",
+        1,
+    )
+    assert reduce.span_targets("approved 14,500", group, known) == ([("seg", 1)], "claim", 0)
+    assert reduce.span_targets("the weather", group, known) == ([], "uncited", 0)
+    assert reduce.span_targets("unrelated words", group, known) == (
+        [("seg", 0), ("seg", 1)],
+        "group",
+        0,
+    )
+    # only unknown markers: counted as dropped, then resolved like a span without markers
+    assert reduce.span_targets("unrelated [seg-9]", group, known) == (
+        [("seg", 0), ("seg", 1)],
+        "group",
+        1,
+    )
+
+
+def test_two_pass_citations_survive_both_passes() -> None:
+    lm = PartsR7B([*PASS1, PASS2])
+    doc, stats = _two_pass(lm)
+    assert len(lm.calls) == 3
+    assert [d["title"] for d in lm.docs[-1]] == [
+        "0:00–0:40 · slides 1",
+        "5:00–5:40",
+        "slide 2: Plan",
+    ]
+    assert "[seg-0] [slide-1]" in lm.docs[-1][0]["snippet"]
+    assert doc.passes == 2 and doc.raw == PASS2
+    assert doc.two_pass is not None
+    assert [(g.seg_ids, g.slide_ids, g.raw) for g in doc.two_pass.groups] == [
+        ([0], [0], PASS1[0]),
+        ([1], [], PASS1[1]),
+    ]
+    assert doc.two_pass.resolved == {"marker": 2, "claim": 2, "uncited": 1, "group": 2}
+    s = doc.sections
+    # markers in the span; never shown in the text
+    assert s.summary[0].text == "The team approved the 14,500 budget."
+    assert _cites(s.summary[0]) == [("seg", 0), ("slide", 0)]
+    # refined against the resolved segment, with the pass-2 span
+    assert s.summary[0].citations[0].t == 20.0
+    # no marker: the best-matching pass-1 claim
+    assert _cites(s.summary[1]) == [("seg", 1)] and s.summary[1].citations[0].t == 300.0
+    assert _cites(s.summary[2]) == []  # uncited in pass 2 stays uncited
+    assert _cites(s.key_points[0]) == []  # matched an uncited pass-1 claim: nothing invented
+    assert _cites(s.key_points[1]) == [("slide", 1)]  # a slide document cites itself
+    assert _cites(s.key_points[2]) == [("seg", 1)]  # no match: every segment of the group
+    assert _cites(s.key_points[3]) == []  # out-of-range document index
+    assert _cites(s.key_points[4]) == [("seg", 1)]  # unknown marker dropped, group fallback
+    assert _cites(s.decisions[0]) == [("seg", 1)]
+    assert (s.action_items[0].owner, s.action_items[0].due) == ("Tom", None)
+    assert _cites(s.action_items[0]) == [("seg", 1)]
+    assert (stats.groups, stats.dropped, stats.pass1_uncited) == (2, 2, 1)
+    assert stats.uncited == 3
+
+
+class BigPartsR7B(PartsR7B):
+    def count_tokens(self, text: str) -> int:
+        return super().count_tokens(text) + 1000 * text.count("pass 2")
+
+
+def test_two_pass_fails_when_the_part_summaries_are_over_the_cap() -> None:
+    with pytest.raises(reduce.ReduceTooLong, match="2 part summaries are 1000 tokens"):
+        _two_pass(BigPartsR7B([*PASS1, PASS2]))
+
+
+def test_stage_runs_two_passes_over_the_cap(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO, logger="cohr")
+    capped = Config(reduce=ReduceConfig(max_input_tokens=150))
+    run_dir = _run(tmp_path, capped)
+    lm = PartsR7B([*PASS1, PASS2])
+    reduce.run_stage(ctx_for(run_dir, "reduce", fake_manager(capped, tmp_path, reduce=lm)))
+    doc = schemas.load(run_dir, NotesDoc)
+    assert doc.passes == 2 and doc.two_pass is not None and len(doc.two_pass.groups) == 2
+    assert lm.instructions[-1].startswith("Write meeting notes in English for a long meeting")
+    assert lm.instructions[-2].startswith("Write notes in English for one part of a long meeting")
+    assert [c["max_tokens"] for c in lm.calls] == [reduce.TWO_PASS_MAX_TOKENS] * 3
+    assert [d["title"] for d in lm.docs[-1]][2:] == ["slide 2: Plan", "slide 3: Retention"]
+    assert "two passes, 2 groups" in caplog.text
+
+
+def test_stage_under_the_cap_is_one_pass(tmp_path: Path) -> None:
+    run_dir = _run(tmp_path, Config())
+    lm = PartsR7B(REPLY.replace("0:[3]", "0:[4]"))
+    reduce.run_stage(ctx_for(run_dir, "reduce", fake_manager(Config(), tmp_path, reduce=lm)))
+    doc = schemas.load(run_dir, NotesDoc)
+    assert (doc.passes, doc.two_pass, len(lm.calls)) == (1, None, 1)

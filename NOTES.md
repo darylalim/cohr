@@ -1231,3 +1231,81 @@ Seeds 2 and 3 pass against the seed-1 baseline.
 
 ### Next
 - Phase 6c in a new session with the §21 prompt.
+
+## 2026-10-12 · Phase 6c (long meetings)
+
+quick evals with `-c seed=1` against `evals/baseline.json`; long-en against
+`evals/baseline-long.json` (report-only). Each baseline update is its own commit.
+
+### 0. Reduce bundling and the citation gate (D25)
+- `reduce.md`: "Write one fact per item, in one short sentence. Put decisions and tasks only
+  under DECISIONS and ACTION_ITEMS, not inside key points." **Recall 82.3 → 89.7%, citation
+  92.9 → 96.7%**, support 94.0 → 95.5%, Ask unchanged. Re-baselined.
+- The gain is decisions and actions as their own cited items. Key points stay bundled: they are
+  **Map's** key points copied word for word ("Support Queue: 390 open tickets … Laura to send
+  contract to legal by Friday."). Tried and dropped: an off-domain one-fact example plus "no
+  remarks like 'trend as expected'" (recall 83.8%); "split a part-note line that joins several
+  facts" (identical notes). → 6b-2.
+- D25 (seeds 1–3): citation 96.7 / 96.6 / 100%, noise 3.4 → **gate −6.9** (user). Recall
+  89.7 / 85.3 / 83.8%, noise 5.9 (was 2.9); gate kept at −5.9 (user: seed 1 is the high point).
+
+### 1. Two-pass reduce (§4, D26)
+- Over the cap: pass 1 per group of consecutive segments (+ aligned slides) → group summary
+  with `[seg-N]` / `[slide-N]` after every claim; pass 2 over summaries + unaligned slides.
+  A pass-2 citation of a group resolves to markers in the span, else the best-matching pass-1
+  claim (overlap ≥ 0.5), else every segment of the group; a match to an uncited pass-1 claim
+  stays uncited. `notes.json` v4 keeps the groups and the resolution counts; the eval reports
+  them (`pass2_*`).
+- R7B rarely copies markers into its spans (38 of 108 with the first pass-2 prompt, 0 with the
+  final one); the claim match carries resolution. Group fallbacks: 0 on quick, 5 of 139 on
+  long-en.
+- Under the cap nothing changes (same notes and metrics as the baseline).
+
+### 2. Ask ranking (§5.7, D17, D27)
+- D17: SQLite 3.50.4 in uv's Python has FTS5 and `trigram` (no new dependency).
+- Over the cap: FTS5 BM25 over segment + slide documents for the question plus the last turn,
+  top 12 that fit with the history, sent in meeting order. Replaces transcript trimming in Ask.
+- quick at cap 4000 vs no cap / vs the old trimming at 4000: accuracy 96.2 / 98.1 / 98.1%,
+  citation 98.0 / 100 / 100%, follow-up 3/4 / 3/4 / 1/4, near-miss 4/12 / 7/12 / 5/12.
+  Fitting the cap costs near-misses either way; ranking keeps follow-ups and scales.
+
+### 3. long-en (§18)
+- `long` set: 5 regions × 8 topics (region in the spoken metric, fact label and slide title),
+  36 discussion lines per topic, 88 facts, 40 slides, audio + PDF; ~2.2 h. Realistic density
+  (user): at quick's density 2.5 h would be ~460 facts. Extra word lists are used only above
+  quick's sizes (quick scripts pinned by hash). Ask asks 24 questions (12 number, 6 action,
+  follow-up, 2 German, 3 near-miss); action questions name the due date when owners repeat.
+- Run 1: **VAD failed** ("[metal::malloc] Resource limit (499000) exceeded"): mlx-audio's
+  Silero keeps one MLX array per 512-sample window. Now per 10-minute block.
+- Run 2 (32K cap): two-pass citations all resolved, but **recall 11.3%**: pass 1 on 2 groups
+  of ~23K tokens spent its 2048 output tokens on ~66 key points or a citation-index loop
+  (`0:[1,16,20,…,533]`), so DECISIONS/ACTION_ITEMS were never written. Ask 61% at ~100 s per
+  answer (ranking filled the cap with ~60 documents; same citation loops).
+- Fixes, checked with Reduce-only reruns on run 2's media: `reduce_part.md` + `reduce_pass2.md`
+  list decisions/actions/open questions before figures-only key points, 4096 output tokens
+  (recall 37.5%); groups at 40% of the cap (53.8%, citation 97.7%). Then: my new filler lines
+  ("I'd like us to keep an eye on …") had become 36 Map decisions (made-up 54) → fact-free
+  filler; Ask top 12; `say` timeout + retry (one call hung for 40 min).
+- Run 3 (final, baseline-long.json): **recall 67.5%** (numbers 90, decisions 50, actions 40,
+  open questions 75%), **citation 98.1%**, uncited 0, made-up 9 / 2; Ask 83.3%, citation 93.8%,
+  ~32 s per answer; 467 s per audio hour, peak 17.3 GB.
+- Where long-en loses decisions: Map 19/20 → pass 1 15 → pass 2 10. Pass 2 finishes (not
+  truncated) but drops or rewords about a third.
+
+### Final gate (quick, seed 1, Ask + judge)
+**Pass, identical to the baseline** after all of 6c (regenerated media, new prompt list):
+recall 89.7%, citation 96.7%, uncited 0, made-up 2 / 0, support 95.5%, Ask 98.1%, citation
+100%, follow-up 3/4, German 4/4 / 4/4, near-miss 7/12.
+
+### Decisions (PLAN §20)
+- D17 available; D25 citation −6.9; D26 groups at 40% of the cap with the long-meeting
+  prompts and 4096 tokens; D27 FTS5 top 12.
+
+### Plan changes
+- Status line; §4, §5.6, §5.7 (two-pass, ranking); §9 6c done with carry-overs; §18 long-en
+  row, `long` set, D25 gate, per-set baselines; §19 notes.json v4; §20 D17, D25–D27;
+  evals/README.
+
+### Next
+- 6b-2 (Map fixes) kickoff prompt. Carry-overs: Map's bundled key points; two-pass pass 2
+  losing decisions on long-en; near-miss under the cap; German after history on long-en.

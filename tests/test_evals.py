@@ -1,6 +1,8 @@
 """Eval scoring and generator (PLAN §18 Tests). No models, no `say`, no ffmpeg."""
 
+import hashlib
 import json
+from collections import Counter
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -10,6 +12,7 @@ import pytest
 from cohr import evals, schemas
 from cohr.config import Config
 from cohr.evals import (
+    NUMBER_LABELS,
     ItemReport,
     ItemSpec,
     Report,
@@ -33,6 +36,7 @@ from cohr.schemas import (
     Manifest,
     MapFile,
     NotesDoc,
+    NotesGroup,
     NotesSections,
     NumberRepair,
     SegmentNotes,
@@ -42,10 +46,15 @@ from cohr.schemas import (
     StageState,
     Transcript,
     TranscriptItem,
+    TwoPass,
 )
 from evals.gen import build as gen_build
 from evals.gen.script import (
     DECISIONS,
+    MORE_DECISIONS,
+    MORE_DISCUSSION,
+    MORE_OPEN_QUESTIONS,
+    MORE_TASKS,
     OPEN_QUESTIONS,
     TASKS,
     TEEN_TO_TY,
@@ -327,8 +336,8 @@ def test_baseline_thresholds() -> None:
     assert compare(report(fact_recall=0.85), old) == []  # −5 points: within −5.9 (D16)
     assert compare(report(fact_recall=0.841), old) == []  # exactly −5.9
     assert "fact_recall" in compare(report(fact_recall=0.84), old)[0]
-    assert compare(report(citation_accuracy=0.92), old) == []
-    assert "citation_accuracy" in compare(report(citation_accuracy=0.91), old)[0]
+    assert compare(report(citation_accuracy=0.881), old) == []  # D25: −6.9 allowed
+    assert "citation_accuracy" in compare(report(citation_accuracy=0.88), old)[0]
     assert compare(report(made_up_items=2), old) == []  # D16: +2 allowed (noise 1)
     assert "made_up_items" in compare(report(made_up_items=3), old)[0]
     ask = report(ask_accuracy=0.98, ask_citation_accuracy=1.0, ask_near_miss=7 / 12)
@@ -573,6 +582,26 @@ def test_score_item_end_to_end(tmp_path: Path) -> None:
     md = evals.render_markdown(full)
     assert "citation off by -20 s" in md and "| map | 360 | 9 |" in md
     assert "Map number repaired: 4,090 → 409" in md and "number in no source: 3100" in md
+    assert m["reduce_groups"] == 0 and m["pass2_group"] == 0  # one pass
+
+    two = schemas.load(run_dir, NotesDoc).model_copy(
+        update={
+            "passes": 2,
+            "two_pass": TwoPass(
+                groups=[NotesGroup(seg_ids=[0], slide_ids=[0], raw="")] * 2,
+                resolved={"marker": 3, "group": 1},
+            ),
+        }
+    )
+    schemas.save(run_dir, two)
+    m2 = evals.score_item(truth, run_dir).metrics
+    assert (m2["reduce_groups"], m2["pass2_marker"], m2["pass2_claim"], m2["pass2_group"]) == (
+        2,
+        3,
+        0,
+        1,
+    )
+    assert evals.summarize([rep, evals.score_item(truth, run_dir)])["pass2_marker"] == 3
     path = evals.write_report(full, tmp_path)
     assert evals.load_report(path) == full
     assert json.loads(path.read_text())["summary"]["facts"] == 2
@@ -596,3 +625,105 @@ def test_gate_tables_drive_compare(monkeypatch: pytest.MonkeyPatch) -> None:
     assert compare(report(ask_accuracy=0.7, made_up_items=5), old) == []
     out = compare(report(ask_accuracy=0.69, made_up_items=6), old)
     assert len(out) == 2 and "ask_accuracy" in out[0] and "made_up_items" in out[1]
+
+
+# --- long meetings (6c) --------------------------------------------------------------------
+
+# sha256 of each quick item's script (project, lines, facts, slides, gaps) before 6c's
+# long-meeting generator: quick media must not change.
+QUICK_SCRIPTS = {
+    "clean-en": "c756efafea95384e",
+    "noisy-en": "828ee1ad2db3580c",
+    "pdf-slides-en": "8d2d7c332774f379",
+    "slide-conflict-en": "8797da481efee227",
+}
+
+
+def _fingerprint(s: Script) -> str:
+    text = repr((s.project, s.lines, s.facts, s.slides, s.gaps_after))
+    return hashlib.sha256(text.encode()).hexdigest()[:16]
+
+
+def test_quick_scripts_are_unchanged_by_the_long_generator() -> None:
+    for spec in evals.load_set("quick", ROOT).items:
+        assert _fingerprint(generate(spec.seed, gen_build.variant(spec))) == QUICK_SCRIPTS[spec.id]
+
+
+def test_planted_texts_stay_distinguishable() -> None:
+    texts = [*DECISIONS, *MORE_DECISIONS, *TASKS, *MORE_TASKS, *OPEN_QUESTIONS]
+    texts += MORE_OPEN_QUESTIONS
+    assert len(set(texts)) == len(texts)
+    sets = [evals.content(t) for t in texts]
+    for i, a in enumerate(sets):
+        for j in range(i):
+            b = sets[j]
+            assert len(a & b) / min(len(a), len(b)) < 0.6, (texts[i], texts[j])
+    for q in (*OPEN_QUESTIONS, *MORE_OPEN_QUESTIONS):
+        assert not numbers_in(q)
+        for text in (*DECISIONS, *MORE_DECISIONS, *TASKS, *MORE_TASKS):
+            assert not evals.content(q) & evals.content(text), (q, text)
+    assert not any(numbers_in(t) for t in MORE_DISCUSSION)
+    # Long-meeting filler states nothing Map could list as a decision, task or question.
+    cues = ("?", "let's", "we should", "i'd like", "happy to", "will ", "keep an eye", "asked")
+    assert not [t for t in MORE_DISCUSSION if any(c in t.casefold() for c in cues)]
+
+
+def test_long_meeting_facts_are_unique() -> None:
+    spec = evals.load_set("long", ROOT).items[0]
+    script = generate(spec.seed, gen_build.variant(spec))
+    kinds = Counter(f.kind for f in script.facts)
+    assert kinds == {"number": 40, "decision": 20, "action": 20, "open_question": 8}
+    assert len(script.slides) == 40
+    assert len({s.title for s in script.slides}) == 40  # region in every title
+    texts = [f.text for f in script.facts if f.kind != "number"]
+    assert len(set(texts)) == len(texts)
+    labels = [f.text.rsplit(": ", 1)[0] for f in script.facts if f.kind == "number"]
+    assert len(set(labels)) == len(labels)  # "Open tickets (North)": one per region
+    values = [f.value for f in script.facts if f.kind == "number"]
+    assert len(set(values)) == len(values) and min(v for v in values if v) > 31
+    assert any("for the North region is" in line.text for line in script.lines)
+
+
+def test_long_meeting_ask_sample() -> None:
+    spec = evals.load_set("long", ROOT).items[0]
+    script = generate(spec.seed, gen_build.variant(spec))
+    facts = [
+        TruthFact(
+            id=f.id, kind=f.kind, text=f.text, owner=f.owner, due=f.due, value=f.value, t0=0, t1=1
+        )
+        for f in script.facts
+    ]
+    qs = evals.ask_questions(Truth.model_construct(facts=facts))
+    assert Counter(q.kind for q in qs) == {
+        "number": 12,
+        "action": 6,
+        "followup": 1,
+        "de_alone": 1,
+        "de_history": 1,
+        "near_miss": 3,
+    }
+    assert qs[0].question.endswith("for the North region?")
+    actions = [q.question for q in qs if q.kind == "action"]
+    assert all(" need to do by " in q for q in actions)  # owners repeat in long-en
+    assert len(set(actions)) == len(actions)
+    assert "in der Region" in next(q.question for q in qs if q.kind == "de_alone")
+    assert evals.sample(facts[:3], 12) == facts[:3]
+
+
+def test_question_labels_with_and_without_a_region() -> None:
+    def fact(text: str) -> TruthFact:
+        return TruthFact(id="f1", kind="number", text=text, t0=0, t1=1)
+
+    assert evals._label(fact("Page load (ms): 740")) == NUMBER_LABELS["Page load (ms)"]
+    assert evals._label(fact("Page load (ms) (West): 740"))[0] == (
+        "the page load time for the West region"
+    )
+
+
+def test_each_set_has_its_own_baseline(tmp_path: Path) -> None:
+    assert evals.baseline_path("quick", tmp_path) == tmp_path / "evals" / "baseline.json"
+    assert evals.baseline_path("long", tmp_path) == tmp_path / "evals" / "baseline-long.json"
+    (tmp_path / "evals").mkdir()
+    written = evals.write_baseline(report().model_copy(update={"set": "long"}), tmp_path)
+    assert written.name == "baseline-long.json"
+    assert "long" not in evals.GATED_SETS and "quick" in evals.GATED_SETS

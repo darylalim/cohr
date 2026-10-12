@@ -5,13 +5,15 @@ reuses Reduce's documents, prompt fitting, citation parsing (dropped indices, un
 kept and flagged) and time refinement, so an answer cites exactly like the notes do.
 
 History is the last 3 turns, answers without citation markup, dropped oldest-first when the
-prompt is over the run's `reduce.max_input_tokens`; if the documents alone don't fit,
-transcripts are trimmed as in Reduce (ranking for long meetings is Phase 6). The answer
-language is the question's (lingua), or the run's target language when detection is unsure.
+prompt is over the run's `reduce.max_input_tokens`. If the documents alone don't fit (long
+meetings), they're ranked for the question with an in-memory SQLite FTS5 table (BM25) and
+the top-ranked ones that fit are sent, in meeting order. The answer language is the
+question's (lingua), or the run's target language when detection is unsure.
 """
 
 import logging
 import re
+import sqlite3
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import cache
@@ -20,6 +22,7 @@ from typing import Any
 
 from cohr import reduce, schemas
 from cohr.config import TARGET_LANGUAGES, Config, language_name, load_prompt
+from cohr.fuse import STOPWORDS
 from cohr.mapper import fill
 from cohr.models import ModelManager
 from cohr.schemas import (
@@ -49,6 +52,11 @@ MIN_WORDS = 2
 
 _CJK = re.compile(r"[぀-ヿ㐀-鿿가-힯]")
 _WORD = re.compile(r"[^\W\d_]+")
+_TERM = re.compile(r"[^\W_]+")
+TRIGRAM = 3  # FTS5's trigram tokenizer matches terms of at least 3 characters
+# Over the cap, at most this many top-ranked documents (6c long-en): filling the whole 32K cap
+# (~60 documents) took ~100 s per answer and R7B fell into citing document after document.
+MAX_RANKED = 12
 
 
 class AskError(RuntimeError):
@@ -87,13 +95,22 @@ class Answer:
     language: str
     prompt_tokens: int
     turns_dropped: int  # history turns left out to fit the cap
-    transcript_limit: int | None  # characters per segment when transcripts were trimmed
+    ranked: list[reduce.Target] | None  # over the cap: the top-ranked documents sent (§5.7)
     dropped_citations: int  # indices outside the documents sent
     raw: str
 
     @property
     def uncited(self) -> int:
         return sum(1 for c in self.claims if not c.citations)
+
+    def scope(self) -> str | None:
+        """ "Answer based on the N most relevant segments" when ranking left some out."""
+        if self.ranked is None:
+            return None
+        segs = sum(1 for kind, _ in self.ranked if kind == "seg")
+        slides = len(self.ranked) - segs
+        text = f"Answer based on the {segs} most relevant segment{'s' * (segs != 1)}"
+        return text + (f" and {slides} slide{'s' * (slides != 1)}" if slides else "")
 
     def turn(self) -> Turn:
         return Turn(self.question, " ".join(c.text for c in self.claims))
@@ -150,7 +167,59 @@ def instruction(question: str, history: Sequence[Turn], language: str) -> str:
     )
 
 
-Fitted = tuple[str, list[reduce.Target], int, int | None]  # prompt, targets, tokens, limit
+# --- ranking (pure) -----------------------------------------------------------------------
+
+
+def query_terms(text: str) -> tuple[list[str], bool]:
+    """FTS5 terms for a question and whether to use the trigram tokenizer: words (English
+    stopwords left out) for space-separated languages; for text with Chinese, Japanese or
+    Korean, every 3-character window of each run (trigram can't match shorter terms)."""
+    cjk = bool(_CJK.search(text))
+    out: list[str] = []
+    for run in _TERM.findall(text.casefold()):
+        if not cjk:
+            if run not in STOPWORDS and (len(run) > 1 or run.isdigit()):
+                out.append(run)
+            continue
+        out += [run[i : i + TRIGRAM] for i in range(len(run) - TRIGRAM + 1)]
+    return list(dict.fromkeys(out)), cjk
+
+
+def rank(query: str, docs: Sequence[dict[str, str]]) -> list[int]:
+    """Document indices, best first: BM25 over title + snippet for the query terms OR'ed
+    (D27); documents matching no term follow in meeting order."""
+    terms, cjk = query_terms(query)
+    hits: list[int] = []
+    if terms:
+        tokenizer = "trigram" if cjk else "unicode61 remove_diacritics 2"
+        con = sqlite3.connect(":memory:")
+        try:
+            con.execute(f"CREATE VIRTUAL TABLE d USING fts5(body, tokenize='{tokenizer}')")
+            con.executemany(
+                "INSERT INTO d(rowid, body) VALUES (?, ?)",
+                [(i + 1, f"{d['title']}\n{d['snippet']}") for i, d in enumerate(docs)],
+            )
+            match = " OR ".join('"' + t.replace('"', '""') + '"' for t in terms)
+            rows = con.execute(
+                "SELECT rowid FROM d WHERE d MATCH ? ORDER BY bm25(d), rowid", (match,)
+            )
+            hits = [r[0] - 1 for r in rows]
+        finally:
+            con.close()
+    found = set(hits)
+    return hits + [i for i in range(len(docs)) if i not in found]
+
+
+# --- prompt (pure, given a model) ----------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Fit:
+    prompt: str
+    targets: list[reduce.Target]  # what each document index sent cites
+    tokens: int
+    turns_dropped: int
+    ranked: bool  # only the top-ranked documents were sent
 
 
 def fit(
@@ -160,27 +229,39 @@ def fit(
     language: str,
     sources: Sources,
     max_tokens: int,
-) -> tuple[Fitted, int]:
-    """The prompt within max_tokens and how many history turns were dropped: history goes
-    oldest-first, then Reduce's own fitting trims transcripts."""
+) -> Fit:
+    """The prompt within max_tokens. Every document if they fit (history dropped
+    oldest-first as needed); else the documents ranked for the question and the last turn
+    (a follow-up like "who owns that?" has few terms of its own), the best that fit with
+    the history added greedily (at most MAX_RANKED) and sent in meeting order, so indices
+    map like Reduce's."""
     history = list(history)[-HISTORY_TURNS:]
     docs, targets = reduce.documents(sources.segments, sources.notes, sources.slides)
-    for dropped in range(len(history)):
+    for dropped in range(len(history) + 1):
         prompt = lm.prompt(instruction(question, history[dropped:], language), docs)
         size = lm.count_tokens(prompt)
         if size <= max_tokens:
-            return (prompt, targets, size, None), dropped
-    alone = instruction(question, [], language)
-    try:
-        fitted = reduce.fit_prompt(
-            lm, alone, sources.segments, sources.notes, sources.slides, max_tokens
-        )
-    except reduce.ReduceTooLong:
-        raise AskError(
-            f"This meeting is too long for Ask: over the {max_tokens}-token cap even with "
-            "shortened transcripts. Ranking for long meetings is not built yet."
-        ) from None
-    return fitted, len(history)
+            return Fit(prompt, targets, size, dropped, ranked=False)
+    last = f"{history[-1].question} {history[-1].answer}" if history else ""
+    order = rank(f"{question} {last}", docs)
+    for dropped in range(len(history) + 1):
+        text = instruction(question, history[dropped:], language)
+        chosen: list[int] = []
+        best: tuple[str, int] | None = None
+        for i in order:
+            if len(chosen) == MAX_RANKED:
+                break
+            trial = sorted([*chosen, i])
+            prompt = lm.prompt(text, [docs[k] for k in trial])
+            size = lm.count_tokens(prompt)
+            if size <= max_tokens:
+                chosen, best = trial, (prompt, size)
+        if best is not None:
+            return Fit(best[0], [targets[k] for k in chosen], best[1], dropped, ranked=True)
+    raise AskError(
+        f"This meeting is too long for Ask: no part of it fits the {max_tokens}-token cap "
+        "with the question."
+    )
 
 
 def parse_answer(
@@ -209,11 +290,9 @@ def ask(
     if not sources.segments and not sources.slides:
         raise AskError("This run has no transcript or slides to answer from.")
     language = answer_language(question, config.target_language, detect)
-    (prompt, targets, size, limit), turns_dropped = fit(
-        lm, question, history, language, sources, config.reduce.max_input_tokens
-    )
+    fitted = fit(lm, question, history, language, sources, config.reduce.max_input_tokens)
     reply = lm.generate(
-        prompt,
+        fitted.prompt,
         max_tokens=MAX_ANSWER_TOKENS,
         temperature=config.reduce.temperature,
         seed=config.seed,
@@ -221,24 +300,25 @@ def ask(
     refine = reduce.segment_refiner(
         sources.segments, sources.items, config.reduce.citation_min_score
     )
-    claims, dropped = parse_answer(reply, targets, refine)
+    claims, dropped = parse_answer(reply, fitted.targets, refine)
     if dropped:
         log.warning("ask: dropped %d citations to unknown documents", dropped)
     log.info(
-        "ask: %s, %d claims, %d uncited, %d prompt tokens, %d turns dropped",
+        "ask: %s, %d claims, %d uncited, %d prompt tokens, %d turns dropped, %s documents",
         language,
         len(claims),
         sum(1 for c in claims if not c.citations),
-        size,
-        turns_dropped,
+        fitted.tokens,
+        fitted.turns_dropped,
+        len(fitted.targets) if fitted.ranked else "all",
     )
     return Answer(
         question=question,
         claims=claims,
         language=language,
-        prompt_tokens=size,
-        turns_dropped=turns_dropped,
-        transcript_limit=limit,
+        prompt_tokens=fitted.tokens,
+        turns_dropped=fitted.turns_dropped,
+        ranked=fitted.targets if fitted.ranked else None,
         dropped_citations=dropped,
         raw=reply,
     )

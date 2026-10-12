@@ -1,0 +1,16 @@
+# Long eval set (PLAN §18, 6c): one ~2.5 h planted-facts meeting for two-pass Reduce and Ask
+# ranking. Audio + PDF deck (a 2.5 h screen recording is large; vision is the slowest stage).
+# Realistic density (user, 6c): 5 regions × 8 topics, 36 discussion lines per topic,
+# ~90 facts and 40 slides. Report-only baseline: evals/baseline-long.json.
+# Run: uv run cohr eval --set long --baseline evals/baseline-long.json (~40 min of pipeline).
+items:
+  - id: long-en
+    seed: 11
+    media: audio
+    slides: pdf
+    decisions: 20
+    actions: 20
+    regions: [North, South, East, West, Central]
+    discussion: 36
+    open_questions: [8, 8]
+    gaps: [silence, music, noise]

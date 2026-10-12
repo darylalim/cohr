@@ -79,8 +79,8 @@ for i, answer in enumerate(history):
         notes = []
         if answer.turns_dropped:
             notes.append(f"{answer.turns_dropped} earlier question(s) left out to fit")
-        if answer.transcript_limit is not None:
-            notes.append("transcripts shortened to fit")
+        if scope := answer.scope():
+            notes.append(scope)
         if notes:
             st.caption(" · ".join(notes).capitalize() + ".")
         cited = ui.unique_citations([c for claim in answer.claims for c in claim.citations])

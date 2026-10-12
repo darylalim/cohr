@@ -22,7 +22,11 @@ uv run cohr eval --set quick      # ~10 min on an M2 Max; models must be downloa
   `-c reduce.citation_min_score=0.2` (D19).
 - Reports go to `evals/reports/<YYYYmmdd-HHMMSS>-<set>.json` + `.md` (gitignored).
 - `--baseline PATH` compares with an earlier report (exit 1 on a regression, §18 thresholds).
-  `evals/baseline.json` is committed from Phase 6 on; `--update-baseline` rewrites it.
+  Each set has its own baseline: `evals/baseline.json` (quick), `evals/baseline-<set>.json`
+  otherwise; `--update-baseline` rewrites the set's. Only `quick` and `full` exit 1; `long` is
+  report-only.
+- `-c reduce.max_input_tokens=4000` forces two-pass Reduce and Ask ranking on the 5-minute quick
+  items (2 groups each): the fast loop for long-meeting work (6c).
 
 - After every item has run, the judge (`src/cohr/judge.py`) answers its questions; answers are
   cached in `evals/data/judge/<item>.json`, so re-scoring loads no model. `--no-judge` skips it.
@@ -37,6 +41,7 @@ Generate one item by hand: `uv run python -m evals.gen clean-en evals/data/gen/c
 | Set | Items |
 |---|---|
 | `quick` | `clean-en` (screen recording), `noisy-en` (background noise, music and noise gaps), `pdf-slides-en` (audio + PDF deck, text alignment), `slide-conflict-en` (a number misspoken, correct on the slide) |
+| `long` | `long-en`: ~2.5 h, audio + PDF deck, 5 regions × 8 topics, 88 facts; Ask asks a 24-question sample (6c). ~1 h with generation |
 | `full` | Phase 6: adds cross-language items, `long-en`, FLEURS and AMI |
 
 ## Metrics
@@ -46,7 +51,8 @@ or its slide), uncited claims, made-up decisions/action items (a real task with 
 else's owner or due date counts), open-question recall and made-up open questions (planted
 open questions vs. the Open questions section), VAD speech F1 and words transcribed in non-speech gaps,
 WER, slide titles/cells/numbers, slide alignment (`pdf-slides-en`), output language, and
-seconds per audio hour and peak memory per stage. Matching rules: `src/cohr/evals.py`.
+seconds per audio hour and peak memory per stage. Two-pass runs also count their groups and how
+each pass-2 citation resolved (`pass2_marker`, `pass2_claim`, `pass2_group`, `pass2_uncited`). Matching rules: `src/cohr/evals.py`.
 
 Judge (secondary): **support rate**, the share of cited claims whose cited transcript and
 slides state them ("yes"; partial, no and unjudged are counted apart), and **judge recall** for

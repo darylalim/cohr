@@ -1,6 +1,7 @@
 """PLAN §5.1a, §8: chunk packing from synthetic speech runs, silence fallback, the vad stage."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -153,3 +154,33 @@ def test_silence_chunker_by_config_loads_no_model(tmp_path: Path) -> None:
     run_dir = make_run(tmp_path, audio, Config(vad=VadConfig(chunker="silence")))
     vad.run_stage(ctx_for(run_dir, "vad", None))  # would raise if it asked for a model
     assert schemas.load(run_dir, ChunksFile).chunker == "silence"
+
+
+class FakeSilero:
+    """mlx-audio's generate(): one probability per 512 samples, timestamps in seconds."""
+
+    def __init__(self) -> None:
+        self.lengths: list[int] = []
+
+    def generate(self, audio: np.ndarray, **_kw: object) -> SimpleNamespace:
+        self.lengths.append(len(audio))
+        n = -(-len(audio) // 512)
+        end = len(audio) / SR
+        return SimpleNamespace(
+            probabilities=np.full(n, 0.9, dtype=np.float32),
+            timestamps=[{"start": 1.0, "end": end}],
+        )
+
+
+def test_silero_runs_per_block_and_offsets_times() -> None:
+    model = FakeSilero()
+    audio = np.zeros(int((2 * vad.SILERO_BLOCK_S + 30) * SR), dtype=np.float32)
+    det = vad.SileroVad(model).detect(audio, VadConfig())
+    block = vad.SILERO_BLOCK_S * SR
+    assert model.lengths == [block, block, 30 * SR]
+    assert len(det.scores) == -(-len(audio) // 512)  # one score per window, in order
+    b = float(vad.SILERO_BLOCK_S)
+    assert det.runs == [(1.0, b), (b + 1.0, 2 * b), (2 * b + 1.0, 2 * b + 30.0)]
+    short = FakeSilero()
+    vad.SileroVad(short).detect(np.zeros(SR * 20, dtype=np.float32), VadConfig())
+    assert short.lengths == [SR * 20]  # quick-sized input: one call, as before

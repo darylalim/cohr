@@ -29,6 +29,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -70,8 +71,8 @@ FRAME_S = 0.01  # VAD F1 frame size
 # open questions. Report-only (not here): the one-question-per-item Ask rates (follow-up,
 # German alone and after history: 25-point steps on quick) and the judge metrics (D15).
 MAX_DROP: dict[str, float] = {
-    "fact_recall": 0.059,  # noise 2.94 points
-    "citation_accuracy": 0.03,  # noise 0
+    "fact_recall": 0.059,  # D16 noise 2.94 points; 6c: 5.9 (89.7, 85.3, 83.8%), kept (user)
+    "citation_accuracy": 0.069,  # D25: noise 3.4 points (96.7, 96.6, 100%)
     "ask_accuracy": 0.05,  # noise 0; Ask has no PLAN default: fact recall's
     "ask_citation_accuracy": 0.03,  # noise 0; citation accuracy's default
     "ask_near_miss": 0.167,  # D24: noise 8.3 points (7, 7, 6 of 12)
@@ -82,6 +83,8 @@ MAX_RISE: dict[str, float] = {
     "uncited_claims": 0,  # noise 0
     "gap_words_per_min": 0.0,  # noise 0
 }
+# How a pass-2 citation of a group resolved (reduce.span_targets; report-only).
+PASS2 = ("marker", "claim", "group", "uncited")
 MAX_STAGE_SLOWDOWN = 0.25  # noisiest stage: reduce, 10.5%
 
 GEN_DIR = Path("evals") / "gen"
@@ -89,6 +92,9 @@ SETS_DIR = Path("evals") / "sets"
 DATA_DIR = Path("evals") / "data"
 REPORTS_DIR = Path("evals") / "reports"
 BASELINE = Path("evals") / "baseline.json"
+# The release gate (§18) fails only on these sets; others (long, 6c: one run, no noise
+# measured) compare with their own baseline, report-only.
+GATED_SETS = ("quick", "full")
 JUDGE_CACHE_DIR = DATA_DIR / "judge"  # judge answers per item (gitignored with evals/data)
 CALIBRATION = GEN_DIR / "judge_calibration.json"
 AGREEMENT_MIN = 0.8  # D15: judge metrics may enter the gate only above this (Phase 6)
@@ -117,6 +123,9 @@ class ItemSpec(_Model):
     gap_s: float = 12.0
     background_noise: float = 0.0  # pink noise amplitude under the speech
     conflict: bool = False  # a misspoken number, correct on the slide (§5.5)
+    regions: list[str] = []  # long meetings: the topic loop once per region (6c)
+    discussion: int = 4  # discussion lines per topic
+    open_questions: tuple[int, int] = (1, 2)  # how many are planted: random in this range
 
 
 class EvalSet(_Model):
@@ -670,6 +679,9 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
         "map_numbers_repaired": len(repairs),
         "map_numbers_unverified": len(unverified),
         "unsupported_numbers": len(unsupported),
+        "reduce_groups": len(doc.two_pass.groups) if doc.two_pass else 0,
+        # two-pass (§4, D26): how pass-2 citations of a group resolved
+        **{f"pass2_{k}": (doc.two_pass.resolved.get(k, 0) if doc.two_pass else 0) for k in PASS2},
     }
     if spec.slides == "pdf":
         metrics["slide_alignment"] = alignment_accuracy(truth.slides, slides, ids, chunks.chunks)
@@ -935,21 +947,56 @@ class AskQuestion(_Model):
     after: list[str] = []  # earlier question ids whose turns are the history, oldest first
 
 
+_REGION = re.compile(r"^(.*) \((\w+)\)$")  # long meetings: "Open tickets (North)"
+ASK_SAMPLE = {"number": 12, "action": 6}  # long meetings: most questions asked per kind (6c)
+
+
 def _label(fact: TruthFact) -> tuple[str, str]:
-    return NUMBER_LABELS[fact.text.rsplit(": ", 1)[0]]
+    """(English, German) question label; a long meeting's region names which one."""
+    label = fact.text.rsplit(": ", 1)[0]
+    if label in NUMBER_LABELS:  # "Page load (ms)" is a quick label, not a region
+        return NUMBER_LABELS[label]
+    if m := _REGION.match(label):
+        en, de = NUMBER_LABELS[m.group(1)]
+        return f"{en} for the {m.group(2)} region", f"{de} in der Region {m.group(2)}"
+    return NUMBER_LABELS[label]
+
+
+def _action_question(fact: TruthFact, by_due: bool) -> str:
+    if not by_due:
+        return f"What does {fact.owner} need to do?"
+    due = fact.due or ""
+    due = f"the {due}" if due.startswith("end of") else due
+    return f"What does {fact.owner} need to do by {due}?"
+
+
+def sample(facts: list[TruthFact], n: int) -> list[TruthFact]:
+    """At most n facts, evenly spread over the meeting (all of them when there are ≤ n)."""
+    if len(facts) <= n:
+        return facts
+    return [facts[i * len(facts) // n] for i in range(n)]
 
 
 def ask_questions(truth: Truth) -> list[AskQuestion]:
     """The item's Ask questions, deterministic from truth.json."""
-    numbers = [f for f in truth.facts if f.kind == "number"]
-    actions = [f for f in truth.facts if f.kind == "action"]
+    numbers = sample([f for f in truth.facts if f.kind == "number"], ASK_SAMPLE["number"])
+    # long-en gives owners several tasks: the question names the due date too, and is asked
+    # only when owner and due pick out one task.
+    all_actions = [f for f in truth.facts if f.kind == "action"]
+    owners = Counter(f.owner for f in all_actions)
+    pairs = Counter((f.owner, f.due) for f in all_actions)
+    actions = [f for f in all_actions if pairs[(f.owner, f.due)] == 1]
+    actions = sample(actions, ASK_SAMPLE["action"])
     out = [
         AskQuestion(id=f"n-{f.id}", kind="number", question=f"What is {_label(f)[0]}?", fact=f.id)
         for f in numbers
     ]
     out += [
         AskQuestion(
-            id=f"a-{f.id}", kind="action", question=f"What does {f.owner} need to do?", fact=f.id
+            id=f"a-{f.id}",
+            kind="action",
+            question=_action_question(f, owners[f.owner] > 1),
+            fact=f.id,
         )
         for f in actions
     ]
@@ -1160,7 +1207,7 @@ def _answer_entry(a: ask.Answer) -> dict[str, Any]:
         "language": a.language,
         "prompt_tokens": a.prompt_tokens,
         "turns_dropped": a.turns_dropped,
-        "transcript_limit": a.transcript_limit,
+        "ranked": a.ranked,
         "dropped_citations": a.dropped_citations,
         "raw": a.raw,
     }
@@ -1173,7 +1220,7 @@ def _answer_from(question: str, entry: Mapping[str, Any]) -> ask.Answer:
         language=entry["language"],
         prompt_tokens=entry["prompt_tokens"],
         turns_dropped=entry["turns_dropped"],
-        transcript_limit=entry["transcript_limit"],
+        ranked=[tuple(t) for t in r] if (r := entry.get("ranked")) is not None else None,
         dropped_citations=entry["dropped_citations"],
         raw=entry["raw"],
     )
@@ -1330,6 +1377,8 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         "map_numbers_repaired": total("map_numbers_repaired"),
         "map_numbers_unverified": total("map_numbers_unverified"),
         "unsupported_numbers": total("unsupported_numbers"),
+        "reduce_groups": total("reduce_groups"),
+        **{f"pass2_{k}": total(f"pass2_{k}") for k in PASS2},
         # judge (secondary, not in the gate): None when the set wasn't judged
         "support_rate": round(yes / cited, 4) if judged and cited else None,
         "support_partial": total("support_partial") if judged else None,
@@ -1746,9 +1795,16 @@ def write_report(report: Report, root: Path = Path()) -> Path:
     return path
 
 
+def baseline_path(set_name: str, root: Path = Path()) -> Path:
+    """evals/baseline.json for quick; evals/baseline-<set>.json for any other set."""
+    return root / (
+        BASELINE if set_name == "quick" else BASELINE.with_name(f"baseline-{set_name}.json")
+    )
+
+
 def write_baseline(report: Report, root: Path = Path()) -> Path:
-    """Rewrite evals/baseline.json. Commit it only with the reason (§18); not before Phase 6."""
-    path = root / BASELINE
+    """Rewrite the set's baseline. Commit it only with the reason (§18)."""
+    path = baseline_path(report.set, root)
     atomic.write_text(path, report.model_dump_json(indent=2) + "\n")
     return path
 
