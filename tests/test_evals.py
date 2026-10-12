@@ -331,9 +331,16 @@ def test_baseline_thresholds() -> None:
     assert "citation_accuracy" in compare(report(citation_accuracy=0.91), old)[0]
     assert compare(report(made_up_items=2), old) == []  # D16: +2 allowed (noise 1)
     assert "made_up_items" in compare(report(made_up_items=3), old)[0]
-    ask = report(ask_accuracy=0.98, ask_citation_accuracy=1.0, ask_near_miss=1.0)
+    ask = report(ask_accuracy=0.98, ask_citation_accuracy=1.0, ask_near_miss=7 / 12)
     assert (
-        compare(report(ask_accuracy=0.93, ask_citation_accuracy=0.97, ask_near_miss=0.0), ask) == []
+        compare(report(ask_accuracy=0.93, ask_citation_accuracy=0.97, ask_near_miss=5 / 12), ask)
+        == []
+    )  # D24: near-miss may lose 2 of 12
+    assert "ask_near_miss" in compare(report(ask_near_miss=4 / 12), ask)[0]
+    assert compare(report(made_up_open_questions=2), report(made_up_open_questions=0)) == []
+    assert (
+        "made_up_open_questions"
+        in compare(report(made_up_open_questions=3), report(made_up_open_questions=0))[0]
     )
     regressions = compare(report(ask_accuracy=0.92, ask_citation_accuracy=0.96), ask)
     assert ["ask_accuracy" in regressions[0], "ask_citation_accuracy" in regressions[1]] == [

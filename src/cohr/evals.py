@@ -66,16 +66,19 @@ FRAME_S = 0.01  # VAD F1 frame size
 # Release-gate thresholds (§18, D16): each is max(PLAN default, 2 × the run-to-run noise of
 # 3 quick runs with pipeline seeds 1–3, same media; NOTES.md 6a). Rates: the largest drop
 # allowed (points); counts: the largest rise allowed; stages: the largest slowdown (share).
-# Report-only (not here): the one-question-per-item Ask rates (follow-up, German alone and
-# after history, near-miss: 25-point steps on quick) and the judge metrics (D15, no margin).
+# 6b (D24, same rule on the 6b media and final config): near-miss (3 per item) and made-up
+# open questions. Report-only (not here): the one-question-per-item Ask rates (follow-up,
+# German alone and after history: 25-point steps on quick) and the judge metrics (D15).
 MAX_DROP: dict[str, float] = {
     "fact_recall": 0.059,  # noise 2.94 points
     "citation_accuracy": 0.03,  # noise 0
     "ask_accuracy": 0.05,  # noise 0; Ask has no PLAN default: fact recall's
     "ask_citation_accuracy": 0.03,  # noise 0; citation accuracy's default
+    "ask_near_miss": 0.167,  # D24: noise 8.3 points (7, 7, 6 of 12)
 }
 MAX_RISE: dict[str, float] = {
     "made_up_items": 2,  # noise 1 (4, 3, 3)
+    "made_up_open_questions": 2,  # D24: noise 1 (0, 1, 0)
     "uncited_claims": 0,  # noise 0
     "gap_words_per_min": 0.0,  # noise 0
 }
