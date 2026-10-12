@@ -19,8 +19,8 @@ GapKind = Literal["silence", "noise", "music"]
 
 VOICES = ("Samantha", "Daniel", "Karen")  # en_US, en_GB, en_AU (`say -v '?'`)
 # One common spelling each: "Sofia" came back as "Sophia" and "Priya" as "Kreia" (4b-1 run 1),
-# and an owner is matched exactly.
-OWNERS = ("Tom", "Elena", "Omar", "Kenji", "Nadia", "Victor", "Grace", "Laura")
+# "Elena" as "Eleanor" (6b, 4 of 9 say/ASR round trips), and an owner is matched exactly.
+OWNERS = ("Tom", "Maria", "Omar", "Kenji", "Nadia", "Victor", "Grace", "Laura")
 PROJECTS = ("Atlas", "Borealis", "Cedar", "Harbor", "Juniper", "Meridian")
 
 
