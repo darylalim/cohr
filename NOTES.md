@@ -1211,3 +1211,23 @@ Seeds 2 and 3 pass against the seed-1 baseline.
 - 6c kickoff prompt (long meetings). Carry over: Map coverage on long/dense segments (4a), the
   slide-conflict value in Map (4b), Reduce bundling several facts into one claim (citation
   noise), and whether citation accuracy's gate should follow its new noise.
+
+## 2026-10-11 · Phase 6c kickoff prompt (no code)
+
+### Plan changes
+- §21 kickoff prompt for 6c; §9 6c bullet updated and points to it.
+- Carry-overs from 6b, split (user): Reduce bundling several facts into one claim and the
+  citation-accuracy gate go first in 6c (step 0, D25), because citation accuracy is how two-pass
+  is judged and its noise (7.1 points) is above its gate (3). Map coverage on dense segments,
+  the due-date misread and the slide-conflict value go to a new **6b-2: Map fixes** after 6c.
+- New decisions D25 (citation gate after the bundling fix), D26 (two-pass grouping), D27 (Ask
+  ranking under the cap); D17 (FTS5 in uv's Python) moves from Phase 7 to 6c, since Ask ranking
+  needs it.
+- Fast loop: a lowered `reduce.max_input_tokens` forces two-pass Reduce and Ask ranking on the
+  5-minute quick items; long-en (~2.5 h, audio + PDF, own `long` set, ~40 min of pipeline per
+  run) only confirms, at most three runs, report-only baseline (evals/baseline-long.json).
+- The generator's word lists can't give unique facts over 2.5 h; long-en widens them while
+  quick scripts stay identical (any evals/gen edit regenerates quick media).
+
+### Next
+- Phase 6c in a new session with the §21 prompt.
