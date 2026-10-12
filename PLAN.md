@@ -1062,10 +1062,16 @@ compared with a committed baseline:
   bundled key points (Reduce copies them; key-point citations land on the bundle, 6b-2); pass 2
   of two-pass dropping about a third of pass 1's decisions on `long-en`; near-miss under the cap
   (4/12 vs 7/12); `long-en` German-after-history (0/1).
-- **6b-2: Map fixes** (after 6c, from 6b): Map dropping facts on long, dense segments (~280 s,
-  7 topics: ~7 key points kept), the due-date misread ("22nd" → "2nd"), and the slide-conflict
-  value (Map repeats the misspoken number although the slide is in its input). Map prompt
-  changes move every metric: one re-baseline per kept change.
+- **6b-2: Map fixes** (after 6c, from 6b and 6c): measurement first (each planted fact's path
+  transcript → Map → notes, and whether Map replies hit `map.max_tokens`); then Map's bundled
+  key points (6c: Reduce copies them, so key-point citations land on the bundle), Map dropping
+  facts on long, dense segments (~280 s, 7 topics: ~7 key points kept), the due-date misread
+  ("22nd" → "2nd"), and the slide-conflict value (Map repeats the misspoken number although the
+  slide is in its input). Then `long-en` (Map changes change it): whether two-pass pass 2 still
+  drops about a third of pass 1's decisions, re-baselined report-only. Map prompt changes move
+  every metric: one re-baseline per kept change. Not in 6b-2: Ask near-miss under the cap
+  (4/12 vs 7/12) and `long-en` German-after-history (one question), left for 6e's long-meeting
+  check. Kickoff prompt in §21.
 - **6d: languages.** "Other (beta)" target languages with translation that keeps citations
   (§5.6); the `xling-{es,ja}` and `en → {de,ar}` items; optional regional Map models (§5.5):
   `map_model_by_lang` filled only for languages that pass D18 (may stay empty).
@@ -2298,4 +2304,51 @@ Rules from CLAUDE.md apply. Ask me before `cohr eval --set full`, the opt-in mod
 model downloads or new dependencies. quick runs are fine.
 When done: tick the checklist, fill D17 and D25–D27 in §20, add a NOTES.md entry, make sure the
 gate passes, and open a PR (ask before pushing). Stop there; 6b-2 (Map fixes) is separate.
+```
+
+### Kickoff prompt for Phase 6b-2 (Map fixes)
+```text
+Continue cohr: Phase 6b-2 (Map fixes). Read CLAUDE.md, then PLAN.md §5.5 (Map), §9 (the 6b-2
+bullet), §18 (gate, long-en), §20 (D12, D16, D20, D24–D26) and the latest NOTES.md entries
+(Phase 6b and 6c). Work on branch phase-6b-2-map.
+Quick evals run with `-c seed=1` against evals/baseline.json (iterate with --item, --no-judge,
+--no-ask; full quick with Ask + judge, ~12 min, before each baseline update). Map runs at
+temperature 0.3 with the pipeline seed, and a Map change re-runs Map and Reduce and re-asks
+every Ask question. Commit each step separately; every kept Map change gets its own baseline
+commit with the reason and before/after numbers (map.md moves every metric).
+0. Measure first, no fixes. For each quick item (seed 1), trace every planted fact:
+   transcript (ASR right?) → Map segment notes (which list; bundled with what) → notes.json
+   (section, citation). Count Map key points per segment and facts per key point, and check
+   whether any Map reply hit map.max_tokens (1024) or fell back to raw. Put the table in
+   NOTES.md; it decides the order of steps 1–4.
+1. Bundled key points (6c: "Support Queue: 390 open tickets … Laura to send contract to legal
+   by Friday." is one Map key point, and Reduce copies it word for word, so the citation lands
+   on the bundle): in map.md, one fact per key point (a figure with what it measures), and
+   decisions and tasks only in their own lists. Pass: citation accuracy up or equal, fact
+   recall and every gated metric within their gate.
+2. Dense segments (6b: the ~280 s first segment with 7 topics keeps ~7 key points and drops
+   decisions and actions): follow step 0. If replies are cut at max_tokens, raise
+   map.max_tokens (a config change: say so in the commit). If not, try the prompt first (list
+   every decision and task said in this part). A smaller fuse.window_s was worse in D12; a
+   second Map pass per topic is a last resort: ask me first. Pass: recall up, no gated metric
+   outside its gate.
+3. Due-date misread ("by the 22nd of November" → "November 2nd"): prompt first. If it stays,
+   extend the number guard (§5.5, D20) to dues: a due whose day number is in no source is
+   repaired when exactly one spoken day is one digit edit away, else flagged (pure Python,
+   unit tested; a MapFile change bumps its FORMAT_VERSION and regenerates the snapshots).
+4. Slide-conflict value (6b: Map writes the misspoken $80,000 although the slide row
+   "Approved budget | $18,000" is in its input): prompt first (when a slide table row names the
+   figure being spoken about, use the slide's value). A pure-Python guard that changes values
+   (a Map number matching the spoken value while the slide row with the same label has
+   another) only after asking me.
+5. long-en: Map changes change it. Tell me before each long run, at most two. First, one full
+   run: does pass 2 still drop about a third of pass 1's decisions (6c: Map 19/20 → pass 1 15 →
+   pass 2 10)? If so, try reduce_pass2.md with Reduce-only reruns (--no-ask, tell me before
+   each; they don't count toward the two). Then commit the final long report as
+   evals/baseline-long.json (report-only) with the reason.
+If a fix doesn't pass, revert it and record what was tried, and move on.
+Rules from CLAUDE.md apply. Ask me before `cohr eval --set full`, the opt-in model tests, new
+model downloads or new dependencies. quick runs are fine.
+When done: tick the checklist, add any new decision to §20, add a NOTES.md entry, make sure
+the gate passes, and open a PR (ask before pushing). Stop there; 6d (languages) is separate.
 ```
