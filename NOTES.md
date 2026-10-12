@@ -1109,3 +1109,105 @@ default kept). Seeds 2 and 3 pass `compare()` against the seed-1 baseline.
 
 ### Next
 - Phase 6b in a new session with the §21 prompt.
+
+## 2026-10-11 · Phase 6b (quality fixes)
+
+Every eval with `-c seed=1` against `evals/baseline.json`; each baseline update is its own
+commit with the reason and before/after numbers.
+
+### 1. Measurement first
+- **Planted open questions** (`evals/gen`): 1–2 per item from `OPEN_QUESTIONS` ("One thing we
+  haven't settled: should we …?" and two other templates), on their own RNG
+  (`Random(f"{seed}-open-questions")`) so decisions, actions and numbers stay as they were
+  (test). No numbers and no content word shared with a decision or task (test). Quick plants 5.
+  Scored as `recall_open_question` (Open questions section, overlap ≥ 0.6) and
+  `made_up_open_questions` (claims there matching no planted one); kept out of fact recall and
+  citation accuracy (`RECALL_KINDS`), judge-only cross-language like decisions.
+- **Near-miss:** every `NEAR_MISS` template per item, each on another number from the last (12
+  per quick set, ids `near-miss-1..3`).
+- Re-baselined ("generator: planted open questions"): open-question recall 5/5, made-up open
+  questions 5 (all filler: "how should we handle seasonality …"), near-miss 0/12.
+- Gate (user): both enter the gate after the fixes, with thresholds from 3 seeds on the final
+  config (D24).
+
+### 2. Ask: near-miss (ask.md)
+- Kept: "each number belongs to the period and team the documents give for it; another period
+  or team → the meeting doesn't have that number: say so, then the number with its own
+  period", plus one off-domain worked example (Android installs in 2023). **Near-miss 0/12 →
+  7/12**; Ask accuracy 98.1%, citation 100%, follow-up 75%, German alone / after history
+  100% / 100%, all unchanged. German answers checked by eye: right values, in German (two keep
+  English thousands separators, as before).
+- Tried and dropped: a fixed opener ("start with 'The meeting doesn't give'") plus a check of
+  period, team, person and budget. Near-miss went up, but R7B then refused "What does Elena need
+  to do?" because the transcript says "Eleanor" (ASR), and kept refusing with a name rule, the
+  rule as its own bullet and a contrasting name example (5 versions). Rules that name a refusal
+  phrase prime refusals in R7B.
+- Still failing: team questions ("candidates in the pipeline for the marketing team is 75"),
+  and "two years ago" answered with last quarter's value *labelled as last quarter* (the
+  scorer counts it: no "not given" marker before the number).
+
+### 3. Filler → open questions (map.md, not reduce.md)
+- The made-up questions are made by **Map** (`map.json` open_questions); Reduce copies Map's
+  list word for word. Two reduce.md rules ("only questions someone asked and left open"; "the
+  part notes' lists were written by another model, keep one only with a transcript sentence")
+  changed nothing: same 5, same text.
+- Moved to map.md (user): `open_questions` = "questions a participant asked and left
+  unresolved in this part; a remark about a topic or a trend is not one". **Made-up open
+  questions 5 → 0**, open-question recall 5/5 → 4/5 (missed "One thing we haven't settled
+  should we run the user conference online?", ASR dropped the colon; "or said are not settled
+  yet" didn't bring it back), fact recall 82.3 → 83.8%, made-up items 6 → 4, support rate
+  88.2 → 93.2%. Reduce's config hash didn't move (test_ask pin unchanged).
+
+### 4. Causes (no fix)
+- **a. "Reduce dropping facts Map has right": not Reduce.** Fit: ~4.3K prompt tokens of 32K,
+  nothing trimmed. On the 6b baseline every missed fact is upstream:
+  - **Map drops facts on long segments.** Fuse gives a ~280 s first segment (7 topics) and a
+    ~70 s second one; Map's notes for segment 0 list ~7 key points and drop the rest (noisy-en:
+    MRR $248,000 and the venue action; slide-conflict-en: two actions and a decision;
+    pdf-slides-en: the Maria action, ASR right). D12 already found 120 s windows worse; a
+    real fix is Map coverage on dense segments (e.g. a per-topic list or a second pass), not
+    a window tweak. For 6c (two-pass work) or later.
+  - **Map misreads a due date:** "by the 22nd of November" → "November 2nd" (the number guard
+    covers numbers, not dues).
+  - **ASR: "Elena" → "Eleanor"** (say + ASR round trip: 5 of 9). Replaced by **Maria** (9 of 9)
+    in `OWNERS` (user), re-baselined.
+- **b. Slide conflict:** the slide document reaching R7B has the right **$18,000**; Map's
+  segment-0 note says "$80,000 (80,000)" from the misspoken transcript although that slide was
+  in its input. R7B then sees $80,000 twice (Map note + transcript) against $18,000 once. Not a
+  clear fix: Map would need to link a slide row ("Approved budget") to the spoken value.
+- Side finding: slide 1 on slide-conflict-en is the vision fallback (unparseable JSON kept as raw
+  text, by design); its values are still right.
+
+### Baseline after the Maria swap
+Regenerated media (every line re-synthesized) is a new sample: against the previous baseline it
+**failed citation accuracy 98.2 → 92.9%**. Cause: on the new clean-en, Reduce wrote run-on key
+points bundling 3–4 facts per claim ("Support Queue: 390 open tickets … New logo … Laura to
+send contract …"), each citing one point, so 3 number facts land 19–35 s off. Re-baselined
+with the failure stated in the commit.
+
+### D24 runs (quick, final config, `-c seed=1|2|3`, Ask, no judge for 2/3)
+| Metric | seed 1 | seed 2 | seed 3 | noise |
+|---|---|---|---|---|
+| fact recall | 82.3% | 85.3% | 85.3% | 2.9 |
+| citation accuracy | 92.9% | 96.6% | 100% | **7.1** |
+| made-up items | 2 | 1 | 1 | 1 |
+| made-up open questions | 0 | 1 | 0 | 1 |
+| open-question recall | 4/5 | 5/5 | 4/5 | 20 |
+| Ask accuracy | 98.1% | 96.2% | 98.1% | 1.9 |
+| near-miss | 7/12 | 7/12 | 6/12 | 8.3 |
+| reduce / vision s/audio h | | | | 21% / 21% |
+Seeds 2 and 3 pass against the seed-1 baseline.
+
+### Decisions (PLAN §20)
+- D24: near-miss −16.7 points, made-up open questions +2. Citation accuracy noise (7.1) is now
+  above its D16 gate (3); left at 3 for now (seed 1 is the low point, so later runs tend to
+  pass), to revisit.
+
+### Plan changes
+- Status line; §9 6b done; §18 open-questions row, Ask row (3 near-misses), gate text; §20 D24;
+  evals/README metrics.
+
+### Next
+- 6c kickoff prompt (long meetings). Carry over: Map coverage on long/dense segments (4a), the
+  slide-conflict value in Map (4b), Reduce bundling several facts into one claim (citation
+  noise), and whether citation accuracy's gate should follow its new noise.

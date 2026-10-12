@@ -10,7 +10,7 @@ Return only a JSON object, with no other text, using exactly these keys:
 - "action_items": tasks someone will do. Take "owner" and "due" only from the sentence that gives that task; use null when that sentence doesn't state them. Never reuse another task's owner or due date.
 - "due": copy the words that were said, for example "Friday", "end of next week" or "the 3rd of June". Never turn them into a calendar date: no numeric dates like 2025-06-03 and never add a year.
 - Only list an action item when someone is asked or agrees to do something. Something that already happened (for example "the dashboard was updated on Monday") is not an action item.
-- "open_questions": questions raised and not resolved.
+- "open_questions": questions a participant asked and left unresolved in this part. A remark about a topic or a trend is not an open question, and neither is a question you would ask about it. Use [] when nobody asked one.
 - "terms": names, products and technical terms mentioned.
 - Use [] for any list with nothing in it.
 

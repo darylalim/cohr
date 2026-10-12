@@ -66,16 +66,19 @@ FRAME_S = 0.01  # VAD F1 frame size
 # Release-gate thresholds (§18, D16): each is max(PLAN default, 2 × the run-to-run noise of
 # 3 quick runs with pipeline seeds 1–3, same media; NOTES.md 6a). Rates: the largest drop
 # allowed (points); counts: the largest rise allowed; stages: the largest slowdown (share).
-# Report-only (not here): the one-question-per-item Ask rates (follow-up, German alone and
-# after history, near-miss: 25-point steps on quick) and the judge metrics (D15, no margin).
+# 6b (D24, same rule on the 6b media and final config): near-miss (3 per item) and made-up
+# open questions. Report-only (not here): the one-question-per-item Ask rates (follow-up,
+# German alone and after history: 25-point steps on quick) and the judge metrics (D15).
 MAX_DROP: dict[str, float] = {
     "fact_recall": 0.059,  # noise 2.94 points
     "citation_accuracy": 0.03,  # noise 0
     "ask_accuracy": 0.05,  # noise 0; Ask has no PLAN default: fact recall's
     "ask_citation_accuracy": 0.03,  # noise 0; citation accuracy's default
+    "ask_near_miss": 0.167,  # D24: noise 8.3 points (7, 7, 6 of 12)
 }
 MAX_RISE: dict[str, float] = {
     "made_up_items": 2,  # noise 1 (4, 3, 3)
+    "made_up_open_questions": 2,  # D24: noise 1 (0, 1, 0)
     "uncited_claims": 0,  # noise 0
     "gap_words_per_min": 0.0,  # noise 0
 }
@@ -143,7 +146,7 @@ class TruthLine(_Model):
 
 class TruthFact(_Model):
     id: str
-    kind: Literal["decision", "action", "number"]
+    kind: Literal["decision", "action", "number", "open_question"]
     text: str
     owner: str | None = None
     due: str | None = None
@@ -298,7 +301,12 @@ HOME: dict[str, tuple[Section, ...]] = {
     "decision": ("decisions",),
     "action": ("action_items",),
     "number": ("key_points", "decisions", "action_items", "summary", "open_questions"),
+    "open_question": ("open_questions",),
 }
+# Kinds in fact recall and citation accuracy (the gated metrics). Planted open questions (6b)
+# have their own recall, so adding them to the generator didn't change what these measure.
+RECALL_KINDS = ("decision", "action", "number")
+TEXT_KINDS = ("decision", "open_question")  # matched by text only: judge-only cross-language
 
 
 def claims_by_section(doc: NotesDoc) -> dict[Section, list[Claim]]:
@@ -340,7 +348,7 @@ def score_facts(
     sections = claims_by_section(doc)
     out = []
     for fact in facts:
-        judge_only = cross_language and fact.kind == "decision"
+        judge_only = cross_language and fact.kind in TEXT_KINDS
         result = FactResult(
             id=fact.id, kind=fact.kind, text=fact.text, found=False, judge_only=judge_only
         )
@@ -385,6 +393,21 @@ def made_up(
                 continue
             made.append(claim.text)
     return made, wrong
+
+
+def made_up_questions(
+    facts: Sequence[TruthFact], doc: NotesDoc, cross_language: bool = False
+) -> list[str]:
+    """Open-questions claims that match no planted open question (token overlap). Filler talk
+    turned into a question lands here (4b-2). Cross-language: not checkable without the judge."""
+    if cross_language:
+        return []
+    planted = [f for f in facts if f.kind == "open_question"]
+    return [
+        c.text
+        for c in doc.sections.open_questions
+        if not any(fact_fit(c, f) == "match" for f in planted)
+    ]
 
 
 def _owner_unknown(claim: Claim, facts: Sequence[TruthFact]) -> bool:
@@ -548,6 +571,7 @@ class ItemReport(_Model):
     metrics: dict[str, float | int | None]
     facts: list[FactResult]
     made_up: list[str]
+    made_up_questions: list[str] = []  # open questions matching no planted one (6b)
     wrong_fields: list[str]
     uncited: list[str]
     gap_texts: list[str]
@@ -611,11 +635,12 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
     ids = match_slides(truth.slides, slides)
     facts = score_facts(truth.facts, doc, ids, cross)
     made, wrong = made_up(truth.facts, doc, cross)
+    made_q = made_up_questions(truth.facts, doc, cross)
     words, texts = gap_text(transcript, truth.gap_spans)
     gap_min = sum(g.t1 - g.t0 for g in truth.gap_spans) / 60
     all_claims = [c for name in SECTIONS for c in getattr(doc.sections, name)]
     uncited = [c.text for c in all_claims if not c.citations]
-    scored = [f for f in facts if not f.judge_only]
+    scored = [f for f in facts if not f.judge_only and f.kind in RECALL_KINDS]
     found = [f for f in scored if f.found]
     lang = notes_language(doc, {spec.language, spec.target, "en"})
     repairs = [f"{r.original} → {r.repaired}" for n in map_notes for r in n.number_repairs]
@@ -632,6 +657,7 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
         "claims": len(all_claims),
         "uncited_claims": len(uncited),
         "made_up_items": len(made),
+        "made_up_open_questions": None if cross else len(made_q),
         "wrong_owner_or_due": len(wrong),
         "judge_only_facts": sum(f.judge_only for f in facts),
         "vad_speech_f1": round(speech_f1(truth.speech_spans, chunks.chunks, truth.duration_s), 4),
@@ -647,8 +673,8 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
     }
     if spec.slides == "pdf":
         metrics["slide_alignment"] = alignment_accuracy(truth.slides, slides, ids, chunks.chunks)
-    for kind in ("decision", "action", "number"):
-        of_kind = [f for f in scored if f.kind == kind]
+    for kind in (*RECALL_KINDS, "open_question"):
+        of_kind = [f for f in facts if f.kind == kind and not f.judge_only]
         metrics[f"recall_{kind}"] = (
             sum(f.found for f in of_kind) / len(of_kind) if of_kind else None
         )
@@ -671,6 +697,7 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
         metrics={k: round(v, 4) if isinstance(v, float) else v for k, v in metrics.items()},
         facts=facts,
         made_up=made,
+        made_up_questions=made_q,
         wrong_fields=wrong,
         uncited=uncited,
         gap_texts=texts,
@@ -959,16 +986,18 @@ def ask_questions(truth: Truth) -> list[AskQuestion]:
                 after=history,
             )
         )
-        miss = numbers[-1]
-        template = NEAR_MISS[int(hashlib.sha256(truth.item.id.encode()).hexdigest(), 16) % 3]
-        out.append(
-            AskQuestion(
-                id="near-miss",
-                kind="near_miss",
-                question=template.format(label=_label(miss)[0]),
-                fact=miss.id,
+        # Every template, each on another number (the last ones), so one item asks three
+        # near-misses (6b: one per item was a 25-point step).
+        for i, template in enumerate(NEAR_MISS):
+            miss = numbers[-1 - i % len(numbers)]
+            out.append(
+                AskQuestion(
+                    id=f"near-miss-{i + 1}",
+                    kind="near_miss",
+                    question=template.format(label=_label(miss)[0]),
+                    fact=miss.id,
+                )
             )
-        )
     return out
 
 
@@ -1257,7 +1286,8 @@ class Report(_Model):
 
 def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
     """Micro averages over items: recall over all facts, accuracy over all found facts."""
-    facts = [f for it in items for f in it.facts if not f.judge_only]
+    scored = [f for it in items for f in it.facts if not f.judge_only]
+    facts = [f for f in scored if f.kind in RECALL_KINDS]
     found = [f for f in facts if f.found]
 
     def total(key: str) -> int:
@@ -1268,7 +1298,7 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         return round(sum(vals) / len(vals), 4) if vals else None
 
     def recall(kind: str) -> float | None:
-        of_kind = [f for f in facts if f.kind == kind]
+        of_kind = [f for f in scored if f.kind == kind]
         return round(sum(f.found for f in of_kind) / len(of_kind), 4) if of_kind else None
 
     gap_min = sum(float(it.metrics.get("gap_minutes") or 0.0) for it in items)
@@ -1285,6 +1315,7 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         ),
         "uncited_claims": total("uncited_claims"),
         "made_up_items": total("made_up_items"),
+        "made_up_open_questions": total("made_up_open_questions"),
         "wrong_owner_or_due": total("wrong_owner_or_due"),
         "gap_words": total("gap_words"),
         "gap_words_per_min": round(total("gap_words") / gap_min, 2) if gap_min else 0.0,
@@ -1295,7 +1326,7 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         "slide_number_recall": mean("slide_number_recall"),
         "slide_alignment": mean("slide_alignment"),
         "output_language_ok": mean("output_language_ok"),
-        **{f"recall_{kind}": recall(kind) for kind in ("decision", "action", "number")},
+        **{f"recall_{kind}": recall(kind) for kind in (*RECALL_KINDS, "open_question")},
         "map_numbers_repaired": total("map_numbers_repaired"),
         "map_numbers_unverified": total("map_numbers_unverified"),
         "unsupported_numbers": total("unsupported_numbers"),
@@ -1400,6 +1431,7 @@ PCT_KEYS = {
     "recall_decision",
     "recall_action",
     "recall_number",
+    "recall_open_question",
     "support_rate",
     "judge_recall",
     "ask_accuracy",
@@ -1443,6 +1475,7 @@ def render_markdown(report: Report) -> str:
         "fact_recall",
         "citation_accuracy",
         "made_up_items",
+        "made_up_open_questions",
         "uncited_claims",
         "gap_words",
         "wer",
@@ -1486,6 +1519,7 @@ def render_markdown(report: Report) -> str:
             missed
             or off
             or it.made_up
+            or it.made_up_questions
             or it.uncited
             or it.gap_texts
             or it.conflict
@@ -1499,6 +1533,7 @@ def render_markdown(report: Report) -> str:
         lines += [f"- missed {f.kind}: {f.text}" for f in missed]
         lines += [f"- citation off by {_num(f.t_error)} s: {f.text}" for f in off]
         lines += [f"- made up: {t}" for t in it.made_up]
+        lines += [f"- made-up open question: {t}" for t in it.made_up_questions]
         lines += [f"- wrong owner/due: {t}" for t in it.wrong_fields]
         lines += [f"- uncited: {t}" for t in it.uncited]
         lines += [f"- text in a gap: {t}" for t in it.gap_texts]

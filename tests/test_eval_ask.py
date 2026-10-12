@@ -100,12 +100,16 @@ def test_questions_are_deterministic_and_cover_every_kind() -> None:
     assert by_id["followup"].after == ["a-a1"] and by_id["followup"].fact == "a1"
     assert by_id["de-alone"].question == "Wie hoch ist das genehmigte Budget?"
     assert by_id["de-history"].fact == "n2" and by_id["de-history"].after == ["a-a1", "followup"]
-    assert by_id["near-miss"].fact == "n2"
-    assert "number of open tickets" in by_id["near-miss"].question
     assert not any(q.kind == "number" and q.fact == "d1" for q in qs)  # decisions: no question
-    # The near-miss template depends only on the item id.
-    templates = {evals.ask_questions(truth(i))[-1].question.split(" ")[1] for i in "abcdefgh"}
-    assert len(templates) > 1
+    # Every near-miss template, each on another number from the last, wrapping around.
+    misses = [q for q in qs if q.kind == "near_miss"]
+    assert [q.question for q in misses] == [
+        "What was the number of open tickets two years ago?",
+        "What is the approved budget for the marketing team?",
+        "What is the number of open tickets for next year?",
+    ]
+    assert [q.fact for q in misses] == ["n2", "n1", "n2"]
+    assert [q.id for q in misses] == ["near-miss-1", "near-miss-2", "near-miss-3"]
 
 
 def test_every_generator_label_has_question_words() -> None:
@@ -174,19 +178,19 @@ def test_near_miss_rule() -> None:
         Claim(text="There are 409 open tickets.", citations=seg(300.0, 1)),
         Claim(text="The meeting doesn't give the marketing team's number.", citations=[]),
     )
-    assert not score("near-miss", related_first).correct
+    assert not score("near-miss-1", related_first).correct
     not_given_first = answer(
         Claim(text="The meeting doesn't give the marketing team's number.", citations=[]),
         Claim(text="It gives 409 open tickets overall.", citations=seg(300.0, 1)),
     )
-    assert score("near-miss", not_given_first).correct
+    assert score("near-miss-1", not_given_first).correct
     same_sentence = answer(
         Claim(text="That isn't stated; overall there are 409 open tickets.", citations=[])
     )
-    assert score("near-miss", same_sentence).correct
+    assert score("near-miss-1", same_sentence).correct
     no_number = answer(Claim(text="Only the overall queue is discussed.", citations=[]))
-    assert score("near-miss", no_number).correct
-    r = score("near-miss", related_first)
+    assert score("near-miss-1", no_number).correct
+    r = score("near-miss-1", related_first)
     assert r.citation_ok is None and r.stated is False
 
 
@@ -299,17 +303,17 @@ def test_ask_item_end_to_end_and_cached(tmp_path: Path) -> None:
     assert by_id["n-n2"].stated and not by_id["n-n2"].citation_ok  # seg 0, fact at 300 s
     assert by_id["a-a1"].correct and by_id["followup"].correct
     assert by_id["de-alone"].correct and by_id["de-alone"].language == "de"
-    assert not by_id["de-history"].correct and by_id["near-miss"].correct
+    assert not by_id["de-history"].correct and by_id["near-miss-1"].correct
     # The follow-up saw the first answer as history; the German one saw both turns.
     follow = next(i for i in lm.instructions if "Question: Who owns that" in i)
     assert "Tom writes release notes." in follow
     de = next(i for i in lm.instructions if "Question: Wie hoch ist die Anzahl" in i)
     assert "Tom owns it, by Friday." in de and "Tom writes release notes." in de
     m = rep.metrics
-    assert m["ask_questions"] == 7 and m["ask_accuracy"] == round(2 / 3, 4)
+    assert m["ask_questions"] == 9 and m["ask_accuracy"] == round(2 / 3, 4)
     assert m["ask_followup"] == 1.0 and m["ask_near_miss"] == 1.0
     assert m["ask_xlang_alone"] == 1.0 and m["ask_xlang_history"] == 0.0
-    assert asker.calls == 7 and asker.hits == 0
+    assert asker.calls == 9 and asker.hits == 0
 
     # Re-scoring with nothing stale asks no model.
     def no_model(*_a: object) -> Answer:
@@ -318,7 +322,7 @@ def test_ask_item_end_to_end_and_cached(tmp_path: Path) -> None:
     cached = evals.CachedAsk(no_model)
     cached.open(evals.ask_cache(tmp_path, "t"))
     again = evals.ask_item(item_report_for("t"), truth(), run_dir, cached)
-    assert again == rep and cached.hits == 7 and cached.calls == 0
+    assert again == rep and cached.hits == 9 and cached.calls == 0
 
     # A run with another pipeline seed is a cache miss (D16 runs don't share answers).
     config = schemas.load(run_dir, schemas.Manifest)
@@ -327,7 +331,7 @@ def test_ask_item_end_to_end_and_cached(tmp_path: Path) -> None:
     other = evals.CachedAsk(lambda *_a: answer())
     other.open(evals.ask_cache(tmp_path, "t"))
     evals.ask_item(item_report_for("t"), truth(), run_dir, other)
-    assert other.calls == 7
+    assert other.calls == 9
 
 
 def test_ask_without_models_and_no_cache_is_a_clear_error(tmp_path: Path) -> None:
