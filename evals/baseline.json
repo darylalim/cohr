@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-11T13:38:54.483232-10:00",
+  "created_at": "2026-10-11T14:51:57.268947-10:00",
   "set": "quick",
-  "git_sha": "6877b04",
+  "git_sha": "8a7ce70-dirty",
   "overrides": {
     "seed": 1
   },
@@ -21,7 +21,7 @@
     "judge": "9376307c9b8d",
     "judge_coverage": "e5750994ae0f",
     "judge_retry": "4b4aaa239c8a",
-    "ask": "67ff211559ff",
+    "ask": "45768f3bca24",
     "ask_history": "bb8257c0d925",
     "ask_turn": "22e8777ef3d8"
   },
@@ -66,7 +66,7 @@
         "ask_followup": 1.0,
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
-        "ask_near_miss": 0.0,
+        "ask_near_miss": 0.6667,
         "cited_claims": 21,
         "support_rate": 0.8571,
         "support_partial": 0,
@@ -688,7 +688,7 @@
           "kind": "action",
           "question": "What does Omar need to do?",
           "fact": "f5",
-          "answer": "Omar needs to draft the hiring plan by the end of next week.",
+          "answer": "The meeting doesn't give any information about what Omar needs to do. It says Omar will draft the hiring plan by the end of next week.",
           "citations": [
             "seg 0 @99.12"
           ],
@@ -703,7 +703,7 @@
           "kind": "action",
           "question": "What does Victor need to do?",
           "fact": "f8",
-          "answer": "Victor needs to write the release notes by the end of next week.",
+          "answer": "Victor needs to write release notes by the end of next week.",
           "citations": [
             "seg 0 @173.67"
           ],
@@ -795,16 +795,18 @@
           "kind": "near_miss",
           "question": "What was the number of new trial signups two years ago?",
           "fact": "f16",
-          "answer": "The number of new trial signups two years ago was 2,600.",
+          "answer": "The meeting doesn't give the number of new trial signups for two years ago. It says trial signups increased from 2,600 last month to 4,650 this month.",
           "citations": [
-            "seg 1 @312.12",
+            "seg 1 @307.96",
+            "slide 7",
+            "seg 1 @307.96",
             "slide 7"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true
         },
         {
           "id": "near-miss-2",
@@ -827,16 +829,16 @@
           "kind": "near_miss",
           "question": "What is the week-2 return rate for next year?",
           "fact": "f10",
-          "answer": "The week-2 return rate for trial users is 34%.",
+          "answer": "The meeting doesn't give the week-2 return rate for next year. It says the week-2 return rate for trial users is 34%.",
           "citations": [
             "seg 0 @216.12",
             "slide 5"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true
         }
       ],
       "stages": {
@@ -844,49 +846,49 @@
           "seconds": 1.48,
           "s_per_audio_hour": 14.9,
           "peak_mem_gb": null,
-          "reused": false
+          "reused": true
         },
         "vad": {
           "seconds": 2.52,
           "s_per_audio_hour": 25.3,
           "peak_mem_gb": 0.05,
-          "reused": false
+          "reused": true
         },
         "transcribe": {
           "seconds": 11.33,
           "s_per_audio_hour": 113.9,
           "peak_mem_gb": 5.63,
-          "reused": false
+          "reused": true
         },
         "vision": {
           "seconds": 39.65,
           "s_per_audio_hour": 398.9,
           "peak_mem_gb": 8.59,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 15.01,
           "s_per_audio_hour": 151.1,
           "peak_mem_gb": 11.68,
-          "reused": false
+          "reused": true
         },
         "reduce": {
           "seconds": 34.42,
           "s_per_audio_hour": 346.3,
           "peak_mem_gb": 16.76,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -930,7 +932,7 @@
         "ask_followup": 0.0,
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
-        "ask_near_miss": 0.0,
+        "ask_near_miss": 1.0,
         "cited_claims": 25,
         "support_rate": 0.96,
         "support_partial": 0,
@@ -1420,7 +1422,7 @@
           "kind": "number",
           "question": "What is the approved budget?",
           "fact": "f1",
-          "answer": "The approved budget for the next quarter is $75,500.",
+          "answer": "The approved budget for next quarter is $75,500.",
           "citations": [
             "seg 0 @12.41",
             "slide 0"
@@ -1468,7 +1470,7 @@
           "kind": "number",
           "question": "What is the number of open tickets?",
           "fact": "f9",
-          "answer": "The number of open tickets is 149.",
+          "answer": "The number of open support tickets is 149.",
           "citations": [
             "seg 0 @164.19",
             "slide 3"
@@ -1516,7 +1518,7 @@
           "kind": "number",
           "question": "What is the number of new trial signups?",
           "fact": "f13",
-          "answer": "The number of new trial signups this month is 4,450.",
+          "answer": "The number of new trial signups is 4,450.",
           "citations": [
             "seg 0 @269.3",
             "slide 6"
@@ -1623,7 +1625,7 @@
           "kind": "followup",
           "question": "Who owns that, and by when?",
           "fact": "f7",
-          "answer": "Nadia is the owner of the hiring plan and needs to draft it by 13 October.",
+          "answer": "Nadia needs to draft the hiring plan by 13 October.",
           "citations": [
             "seg 0 @195.59"
           ],
@@ -1670,48 +1672,48 @@
           "kind": "near_miss",
           "question": "What was the monthly recurring revenue two years ago?",
           "fact": "f16",
-          "answer": "The monthly recurring revenue was $161,000 last month.",
+          "answer": "The meeting doesn't give monthly recurring revenue for two years ago. It says the monthly recurring revenue is $248,000 last month (last month's monthly recurring revenue was $161,000).",
           "citations": [
-            "seg 1 @315.43",
+            "seg 1 @312.25",
             "slide 7"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true
         },
         {
           "id": "near-miss-2",
           "kind": "near_miss",
           "question": "What is the number of new trial signups for the marketing team?",
           "fact": "f13",
-          "answer": "The number of new trial signups for the marketing team is 4,450.",
+          "answer": "The meeting doesn't give the number of new trial signups for the marketing team. It says new trial signups this month is 4,450.",
           "citations": [
             "seg 0 @269.3",
             "slide 6"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true
         },
         {
           "id": "near-miss-3",
           "kind": "near_miss",
           "question": "What is the page load time for next year?",
           "fact": "f12",
-          "answer": "The average page load time is 370 milliseconds.",
+          "answer": "The meeting doesn't give the page load time for next year. It says the average page load time is 370 milliseconds, compared to 650 milliseconds last release.",
           "citations": [
             "seg 0 @234.78",
             "slide 5"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true
         }
       ],
       "stages": {
@@ -1719,49 +1721,49 @@
           "seconds": 1.44,
           "s_per_audio_hour": 14.4,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "vad": {
           "seconds": 2.03,
           "s_per_audio_hour": 20.2,
           "peak_mem_gb": 15.41,
-          "reused": false
+          "reused": true
         },
         "transcribe": {
           "seconds": 11.16,
           "s_per_audio_hour": 111.4,
           "peak_mem_gb": 16.82,
-          "reused": false
+          "reused": true
         },
         "vision": {
           "seconds": 37.98,
           "s_per_audio_hour": 379.1,
           "peak_mem_gb": 16.66,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 11.35,
           "s_per_audio_hour": 113.3,
           "peak_mem_gb": 16.19,
-          "reused": false
+          "reused": true
         },
         "reduce": {
           "seconds": 24.62,
           "s_per_audio_hour": 245.7,
           "peak_mem_gb": 16.76,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -2460,7 +2462,7 @@
           "kind": "action",
           "question": "What does Nadia need to do?",
           "fact": "f16",
-          "answer": "Nadia needs to prepare the customer survey by November 2nd.",
+          "answer": "Nadia needs to prepare the customer survey by 2nd November.",
           "citations": [
             "seg 1 @301.51"
           ],
@@ -2490,11 +2492,9 @@
           "kind": "de_alone",
           "question": "Wie hoch ist die Anzahl neuer Testanmeldungen?",
           "fact": "f1",
-          "answer": "Die Anzahl der neuen Testanmeldungen hat sich auf 3,100 erhöht. Verglichen mit 1,350 im letzten Monat.",
+          "answer": "Die Anzahl neuer Testanmeldungen stieg auf 3.100 dieses Monat (gegenüber 1.350 im letzten Monat).",
           "citations": [
             "seg 0 @12.72",
-            "slide 0",
-            "seg 0 @16.88",
             "slide 0"
           ],
           "language": "de",
@@ -2524,9 +2524,9 @@
           "kind": "near_miss",
           "question": "What was the approved budget two years ago?",
           "fact": "f18",
-          "answer": "The approved budget two years ago was $54,000.",
+          "answer": "The approved budget for the last quarter was $57,000.",
           "citations": [
-            "seg 1 @340.03",
+            "seg 1 @320.96",
             "slide 7"
           ],
           "language": "en",
@@ -2556,8 +2556,10 @@
           "kind": "near_miss",
           "question": "What is the monthly cloud bill for next year?",
           "fact": "f12",
-          "answer": "The monthly cloud bill is $8,900.",
+          "answer": "The approved budget for next quarter is $57,000. The monthly cloud bill is $8,900.",
           "citations": [
+            "seg 1 @320.96",
+            "slide 7",
             "seg 0 @228.98",
             "slide 5"
           ],
@@ -2573,49 +2575,49 @@
           "seconds": 0.34,
           "s_per_audio_hour": 3.4,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "vad": {
           "seconds": 1.93,
           "s_per_audio_hour": 19.4,
           "peak_mem_gb": 15.43,
-          "reused": false
+          "reused": true
         },
         "transcribe": {
           "seconds": 10.93,
           "s_per_audio_hour": 110.2,
           "peak_mem_gb": 16.83,
-          "reused": false
+          "reused": true
         },
         "vision": {
           "seconds": 37.93,
           "s_per_audio_hour": 382.3,
           "peak_mem_gb": 16.66,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 12.16,
           "s_per_audio_hour": 122.6,
           "peak_mem_gb": 16.19,
-          "reused": false
+          "reused": true
         },
         "reduce": {
           "seconds": 22.61,
           "s_per_audio_hour": 227.9,
           "peak_mem_gb": 16.76,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -2659,7 +2661,7 @@
         "ask_followup": 1.0,
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
-        "ask_near_miss": 0.0,
+        "ask_near_miss": 0.6667,
         "cited_claims": 19,
         "support_rate": 0.8421,
         "support_partial": 1,
@@ -3320,7 +3322,7 @@
           "kind": "action",
           "question": "What does Omar need to do?",
           "fact": "f16",
-          "answer": "Omar needs to book the venue for the offsite by Friday.",
+          "answer": "The meeting doesn't give Omar's action items for another period or team. It says Omar needs to book the venue for the offsite by Friday.",
           "citations": [
             "seg 1 @296.5"
           ],
@@ -3350,7 +3352,7 @@
           "kind": "de_alone",
           "question": "Wie hoch ist die Anzahl neuer Testanmeldungen?",
           "fact": "f1",
-          "answer": "Die Anzahl der neuen Testanmeldungen ist 3,550.",
+          "answer": "Die Anzahl neuer Testanmeldungen beträgt 3,550.",
           "citations": [
             "seg 0 @12.88",
             "slide 0"
@@ -3382,16 +3384,16 @@
           "kind": "near_miss",
           "question": "What was the week-2 return rate two years ago?",
           "fact": "f17",
-          "answer": "The week-2 return rate for trial users was 37% two years ago.",
+          "answer": "The meeting doesn't give the week-2 return rate for two years ago. It says the week-2 return rate is 37%.",
           "citations": [
             "slide 7",
-            "seg 1 @285.346"
+            "slide 7"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true
         },
         {
           "id": "near-miss-2",
@@ -3415,16 +3417,16 @@
           "kind": "near_miss",
           "question": "What is the monthly recurring revenue for next year?",
           "fact": "f13",
-          "answer": "The monthly recurring revenue for next month is $140,000.",
+          "answer": "The meeting doesn't give the monthly recurring revenue for next year. It says the monthly recurring revenue this month is $140,000.",
           "citations": [
             "seg 0 @231.38",
             "slide 5"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true
         }
       ],
       "stages": {
@@ -3432,49 +3434,49 @@
           "seconds": 1.34,
           "s_per_audio_hour": 13.8,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "vad": {
           "seconds": 2.04,
           "s_per_audio_hour": 21.0,
           "peak_mem_gb": 15.41,
-          "reused": false
+          "reused": true
         },
         "transcribe": {
           "seconds": 10.48,
           "s_per_audio_hour": 107.7,
           "peak_mem_gb": 16.83,
-          "reused": false
+          "reused": true
         },
         "vision": {
           "seconds": 37.92,
           "s_per_audio_hour": 389.9,
           "peak_mem_gb": 16.66,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 11.93,
           "s_per_audio_hour": 122.6,
           "peak_mem_gb": 16.19,
-          "reused": false
+          "reused": true
         },
         "reduce": {
           "seconds": 23.84,
           "s_per_audio_hour": 245.1,
           "peak_mem_gb": 16.76,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     }
@@ -3516,7 +3518,7 @@
     "ask_followup": 0.75,
     "ask_xlang_alone": 1.0,
     "ask_xlang_history": 1.0,
-    "ask_near_miss": 0.0,
+    "ask_near_miss": 0.5833,
     "audio_s": 1425.8
   },
   "stages": {
@@ -3620,19 +3622,19 @@
     4.12
   ],
   "judge": {
-    "loaded": true,
-    "calls": 70,
-    "cached": 15,
-    "seconds": 123.5,
-    "s_per_audio_hour": 311.8,
-    "peak_mem_gb": 3.39
+    "loaded": false,
+    "calls": 0,
+    "cached": 85,
+    "seconds": 0.01,
+    "s_per_audio_hour": 0.0,
+    "peak_mem_gb": null
   },
   "ask": {
     "loaded": true,
-    "calls": 76,
-    "cached": 0,
-    "seconds": 669.24,
-    "s_per_audio_hour": 1689.8,
+    "calls": 57,
+    "cached": 19,
+    "seconds": 518.97,
+    "s_per_audio_hour": 1310.4,
     "peak_mem_gb": null
   },
   "baseline": "evals/baseline.json",
