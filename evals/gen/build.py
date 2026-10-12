@@ -32,10 +32,21 @@ FPS = 5
 Synth = Callable[[str, str], np.ndarray]  # (voice, text) → mono float32 at SR
 
 
+SAY_TIMEOUT_S = 60  # `say` hung on one line for 40 min while generating long-en (6c)
+SAY_TRIES = 3
+
+
 def say(voice: str, text: str) -> np.ndarray:
     with tempfile.TemporaryDirectory() as tmp:
         aiff, wav = Path(tmp) / "line.aiff", Path(tmp) / "line.wav"
-        subprocess.run(["say", "-v", voice, "-o", str(aiff), text], check=True)
+        for attempt in range(SAY_TRIES):
+            try:
+                cmd = ["say", "-v", voice, "-o", str(aiff), text]
+                subprocess.run(cmd, check=True, timeout=SAY_TIMEOUT_S)
+                break
+            except subprocess.TimeoutExpired:
+                if attempt == SAY_TRIES - 1:
+                    raise
         _ffmpeg("-i", str(aiff), "-ac", "1", "-ar", str(SR), str(wav))
         audio, _ = sf.read(wav, dtype="float32")
     return audio
