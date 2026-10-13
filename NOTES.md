@@ -1510,3 +1510,22 @@ mean 85.3).
   release-notes example in `reduce.md` (changing it re-runs quick's Reduce); Ask doesn't see
   slide conflicts; " (slide: …)" in non-English notes (6d). Step 0's tools are in `scripts/`
   (throwaway): `trace_facts.py <report.json>` and `map_tokens.py [seed]`.
+
+## 2026-10-13 · Phase 6d split and 6d-1 kickoff prompt (no code)
+
+### Plan changes
+- §9 6d split (user): **6d-1** notes in other languages (output side), **6d-2** other source
+  languages (`xling-{es,ja}`) and regional Map models (D18, now Phase 6d-2). Why: the generator
+  is English-only (es/ja need scripts, templates and number words; macOS has es_ES, es_MX and
+  ja_JP voices), "Other (beta)" translation doesn't exist yet, and D18 needs gated downloads
+  and an HF token, while `en → {de,ar}` only changes ItemSpec's `target`.
+- §21 kickoff prompt for 6d-1: a `lang` set (`conflict-de`, `clean-ar`, report-only baseline)
+  measured first; scoring that reads numbers in the notes language; the 6b-2 "(slide: …)"
+  note localized; Arabic right-to-left check (no custom CSS); "Other (beta)" with
+  citation-preserving translation (design proposed before coding).
+- Found while writing it: evals.py reads claim numbers with the English-only `numbers_in`, so
+  German "42.500" would score as 42.5 (a correct fact counted as missed). Step 1 fixes it
+  with the guard's `native_readings`.
+
+### Next
+- Phase 6d-1 in a new session with the §21 prompt.

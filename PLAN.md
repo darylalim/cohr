@@ -1089,9 +1089,18 @@ compared with a committed baseline:
   94.4%; pass 2 keeps 15 of 18 decisions). Carry-overs (6e): Map files long-en tasks as
   decisions (actions 40%; a Reduce rule was ignored); `reduce.md`'s "Update the release notes"
   example overlaps a generator task; Ask doesn't see slide conflicts.
-- **6d: languages.** "Other (beta)" target languages with translation that keeps citations
-  (§5.6); the `xling-{es,ja}` and `en → {de,ar}` items; optional regional Map models (§5.5):
-  `map_model_by_lang` filled only for languages that pass D18 (may stay empty).
+- **6d: languages**, split in two (user, 2026-10-13): the output side first, then the input
+  side and the Map models.
+  - **6d-1: notes in other languages.** The `en → {de,ar}` items in a new `lang` set
+    (report-only baseline `evals/baseline-lang.json`), measured first; scoring that reads numbers
+    the way the notes language writes them; the " (slide: …)" note (6b-2) in the target
+    language; Arabic (right-to-left) in the Notes page and `notes.md`; "Other (beta)" target
+    languages with translation that keeps citations (§5.6). Kickoff prompt in §21.
+  - **6d-2: other source languages and regional Map models.** The `xling-{es,ja}` items (the
+    generator in Spanish and Japanese: templates, number words, `say` voices; CER for ja);
+    optional regional Map models (§5.5, D18) scored on 6d-1's `en → X` items:
+    `map_model_by_lang` filled only for languages that pass D18 (may stay empty). Gated model
+    downloads and the HF token need the user's approval. Kickoff prompt written after 6d-1.
 - **6e: full set + v1.** FLEURS and AMI in `full` (§18); error messages for missing ffmpeg or
   models; an end-to-end check of the sequential memory policy; a cache size note for the README;
   the `full` release gate; bump to `1.0.0` to release v1 (§16, only when asked).
@@ -1891,7 +1900,7 @@ section.
 | D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4b-2 | **Pass, no margin**: 3-way 80.0% (24/30), yes vs not-yes 96.7% (29/30). All 12 "yes" right; 4 of 8 "partial" judged "no" (an added detail read as a contradiction), 1 "partial" judged "yes", 1 "no" judged "partial". Support rate counts only "yes", so the partial/no confusion barely moves it. Judge metrics stay out of the gate until D16 (Phase 6) |
 | D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 `quick` runs, same media, pipeline seeds 1–3 (`-c seed=N`): threshold = max(default, 2× noise), Ask metrics included | Phase 6a | **Recall −5.9 (noise 2.9), made-up +2 (noise 1), rest at defaults** (citation −3, uncited and gap text no rise, stages +25%: noisiest Reduce 10.5%); Ask accuracy −5 and Ask citation −3 (noise 0, defaults borrowed from recall/citation). Report-only (user, 6a): follow-up and German after history (noise 25 points: one question per item), German alone and near-miss (25-point steps), support rate (noise 9.1, D15 no margin). Open questions not counted as made up: 13 / 11 / 4 over the seeds. Baseline = seed 1 |
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 6c (Ask ranking needs it; was Phase 7) | **Available**: uv's Python 3.13.12 has SQLite 3.50.4 with `ENABLE_FTS5`; the `trigram` tokenizer works on Japanese. Trigram can't match terms under 3 characters, so CJK questions are split into 3-character windows |
-| D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6d | |
+| D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6d-2 | |
 | D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | **0.1 and ±15 s, plus a sentence offset inside the chunk**: chunk `t0` alone was a median 12.5 s early (61% within 15 s); with the offset 98% (53 of 54 errors ≤ 5 s, so 15 s hides nothing). Min score 0.0 = 0.1 > 0.2 (94.6%) > 0.3 (91.1%) |
 | D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | **Default rule kept**: 8 repairs on `quick`, all to the transcript's value (0 wrong); number recall 81.2% → 87.5%, fact recall 82.3% → 85.3%, made-up 3 → 3, citation accuracy 98.2% → 100%; numbers in no source 6 → 1 (a flagged `3,360` with two candidates). Short numbers are weak evidence (any one-digit number is one edit from the next): watch on `full`. **6b-2 narrowed the candidates** (user chose the separator rule): a wrong repair ("$770,000" → $740 via the decimal-comma reading) is now flagged, and "November 2nd" is repaired to the only day said (22nd); `quick` seed 1: recall 83.8 → 85.3%, made-up 1 → 0, wrong owner/due 1 → 0, unsupported numbers 2 → 1 |
 | D21 | Notes layout in medium windows (§7) | Two columns; close the sidebar | Options within the no-CSS rule (NOTES.md 2026-10-11 5a finding) | Before 5b | **Beside/Below toggle** in the Notes header, default Beside, per session. Rejected: Sources always in the drawer (undoes D14, loses side-by-side on wide screens), a "close the sidebar" hint only, `initial_sidebar_state="collapsed"` on Notes (localStorage overrides it). Built in 5b |
@@ -2369,4 +2378,61 @@ Rules from CLAUDE.md apply. Ask me before `cohr eval --set full`, the opt-in mod
 model downloads or new dependencies. quick runs are fine.
 When done: tick the checklist, add any new decision to §20, add a NOTES.md entry, make sure
 the gate passes, and open a PR (ask before pushing). Stop there; 6d (languages) is separate.
+```
+
+### Kickoff prompt for Phase 6d-1 (notes in other languages)
+```text
+Continue cohr: Phase 6d-1 (notes in other languages). Read CLAUDE.md, then PLAN.md §5.5 (Map,
+number guard, slide conflicts), §5.6 (fixed section markers, render labels, "Other (beta)"),
+§7 (theme, no custom CSS), §9 (the 6d bullet), §18 (cross-language matching, output language),
+§20 (D15, D16, D20, D23, D28) and the latest NOTES.md entries (Phase 6b-2). Work on branch
+phase-6d-1-langs.
+Notes in a language other than the meeting's have only been checked by hand (Phase 0) and by
+Ask's German questions (6a). The cross-language scoring (exact fields + judge recall, 4b-1/4b-2)
+has unit tests but has never run on a real item. Commit each step separately.
+0. Measure first, no fixes. Add a `lang` set (evals/sets/lang.yaml, report-only baseline
+   evals/baseline-lang.json): `conflict-de` (the slide-conflict-en script and media, target
+   de, so the "(slide: …)" note shows up in German) and `clean-ar` (the clean-en script and
+   media, target ar). Same seed and settings as the quick items, so the generator rebuilds
+   the same script and media under the new id; only the target changes. Run it with
+   `-c seed=1 --no-ask` (judge on: it scores the cross-language text facts). Record in
+   NOTES.md: output language, exact-field and judge recall, citation accuracy, made-up items,
+   number-guard repairs/flags, and by hand: do the five English section markers and the
+   `[owner: …] [due: …]` lines parse; which digits and separators Map and R7B write (German
+   "42.500"? Arabic-Indic digits "٤٢٬٥٠٠"?); how the slide-conflict note reads. Then trace
+   each missed fact (scripts/trace_facts.py) as in 6b-2: scoring miss or real miss?
+1. Scoring that reads the notes language. evals.py reads numbers with numbers_in (English
+   only), so German "42.500" is 42.5 and a correct fact scores as missed. Read the claim's
+   numbers the way the target language writes them (numbers.DECIMAL_MARK / native_readings,
+   the guard's rule since 6b-2), and Arabic-Indic digits and separators if step 0 shows R7B
+   writes them (pure Python, unit tested; the guard and the eval share numbers.py). Pass:
+   step 0's scoring misses become matches; quick unchanged.
+2. The slide-conflict note in the target language: " (slide: $18,000)" is English inside
+   German notes (6b-2). Take the word from one static per-language table (like render's
+   LABELS; English for languages not in it), and make sure Reduce and the eval still see both
+   values. A change to Map strings re-runs Map: say so in the commit. Pass: the note is in
+   German on conflict-de, slide_value_used still true there and on quick.
+3. Arabic in the Notes page and notes.md. Check how Streamlit shows right-to-left notes with
+   citations and owner/due (no custom CSS: §7, CLAUDE.md). If they read wrong, try what the
+   rules allow (Unicode direction marks in render.py's output) and record the result as a new
+   §20 decision. Ask me to do the browser check myself, or whether to use Claude in Chrome.
+4. "Other (beta)" target languages (§5.6): any language Tiny Aya supports beyond R7B's 23
+   (list from the Tiny Aya model card, recorded in config.py with its source). Reduce runs in
+   English; Tiny Aya translates the notes section by section. Only the text between citation
+   markers is translated, and the markers go back in the same order: pure-Python split/join,
+   unit tested, with a claim holding two or more spans, the fixed section markers and the
+   `[owner: …] [due: …]` labels kept in English. Prompt in src/cohr/prompts/ (target language
+   repeated on its last line, as in map.md). Propose where translation runs (its own stage
+   between reduce and render, or inside reduce) and any NotesDoc change before coding: a
+   schema change bumps FORMAT_VERSION and regenerates snapshots. The New run page gets the
+   option. Eval: one lang item with an Other (beta) target that lingua detects and Tiny Aya
+   supports (e.g. Swahili); pass = output language right, every claim's citations identical
+   to the English notes', exact-field recall within the D16 noise of the English run.
+Not in 6d-1: the xling-{es,ja} items and regional Map models (D18) are 6d-2; Ask in the lang
+items (the 6a German questions cover answer language).
+Rules from CLAUDE.md apply. Ask me before `cohr eval --set full`, the opt-in model tests, new
+model downloads or new dependencies. quick and lang runs are fine; quick must pass its gate at
+the end (steps 1–2 touch the guard's numbers code and Map strings).
+When done: tick the checklist, add any new decision to §20, add a NOTES.md entry, make sure
+the gate passes, and open a PR (ask before pushing). Stop there; 6d-2 is separate.
 ```
