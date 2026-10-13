@@ -1072,7 +1072,7 @@ compared with a committed baseline:
   bundled key points (Reduce copies them; key-point citations land on the bundle, 6b-2); pass 2
   of two-pass dropping about a third of pass 1's decisions on `long-en`; near-miss under the cap
   (4/12 vs 7/12); `long-en` German-after-history (0/1).
-- **6b-2: Map fixes** (after 6c, from 6b and 6c): measurement first (each planted fact's path
+- **6b-2: Map fixes** (done 2026-10-13, NOTES.md; after 6c, from 6b and 6c): measurement first (each planted fact's path
   transcript → Map → notes, and whether Map replies hit `map.max_tokens`); then Map's bundled
   key points (6c: Reduce copies them, so key-point citations land on the bundle), Map dropping
   facts on long, dense segments (~280 s, 7 topics: ~7 key points kept), the due-date misread
@@ -1082,6 +1082,13 @@ compared with a committed baseline:
   every metric: one re-baseline per kept change. Not in 6b-2: Ask near-miss under the cap
   (4/12 vs 7/12) and `long-en` German-after-history (one question), left for 6e's long-meeting
   check. Kickoff prompt in §21.
+  Results: one fact per Map key point (citation 100% on seeds 1–3); dense-segment drops not
+  fixed (Tiny Aya coverage; D12 re-checked, 300 s kept); number guard reads separators by
+  target language and repairs ordinals only to days said (D20); speech/slide conflicts shown
+  with both values (D28, MapFile v4); `long-en` re-baselined (recall 70.0%, decisions 75%, Ask
+  94.4%; pass 2 keeps 15 of 18 decisions). Carry-overs (6e): Map files long-en tasks as
+  decisions (actions 40%; a Reduce rule was ignored); `reduce.md`'s "Update the release notes"
+  example overlaps a generator task; Ask doesn't see slide conflicts.
 - **6d: languages.** "Other (beta)" target languages with translation that keeps citations
   (§5.6); the `xling-{es,ja}` and `en → {de,ar}` items; optional regional Map models (§5.5):
   `map_model_by_lang` filled only for languages that pass D18 (may stay empty).
@@ -1894,6 +1901,7 @@ section.
 | D25 | Citation-accuracy gate after the bundling fix (§18) | −3 (D16) | Reduce bundling fix first (one fact per claim), then D16's rule on 3 `quick` runs (seeds 1–3): max(3, 2 × noise) | Phase 6c | **−6.9 points (noise 3.4: 96.7 / 96.6 / 100%)** after `reduce.md`'s one-fact-per-item rule (recall 82.3 → 89.7%, citation 92.9 → 96.7%). Fact-recall noise on the same runs rose to 5.9 (89.7 / 85.3 / 83.8%); its gate stays −5.9 (user: seed 1 is the high point). Key points stay bundled: Reduce copies Map's bundled key points word for word (6b-2) |
 | D26 | Two-pass reduce grouping (§4) | Groups of consecutive segments filling ~75% of `max_input_tokens` | `quick` with a lowered cap forcing 2–3 groups vs single pass on the same media: citation accuracy within D25, no uncited rise, every pass-2 citation resolves; then `long-en` | Phase 6c | **40% (`GROUP_FILL` 0.4), with `reduce_part.md` (decisions/actions before figures-only key points) and 4096 output tokens.** `quick` at cap 4000 (2 groups per item) vs single pass: recall 89.7 = 89.7%, citation 100 vs 96.7%, uncited 0, made-up 3 vs 2, 91 of 91 pass-2 citations by claim match. `long-en` (2.2 h, 32K cap): at 75% (2 groups of ~23K) pass 1 ran out of output inside KEY_POINTS (recall 11.3 → 37.5% with the prompts and 4096); 0.4 (4–5 groups of ~12K) recall 53.8% on the same media, 67.5% after fact-free filler (citation 98.1%, 5 group fallbacks of 139). Pass 2 still loses about a third of pass 1's decisions (carry-over, §9 6c) |
 | D27 | Ask ranking under the cap (§5.7) | FTS5 BM25 over segment + slide documents, question terms OR'ed, top-ranked that fit | Ask accuracy on `quick` with a lowered cap vs the full-document baseline, and on `long-en`'s question sample | Phase 6c | **FTS5 BM25 over the question plus the last turn, at most the top 12 documents that fit, sent in meeting order.** `quick` at cap 4000 vs no cap / vs the old transcript trimming: Ask accuracy 96.2 vs 98.1 / 98.1%, citation 98.0 vs 100 / 100%, follow-up 3/4 vs 3/4 / 1/4, near-miss 4/12 vs 7/12 / 5/12 (any way of fitting the cap costs near-misses; ranking is within one question of trimming and scales). `long-en`: filling the 32K cap (~60 documents) gave 61% at ~100 s per answer and citation loops; top 12 gives 83.3%, citation 93.8%, ~32 s |
+| D28 | Speech/slide conflict (§5.5, §18 `slide-conflict-en`) | Prompt: use the slide's value | Map ignores the prompt rule on every seed; a guard that swaps in the slide value would be wrong when a speaker corrects an outdated slide | Phase 6b-2 | **Show both** (user): a slide table row whose one value was never said, while the sentences naming its label hold exactly one number on no slide, gets "(slide: $18,000)" after the spoken value in Map's strings; `slide_conflicts` in MapFile v4. `quick` seed 1: slide_value_used false → true, recall 85.3 → 86.8%; dry run on 36 real segments found only the planted conflict |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).
