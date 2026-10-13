@@ -212,6 +212,42 @@ def test_guard_flags_two_equally_close_candidates() -> None:
     assert _check("by the 2nd", "the 22nd, one item") == ("by the 2nd", [], ["2nd"])  # 22 or 1
 
 
+def test_guard_repairs_only_from_the_target_languages_reading() -> None:
+    # 6b-2: Map wrote "$770,000" for the spoken $77,500; its decimal-comma reading 770.0 is one
+    # digit from 740 (another figure), so without a language it was "repaired" to $740.
+    sources = {77500.0, 740.0}
+    assert mapper.check_numbers("$770,000", sources) == (
+        "$740",
+        [NumberRepair(original="770,000", repaired="740")],
+        [],
+    )
+    assert mapper.check_numbers("$770,000", sources, "en") == ("$770,000", [], ["770,000"])
+    assert mapper.check_numbers("770.000 €", sources, "de") == ("770.000 €", [], ["770.000"])
+    # the D20 case still repairs: in English "$425,000" is 425000, ×10 from 42500
+    assert mapper.check_numbers("$425,000", {42500.0}, "en")[0] == "$42,500"
+    # a language not in the table keeps both readings
+    assert mapper.check_numbers("$770,000", sources, "es")[0] == "$740"
+
+
+def test_guard_falls_back_to_every_reading_when_none_is_native() -> None:
+    # "3,36" isn't an English number; only the decimal-comma 3.36 reads it (×100 → 336)
+    assert mapper.check_numbers("3,36 open tickets", {336.0}, "en")[0] == "336 open tickets"
+
+
+def test_guard_numbers_passes_the_language_on() -> None:
+    notes = SegmentNotes(
+        seg_id=0,
+        summary="Budget $770,000.",
+        key_points=["Page load 740 ms"],
+        decisions=[],
+        action_items=[],
+        open_questions=[],
+        terms=[],
+    )
+    out = mapper.guard_numbers(notes, {77500.0, 740.0}, "en")
+    assert out.summary == "Budget $770,000." and out.unverified_numbers == ["770,000"]
+
+
 def test_guard_flags_an_invented_iso_year() -> None:
     text, repairs, unverified = _check("Due 2024-11-22", "by the 22nd of November")
     assert text == "Due 2024-11-22" and repairs == []

@@ -190,6 +190,27 @@ def readings(body: str) -> list[Reading]:
     return out
 
 
+# Decimal mark by target language, for the guard's repair candidates (6b-2): "." languages group
+# with ",", "," languages with "." or a space. Not listed, so both readings stay: languages
+# written both ways (es: Spain vs. Mexico) or with their own separators (ar, fa).
+DECIMAL_MARK = {
+    **dict.fromkeys(("en", "he", "hi", "ja", "ko", "zh"), "."),
+    **dict.fromkeys(
+        ("cs", "de", "el", "fr", "id", "it", "nl", "pl", "pt", "ro", "ru", "tr", "uk", "vi"), ","
+    ),
+}
+
+
+def native_readings(reads: list[Reading], language: str | None) -> list[Reading]:
+    """The readings written the way `language` writes numbers: in English "770,000" is 770000,
+    never 770.0. All of them when the language isn't in DECIMAL_MARK or no reading fits it
+    (a malformed "3,36" can only be the decimal-comma 3.36)."""
+    mark = DECIMAL_MARK.get(language or "")
+    if mark is None:
+        return reads
+    return [r for r in reads if r.decimal in (None, mark) and r.group != mark] or reads
+
+
 def one_edit(a: str, b: str) -> bool:
     """One character inserted, dropped or changed."""
     if a == b or abs(len(a) - len(b)) > 1:
