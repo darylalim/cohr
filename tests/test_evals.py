@@ -649,6 +649,19 @@ def test_quick_scripts_are_unchanged_by_the_long_generator() -> None:
         assert _fingerprint(generate(spec.seed, gen_build.variant(spec))) == QUICK_SCRIPTS[spec.id]
 
 
+def test_lang_items_reuse_the_quick_scripts() -> None:
+    # 6d-1: only the notes language changes, so lang and quick results compare item to item.
+    twins = {"conflict-de": "slide-conflict-en", "clean-ar": "clean-en"}
+    lang = evals.load_set("lang", ROOT)
+    assert {i.id: i.target for i in lang.items} == {"conflict-de": "de", "clean-ar": "ar"}
+    for spec in lang.items:
+        assert spec.language == "en"
+        assert (
+            _fingerprint(generate(spec.seed, gen_build.variant(spec)))
+            == QUICK_SCRIPTS[twins[spec.id]]
+        )
+
+
 def test_planted_texts_stay_distinguishable() -> None:
     texts = [*DECISIONS, *MORE_DECISIONS, *TASKS, *MORE_TASKS, *OPEN_QUESTIONS]
     texts += MORE_OPEN_QUESTIONS

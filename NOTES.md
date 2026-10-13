@@ -1529,3 +1529,57 @@ mean 85.3).
 
 ### Next
 - Phase 6d-1 in a new session with the §21 prompt.
+
+## 2026-10-13 · Phase 6d-1 (notes in other languages)
+
+### 0. Measurement (no fixes)
+`lang` set (`evals/sets/lang.yaml`): `conflict-de` (slide-conflict-en's script and media,
+target de) and `clean-ar` (clean-en's, target ar); a test checks both scripts equal their quick
+twins. Seed 1, `--no-ask`, judge on (report `20261013-085449-lang`). Baseline not written yet:
+step 0 is broken by the finding below, so `evals/baseline-lang.json` waits for its fix.
+
+| item | recall (exact) | numbers | actions | judge recall | citation | made-up | lang ok | support |
+|---|---|---|---|---|---|---|---|---|
+| conflict-de | 23.1% (3/13) | 3/8 | 0/5 | 0/6 | 100% | 0 | de ✓ | 88.9% |
+| clean-ar | 53.8% (7/13) | 7/8 | 0/5 | 0/5 | 100% | 0 | ar ✓ | 87.0% |
+
+- **The five section markers don't survive in de or ar: everything lands in Summary.** R7B
+  translates them and wraps them in citation spans: `## <co>Zusammenfassung</co: 0:[0]>`,
+  `## <co>Schlüsselpunkte</co…>`, `## <co>Aktionspunkte</co…>`; Arabic `## <co>ملخص</co…>`,
+  `نقاط رئيسية`, `قرارات`, `مهام`, `أسئلة مفتوحة`. The parser logs "unknown section markers" and keeps
+  the text in Summary (§5.6), so Key points, Decisions, Action items and Open questions are
+  empty in both notes. This alone explains actions 0/10 (home section empty) and judge
+  recall 0/11 (the judge reads the right section's claims). `reduce.md` already says
+  "in English … whatever language" and repeats it on the last line. The translated headings
+  don't match render's `LABELS` either (de "Kernpunkte"/"Aufgaben", ar "الملخص").
+- **Owner/due lines:** de keeps the English labels, inside a citation span:
+  `- <co>[owner: Maria] [due: Mittwoch]</co: 0:[0]> <co>Vorbereitung der Kundensurvey</co…>`.
+  ar drops the labels and every owner name: `- <co>إرسال العقد إلى قسم القانون بحلول يوم
+  الجمعة.</co…>` (Map had `owner: Laura`, Latin script, for all 5 ar tasks). Map's `due` stays
+  English in both ("Friday", "Next week"); de Map wrote "Mi", "Do. 4:44" for Wednesday and
+  "end of next week" (Tom's task).
+- **Digits:** de writes German separators, the `$` after: "80.000 $", "3.550", "10.700 $".
+  ar writes Western digits with English separators ("42,500 دولار", "34%"), no Arabic-Indic
+  digits or `٬`: English readings already fit Arabic, Arabic-Indic support isn't needed for
+  what R7B writes (keep it out unless 6d-2 shows it).
+- **Number guard in German:** 2 correct repairs (Map "800.000" → "80.000", "775.000" →
+  "77.500", the decimal-mark rule from 6b-2 works in de); 2 flagged (4, 44). The eval's
+  `unsupported_numbers` lists 10 (1.75, 3.55, 77.5, 80, …): the English reading of German
+  separators, a scoring artifact like fact recall's.
+- **Slide-conflict note: not added in German.** The conflict is detected (`Approved budget`,
+  spoken 80000, slide `$18,000`), but `mark_conflicts` needs a label word in the Map string
+  ("Quartalsbudget" ≠ {approved, budget}) and reads the spoken value with English `numbers_in`
+  ("80.000" = 80.0). Both have to change before step 2's word matters.
+
+**Each miss, scoring or real** (Map read by hand: trace_facts matches Map strings by English
+text, so its Map column is blank for de/ar text facts):
+| item | miss | cause |
+|---|---|---|
+| conflict-de | f1 3,550, f9 $10,700, f13 $140,000 | scoring: "3.550" read as 3.55 (in the notes, Summary is a home section for numbers) |
+| conflict-de | f7 $18,000 | not marked (above); Map/notes say only 80.000 $ |
+| conflict-de | f17 37% | real: in Map seg 1, Reduce wrote nothing from seg 1's key points |
+| conflict-de | f5, f6, f8, f12, f16 actions | markers (empty section); f5 (Nadia) also missing in Map, f6 has no owner in Map |
+| conflict-de | 6 judge facts | markers; f2, f14 also missing in Map, f10 written 3 times |
+| clean-ar | f16 4,650 | real: in Map seg 1, dropped by Reduce |
+| clean-ar | 5 actions | markers + owners dropped by Reduce (labels gone) |
+| clean-ar | 5 judge facts | markers; ar Decisions repeat 3 tasks |
