@@ -1120,7 +1120,8 @@ compared with a committed baseline:
     generator in Spanish and Japanese: templates, number words, `say` voices; CER for ja);
     optional regional Map models (§5.5, D18) scored on 6d-1's `en → X` items:
     `map_model_by_lang` filled only for languages that pass D18 (may stay empty). Gated model
-    downloads and the HF token need the user's approval. Kickoff prompt written after 6d-1.
+    downloads and the HF token need the user's approval. Kickoff prompt in §21 (written after
+    6d-1, from its findings).
 - **6e: full set + v1.** FLEURS and AMI in `full` (§18); error messages for missing ffmpeg or
   models; an end-to-end check of the sequential memory policy; a cache size note for the README;
   the `full` release gate; bump to `1.0.0` to release v1 (§16, only when asked).
@@ -2458,4 +2459,55 @@ model downloads or new dependencies. quick and lang runs are fine; quick must pa
 the end (steps 1–2 touch the guard's numbers code and Map strings).
 When done: tick the checklist, add any new decision to §20, add a NOTES.md entry, make sure
 the gate passes, and open a PR (ask before pushing). Stop there; 6d-2 is separate.
+```
+
+### Kickoff prompt for Phase 6d-2 (other source languages, regional Map models)
+```text
+Continue cohr: Phase 6d-2 (other source languages and regional Map models). Read CLAUDE.md,
+then PLAN.md §5.2 (Transcribe, user-picked language), §5.5 (Map, number guard, regional models),
+§9 (the 6d bullets and 6d-1 Results), §18 (variants, cross-language matching, WER/CER),
+§20 (D8, D16, D18, D20, D29, D30) and the latest NOTES.md entry (Phase 6d-1). Work on branch
+phase-6d-2-xling.
+6d-1 made notes in another language work when the meeting is English. Nothing has run on a
+meeting in another language yet: the generator writes English only, and the number guard and
+the eval read number words in English only (numbers.py), so a Spanish or Japanese transcript
+that spells numbers out may give the guard no source numbers. Commit each step separately.
+0. Generator in es and ja, then measure, no fixes. Add the script language to evals/gen
+   (ItemSpec.language is already there): per-language tables for openings, topic intros,
+   discussion and filler, decision/task/open-question lines, weekdays and relative dues, units
+   ("por ciento", "パーセント"), and voices (es: Mónica + Paulina + one es_MX/es_ES voice;
+   ja: Kyoko + two ja_JP voices, D8). Owners stay the Latin names, as people's names do in
+   real meetings; say how the ja voices read them. The English scripts must not change
+   (QUICK_SCRIPTS fingerprints) and the planted texts stay distinguishable per language (the
+   test that checks it, per language). New items in the `lang` set: `xling-es` and `xling-ja`
+   (target en, seed 1, video + slides, slides in the meeting's language). Run them with
+   `-c seed=1 --no-ask`, judge on. Record in NOTES.md: WER (es) / CER (ja, jiwer), whether
+   Transcribe writes numbers as digits or words, Map's source numbers and guard repairs/flags,
+   exact-field and judge recall, citation accuracy, made-up items, output language, and how
+   owners come out (ASR "トム" vs notes "Tom"). Trace each miss (scripts/trace_facts.py; its
+   text match is English, so read Map by hand as in 6d-1 step 0): ASR, Map, Reduce or scoring?
+1. Fix what step 0 shows, in pure Python where it's a value (CLAUDE.md lessons): most likely
+   number words for es/ja in numbers.py (shared by the guard and the eval; "cuarenta y dos mil
+   quinientos", "4万2500"), unit tested, with a test that English is unchanged. Pass: step 0's
+   number misses that are scoring or source-number misses become matches; quick unchanged.
+   Prompt changes to Map are judged on seeds 1–3 (CLAUDE.md), on quick too.
+2. Regional Map models (§5.5, D18), only after asking me: the CohereLabs originals are gated,
+   need the license accepted on the Hub and an HF token (HF_TOKEN or .env, never committed),
+   and each is a multi-GB download. Ask me which variants to try first (Fire has an MLX repo;
+   Earth and Water need `mlx_lm.convert` to 8-bit, locally) and whether to keep the converted
+   weights. Add `map_model_by_lang` to config.py (empty by default; the repo + revision enter
+   Map's config hash, and "Other (beta)" translation uses the same model). Score Global vs the
+   variant on 6d-1's en → X items for 2 languages of the variant's region (add lang items as
+   needed, e.g. en → hi for Fire, en → sw for Earth), seeds 1–3 each, with cross-language
+   matching: adopt per language only if exact-field recall improves by ≥ 2× the D16 noise and
+   output-language accuracy is no worse. Record D18's result (it may stay empty).
+Optional if time allows, after asking: the 6d-1 carry-overs (Arabic owners written in Arabic
+script, which the eval misses; "Other (beta)" invented summary).
+Not in 6d-2: Ask on the xling items (report-only at most), the full set and v1 (6e).
+Rules from CLAUDE.md apply. Ask me before the full eval set, the opt-in model tests, any model
+download or HF token use, and new dependencies. quick and lang runs are fine; quick must pass
+its gate at the end (step 1 touches numbers.py, which the guard uses).
+When done: update evals/baseline-lang.json (say why in the commit), tick the checklist, add
+any new decision to §20, add a NOTES.md entry, make sure the gate passes, and open a PR (ask
+before pushing). Stop there; 6e is separate.
 ```

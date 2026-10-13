@@ -1700,3 +1700,16 @@ text, so its Map column is blank for de/ar text facts):
   Ask doesn't see slide conflicts.
 - Phase 6d-2 (other source languages, regional Map models, D18) in a new session; kickoff
   prompt to write from these findings.
+
+## 2026-10-13 · Phase 6d-2 kickoff prompt (no code)
+- §21 kickoff prompt for 6d-2, written from 6d-1's findings: generator in es/ja first (per-
+  language tables, Latin owner names, `say` voices: es Mónica/Paulina + es_MX/es_ES, ja Kyoko +
+  ja_JP), English scripts unchanged; `xling-es`/`xling-ja` (target en) join the `lang` set and are
+  measured before any fix, including whether Transcribe writes numbers as digits or words.
+- Why measure first again: numbers.py reads number words in English only, so a Spanish or
+  Japanese transcript that spells numbers out could leave the guard with no source numbers
+  (more flags, possible wrong repairs) and the eval with misses; 6d-1 showed scoring misses can
+  hide a real problem (the translated markers).
+- D18 (regional Map models) is step 2 and needs the user's approval for gated downloads and the
+  HF token; `map_model_by_lang` doesn't exist in config.py yet. 6d-1's carry-overs are optional.
+- §9's 6d-2 bullet now points to the prompt.
