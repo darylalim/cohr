@@ -1,5 +1,5 @@
 {
-  "format_version": 3,
+  "format_version": 4,
   "schema": {
     "$defs": {
       "MapActionItem": {
@@ -107,6 +107,14 @@
             "title": "Seg Id",
             "type": "integer"
           },
+          "slide_conflicts": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/SlideConflict"
+            },
+            "title": "Slide Conflicts",
+            "type": "array"
+          },
           "summary": {
             "title": "Summary",
             "type": "string"
@@ -137,6 +145,30 @@
           "terms"
         ],
         "title": "SegmentNotes",
+        "type": "object"
+      },
+      "SlideConflict": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "slide": {
+            "title": "Slide",
+            "type": "string"
+          },
+          "spoken": {
+            "title": "Spoken",
+            "type": "number"
+          }
+        },
+        "required": [
+          "label",
+          "spoken",
+          "slide"
+        ],
+        "title": "SlideConflict",
         "type": "object"
       }
     },

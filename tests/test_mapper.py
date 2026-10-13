@@ -14,6 +14,7 @@ from cohr.schemas import (
     SegmentNotes,
     SegmentsFile,
     Slide,
+    SlideConflict,
     SlidesFile,
 )
 from tests.conftest import ctx_for, fake_manager, make_run
@@ -342,3 +343,63 @@ def test_stage_guard_can_be_switched_off(tmp_path: Path) -> None:
     notes = _guard_run(tmp_path, Config(map=MapConfig(number_guard=False))).notes[0]
     assert notes.summary == "Budget $420,500 approved."
     assert notes.number_repairs == [] and notes.unverified_numbers == []
+
+
+# --- speech/slide conflicts -------------------------------------------------------------------
+
+_SAID = (
+    "Let's move on to quarterly budget. The approved budget for next quarter is $80,000. "
+    "That's compared with $77,500 last quarter. Can you say that again?"
+)
+_ROWS = ["Metric\nValue", "Approved budget\n$18,000", "Last quarter\n$77,500"]  # vision's rows
+_MARKDOWN = [
+    "| Metric | Value |\n| --- | --- |\n| Approved budget | $18,000 |\n| Last quarter | $77,500 |"
+]
+_BUDGET = SlideConflict(label="Approved budget", spoken=80000.0, slide="$18,000")
+
+
+@pytest.mark.parametrize("tables", [_ROWS, _MARKDOWN])
+def test_slide_conflict_found_in_both_table_forms(tables: list[str]) -> None:
+    assert mapper.slide_conflicts(_SAID, tables) == [_BUDGET]
+
+
+def test_table_rows_skip_markdown_rules() -> None:
+    assert mapper.table_rows(_MARKDOWN) == [
+        ["Metric", "Value"],
+        ["Approved budget", "$18,000"],
+        ["Last quarter", "$77,500"],
+    ]
+
+
+def test_no_conflict_when_the_slide_value_is_said_or_the_label_isnt() -> None:
+    assert mapper.slide_conflicts(_SAID.replace("$80,000", "$18,000"), _ROWS) == []
+    assert mapper.slide_conflicts("The budget is $80,000.", _ROWS) == []  # "approved" unsaid
+    two = "The approved budget is $80,000, maybe $90,000."
+    assert mapper.slide_conflicts(two, _ROWS) == []  # two spoken candidates
+
+
+def test_mark_keeps_the_spoken_value_and_adds_the_slides() -> None:
+    text, used = mapper.mark_conflicts("Quarterly budget approved at $80,000.", [_BUDGET])
+    assert text == "Quarterly budget approved at $80,000 (slide: $18,000)." and used == [_BUDGET]
+    # another string with the same number but not the label; an already marked string
+    assert mapper.mark_conflicts("Hired 80,000 users", [_BUDGET]) == ("Hired 80,000 users", [])
+    assert mapper.mark_conflicts(text, [_BUDGET]) == (text, [])
+
+
+def test_mark_slide_conflicts_walks_the_notes() -> None:
+    notes = SegmentNotes(
+        seg_id=0,
+        summary="Budget of $80,000 approved.",
+        key_points=["Approved budget: $80,000", "Page load 740 ms"],
+        decisions=[],
+        action_items=[MapActionItem(owner="Ann", task="Spend the $80,000 budget", due=None)],
+        open_questions=[],
+        terms=["budget 80,000"],
+    )
+    out = mapper.mark_slide_conflicts(notes, [_BUDGET])
+    assert out.summary == "Budget of $80,000 (slide: $18,000) approved."
+    assert out.key_points == ["Approved budget: $80,000 (slide: $18,000)", "Page load 740 ms"]
+    assert out.action_items[0].task == "Spend the $80,000 (slide: $18,000) budget"
+    assert out.terms == ["budget 80,000"]
+    assert out.slide_conflicts == [_BUDGET]
+    assert mapper.mark_slide_conflicts(notes, []) == notes

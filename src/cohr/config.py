@@ -125,7 +125,8 @@ class FuseConfig(_Section):
 class MapConfig(_Section):
     max_tokens: int = 1024
     temperature: float = 0.3
-    number_guard: bool = True  # check Map's digits against the segment's sources (§5.5)
+    # check Map's digits against the segment's sources, and mark speech/slide conflicts (§5.5)
+    number_guard: bool = True
 
 
 class ReduceConfig(_Section):

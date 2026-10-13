@@ -190,6 +190,12 @@ class NumberRepair(_Model):
     repaired: str  # the source number in the same style, e.g. "42,500"
 
 
+class SlideConflict(_Model):
+    label: str  # the slide table row's label, e.g. "Approved budget"
+    spoken: float  # the value said for it, e.g. 80000
+    slide: str  # the row's value as shown, e.g. "$18,000"
+
+
 class SegmentNotes(_Model):
     seg_id: int
     summary: str
@@ -203,11 +209,15 @@ class SegmentNotes(_Model):
     # source with no single close source number (kept as written, never dropped or guessed).
     number_repairs: list[NumberRepair] = []
     unverified_numbers: list[str] = []
+    # Speech/slide conflicts (§5.5, 6b-2): a slide row whose value was never said while another
+    # was said for its label. The Map strings keep the spoken value and add the slide's.
+    slide_conflicts: list[SlideConflict] = []
 
 
 class MapFile(RunFile):
-    # v3: number guard (number_repairs, unverified_numbers), so older runs re-run Map.
-    FORMAT_VERSION: ClassVar[int] = 3
+    # v3: number guard (number_repairs, unverified_numbers); v4: slide_conflicts. Older runs
+    # re-run Map.
+    FORMAT_VERSION: ClassVar[int] = 4
     FILENAME: ClassVar[str] = "map.json"
 
     target_language: str
