@@ -1437,8 +1437,30 @@ mean 85.3).
 - Not tried: a second Map pass for decisions and tasks only (last resort; new prompt, merge,
   MapFile bump, ~2× Map time). Revisit only if long-en shows the same drops hurting notes.
 
+### 3. Number guard: separators and days (kept, two baselines)
+- **Option 3 (separators):** repair candidates use only the readings that follow the target
+  language's decimal mark (`numbers.DECIMAL_MARK`, `native_readings`). Beyond the decision: a
+  number no native reading fits ("3,36" in English) falls back to every reading, else the
+  correct malformed repairs (3,36 → 336, 4,26 → 426, 7,40 → 740 on seed 1) would become flags.
+  Spanish (written both ways) and ar/fa (own separators) aren't in the table. First version
+  dropped every reading with a "," for English, thousands group included, and the fallback
+  hid it; the "$770,000" test caught it. Seed 1 `--fresh`: recall 83.8% (=), repairs 9 → 8,
+  unverified 2 → 3, unsupported numbers 2 → 1 ($740 gone from the notes). Baseline 39c67a1.
+- **Due misread, prompt first (reverted):** a `due` rule "Keep every digit of a day and the
+  order it was said in: "the 23rd of June" stays "the 23rd of June", never "June 3rd" or
+  "June 23"". Map still wrote `2nd` on seeds 1–3 (seed 1 kept the order: "2nd of November");
+  recall 88.2 / 79.4 / 89.7%. A copy error inside "22nd", out of the prompt's reach.
+- **Guard for days:** a Map ordinal ("2nd") is compared only with the ordinals in the sources
+  (`numbers.ordinals_in`: "22nd", "the twenty-second"; `mapper.source_days`). Against every
+  source number 2 was one edit from 22, 12 and 1 (flagged); among the days said only 22 is.
+  Plain numbers are unchanged. No MapFile change (`number_repairs` already records it).
+  Seed 1 `--fresh`, Ask + judge: recall 83.8 → 85.3%, made-up items 1 → 0, wrong owner/due
+  1 → 0, citation 100% (=), support 92.7 → 93.9%, Ask 96.2% (=), near-miss 7/12 (=).
+  Baseline e59ff20. Only ordinals with a suffix are narrowed: "13 October" (no suffix) still
+  uses every source number.
+
 ### Next
-- Step 3 (due misread + option 3), then 4 (slide conflict), 5 (long-en). Step 0's tools are
+- Step 4 (slide conflict), then 5 (long-en). Step 0's tools are
   in `scripts/` (throwaway, like Phase 0's): `trace_facts.py <report.json>` (per-fact path and
   facts per key point, no models; run it right after the eval, before the next run replaces
   evals/data/runs) and `map_tokens.py [seed]` (Map reply tokens, loads Tiny Aya).
