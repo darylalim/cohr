@@ -30,7 +30,7 @@ from cohr.schemas import (
     SlidesFile,
 )
 
-FORMAT_VERSION = 1  # of notes.md; bump when the rendering changes
+FORMAT_VERSION = 2  # of notes.md; bump when the rendering changes (2: RTL isolates, 6d-1)
 FILENAME = "notes.md"
 EXCERPT_CHARS = 200
 
@@ -292,6 +292,19 @@ def labels(language: str) -> dict[str, str]:
     return LABELS.get(language, LABELS["en"])
 
 
+# Right-to-left notes languages (6d-1). Streamlit's markdown and most Markdown viewers lay a
+# paragraph out left to right, so a line mixing Arabic with Latin names, dates or citations
+# came out reordered: "(owner: Tom; due: Monday)" split the sentence and the citation ended up
+# on the far side. Each line is wrapped in a right-to-left isolate (RLI … PDI, Unicode bidi):
+# the reading order is right; the bullet and the alignment stay on the left (no custom CSS).
+RTL_LANGUAGES = {"ar", "fa", "he", "ur"}
+RLI, PDI = "\u2067", "\u2069"
+
+
+def isolate(text: str, language: str) -> str:
+    return f"{RLI}{text}{PDI}" if language in RTL_LANGUAGES else text
+
+
 # Semantic colors on the Notes page (§7); the same names in light and dark.
 SECTION_COLORS = {"decisions": "green", "action_items": "orange", "open_questions": "violet"}
 
@@ -335,7 +348,9 @@ def claim_md(
 def answer_md(claims: Sequence[Claim], segments: Sequence[Segment], language: str) -> str:
     """An Ask answer as Streamlit markdown: one paragraph, uncited sentences flagged."""
     by_seg = {s.seg_id: s for s in segments}
-    return " ".join(claim_md(c, by_seg, labels(language), "chat") for c in claims)
+    return isolate(
+        " ".join(claim_md(c, by_seg, labels(language), "chat") for c in claims), language
+    )
 
 
 def excerpt(text: str, limit: int = EXCERPT_CHARS) -> str:
@@ -384,9 +399,9 @@ def render(
         if not rendered:
             out.append("—")
         elif name == "summary":
-            out.append(" ".join(rendered))
+            out.append(isolate(" ".join(rendered), notes.language))
         else:
-            out += [f"- {r}" for r in rendered]
+            out += [f"- {isolate(r, notes.language)}" for r in rendered]
         out.append("")
     if mode == "portable" and (
         sources := sources_md(notes, by_seg, {s.slide_id: s for s in slides})

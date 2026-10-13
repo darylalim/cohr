@@ -1632,3 +1632,21 @@ text, so its Map column is blank for de/ar text facts):
   80.8 / 73.1 / 73.1%, numbers 93.8% each; conflict-de 76.9 / 76.9 / 84.6%.
 - `quick` seed 1 `--fresh`, Ask + judge: gate pass, recall 86.8% (=), slide_value_used true
   (=), Ask 96.2%, near-miss 7/12, support 92.7% (all =).
+
+### 3. Arabic in the Notes page and notes.md (kept: Unicode isolates, D29)
+- Checked with Claude in Chrome (user's choice) on `clean-ar` seed 3, app on 127.0.0.1 with
+  `COHR_RUNS_DIR=evals/data/runs/clean-ar`. Streamlit lays every paragraph out left to right
+  (left-aligned, bullets on the left). Lines in Arabic only read right: the line is one
+  right-to-left run, so the citation (`0:12`) and the final period sit at its visual left, the
+  end of the sentence for an Arabic reader. **A line with Latin text breaks**: Tom's task with
+  "(المسؤول: Tom; الموعد: Monday)" had the citation on the far right and the task in the middle.
+- Fix within the rules: `render.isolate` wraps each claim line, the summary paragraph and Ask
+  answers in RLI … PDI (U+2067 / U+2069) for ar, fa, he, ur. After: Tom's line reads like the
+  others (task, owner/due, citation at the end); clicking `5:40` still scrolls Sources to its
+  segment. `notes.md` FORMAT_VERSION 1 → 2 (render re-runs on old runs). Left alignment and
+  left bullets stay: changing them needs `dir="rtl"` or CSS. Test: isolates for ar in both
+  modes, none for en/de, headings untouched.
+- Found on the way: on seeds 2–3 R7B writes Arabic owners in Arabic script ("المسؤول: لورا" for
+  Laura), so the eval's owner match misses them (clean-ar actions 40%); the name is right,
+  only transliterated. Map keeps Latin owners. Not fixed (a Reduce rule "keep names as
+  written" exists already); carry-over.
