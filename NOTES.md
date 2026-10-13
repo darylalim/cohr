@@ -1415,6 +1415,8 @@ changes which numbers the guard repairs).
 
 ### Next (new session)
 - Continue 6b-2 at step 2 (dense segments, prompt route: replies are not truncated), then
-  3 (due misread + option 3), 4 (slide conflict), 5 (long-en). Scratch tools used for step 0
-  (fact trace, Map token count) were not committed; re-create from the description above if
-  needed.
+  3 (due misread + option 3), 4 (slide conflict), 5 (long-en). Step 0's tools are in
+  `scripts/` (throwaway, like Phase 0's): `trace_facts.py <report.json>` (per-fact path and
+  facts per key point, no models; run it right after the eval, before the next run replaces
+  evals/data/runs) and `map_tokens.py [seed]` (Map reply tokens, loads Tiny Aya). Trace every
+  step-2 variant: one seed's recall moves by reshuffles (step 1).
