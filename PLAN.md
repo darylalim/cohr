@@ -382,7 +382,9 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
 - **Fixed section markers:** the prompt asks for five sections under fixed English markers, whatever
   the target language: `## SUMMARY`, `## KEY_POINTS`, `## DECISIONS`, `## ACTION_ITEMS`,
   `## OPEN_QUESTIONS`. The parser splits on these exact markers, so German or Japanese notes
-  parse the same way as English ones. `render.py` shows each heading in the target language from
+  parse the same way as English ones. The prompt alone doesn't hold them: in de/ar notes R7B
+  translated all five (6d-1), so Reduce starts R7B's reply with `## SUMMARY` (a prefill; Ask
+  has none, D22), and R7B then writes the other four in English. `render.py` shows each heading in the target language from
   a static table (`LABELS[lang][key]`: the five headings plus "Sources", "owner", "due" and
   "uncited", for all 23 languages; English if the language is missing). Missing or unknown
   markers: log them, and put unmatched text in Summary rather than dropping it.

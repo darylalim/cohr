@@ -1583,3 +1583,20 @@ text, so its Map column is blank for de/ar text facts):
 | clean-ar | f16 4,650 | real: in Map seg 1, dropped by Reduce |
 | clean-ar | 5 actions | markers + owners dropped by Reduce (labels gone) |
 | clean-ar | 5 judge facts | markers; ar Decisions repeat 3 tasks |
+
+### 0b. Section markers: reply prefill (kept; user chose prompt first, then a fallback)
+- **Prompt try A (reverted):** `reduce.md`'s last line "A program splits the notes on the
+  markers, so copy them exactly as written above, in English, never translated: ## SUMMARY,
+  …". Seed 1: R7B wrote the same translated markers, word for word.
+- **Prefill (kept):** Reduce appends `<|START_RESPONSE|>## SUMMARY\n` to the prompt and puts
+  it back in front of the reply (`reduce.REPLY_START`, single pass and both two-pass passes;
+  Ask has no prefill, D22). Scratch check on the step-0 runs: all five markers in English on
+  de and ar, seeds 1–3 (6/6), 18–21 citation spans per reply, notes still in de/ar. No prompt
+  change, so REDUCE_HASH stays; a code-only change, so runs need `--fresh`.
+- `lang`, `--fresh --no-ask`, judge on, seeds 1 / 2 / 3: recall **69.2 / 61.5 / 57.7%**
+  (step 0: 38.5), actions 70 / 40 / 40%, numbers 68.8 / 75 / 68.8% (still English-read
+  separators: step 1), judge recall 54.5 / 63.6 / 90.9% (was 0), citation 100%, made-up
+  0 / 4 / 3 (all clean-ar), no marker warning in any run log. ar's action items now get their
+  owners: R7B copies Map's Arabic task text, and the Map fallback (overlap ≥ 0.6) fills them.
+- `quick` seed 1 `--fresh`, Ask + judge: **gate pass**, recall 86.8% (= baseline), citation
+  100%, made-up 0, Ask 96.2%, near-miss 7/12, support 92.7%. Baseline unchanged.
