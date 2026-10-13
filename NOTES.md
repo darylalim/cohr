@@ -1328,3 +1328,185 @@ recall 89.7%, citation 96.7%, uncited 0, made-up 2 / 0, support 95.5%, Ask 98.1%
 
 ### Next
 - Phase 6b-2 in a new session with the §21 prompt.
+
+## 2026-10-12 · Phase 6b-2 (Map fixes)
+
+quick evals with `-c seed=1` against `evals/baseline.json`; each kept Map change gets its own
+baseline commit.
+
+### 0. Measurement (no fixes)
+On the 6c final-gate runs (seed 1, report `20261012-113844-quick`), each planted fact traced
+transcript → Map (segment containing `t0`, which list, how many facts the Map string holds) →
+notes.json. Map replies re-generated with the same prompt and seed to count tokens (identical
+output; key points differ only where the guard repaired a number).
+
+**Map replies are not truncated.** Out tokens per segment: clean 595 / 280, noisy 395 / 374,
+pdf 481 / 311, slide-conflict 413 / 273, all ending in `<|END_RESPONSE|>` (max_tokens 1024).
+No retries, no raw segments. Map stops on its own on the dense segments: step 2 is a prompt
+problem, not `map.max_tokens`.
+
+| item | seg | s | facts in seg | Map key points (facts each) | dec | act | oq |
+|---|---|---|---|---|---|---|---|
+| clean-en | 0 | 291 | 13 | 7 (3, 1, 1, 2, 1, 2, 1) | 5 | 3 | 0 |
+| clean-en | 1 | 66 | 5 | 5 (1, 1, 0, 1, 1) | 2 | 1 | 1 |
+| noisy-en | 0 | 275 | 13 | 7 (1 each) | 3 | 1 | 1 |
+| noisy-en | 1 | 84 | 5 | 7 (0, 0, 0, 1, 1, 1, 1) | 2 | 3 | 0 |
+| pdf-slides-en | 0 | 271 | 14 | 6 (1 each) | 4 | 3 | 1 |
+| pdf-slides-en | 1 | 85 | 4 | 5 (1, 1, 0, 0, 1) | 2 | 1 | 0 |
+| slide-conflict-en | 0 | 285 | 15 | 7 (1 each) | 2 | 2 | 0 |
+| slide-conflict-en | 1 | 64 | 4 | 5 (1, 1, 0, 1, 1) | 1 | 0 | 1 |
+
+- **ASR is right for every planted fact** (the slide-conflict budget is misspoken by design).
+- **Map has 58/68 recall facts in their home list; notes have 61/68** (89.7%, the baseline).
+  Reduce recovers 3 from the transcript (slide-conflict: Nadia and Grace actions in seg 0,
+  Omar in seg 1, which Map's action list left out). **Every notes miss is a Map miss**:
+  | cause | facts |
+  |---|---|
+  | dense seg 0: dropped | clean f5 (Omar: hiring plan), noisy f7 (Victor: venue), slide-conflict f2 (decision: sync to Thursdays) |
+  | wrong list | pdf f14 (Maria: security audit, under decisions as "Maria will review…") |
+  | short seg 1: number dropped | noisy f16 (MRR $248,000: "Revenue has shown more stability…") |
+  | due misread | pdf f16 ("22nd of November" → "November 2nd"; guard flags `2nd`; scored wrong + made up) |
+  | slide conflict | slide-conflict f7 ($80,000 spoken, $18,000 on the slide) |
+  Planted open question dropped by Map: slide-conflict f4 (ASR drops the colon, as in 6b).
+- **Bundling is one segment:** clean-en seg 0's key points join a number with the decision or
+  task said next to it ("Support Queue: 390 … New logo on website approved. Laura to send
+  contract to legal by Friday.", 3 facts; cloud + Victor; retention + Maria). The same segment
+  repeats its 3 actions under decisions. The other 7 segments write one fact per key point. On
+  seed 1 the bundles cost no citation (f1, f7, f10 within ±15 s); 6c saw them cost 3.
+- **Citation misses (2): one is the number guard.** slide-conflict f11 (page load 740 ms)
+  matches "Quarterly budget approved at $80,000, compared to $740 last quarter.": Map wrote
+  "$770,000" for the spoken $77,500; its decimal-comma reading 770.0 is one digit from 740
+  (page load), the only candidate, so the guard "repaired" it to a wrong number. The other
+  (clean f13, 75 candidates) cites seg 0 163 s early: a single-fact key point, Reduce's citation.
+
+**Order:** 1 → 2 → 3 → 4 as planned. Step 1 (one fact per key point; decisions and tasks only
+in their lists) also targets the wrong-list case (pdf f14) and the duplicated actions. Step 2:
+prompt (list every decision and task said in this part), aimed at the 3 dense drops; the
+short-segment number drop (noisy f16) says it's coverage, not only length. Step 3 adds the
+guard's decimal-comma mis-repair: in "$770,000" a 3-digit group after a comma is a thousands
+group, so the 770.0 reading shouldn't make a repair candidate (to confirm with the user: it
+changes which numbers the guard repairs).
+
+### 1. Bundled key points (map.md, kept)
+- `map.md` gets a `key_points` rule (it had none): "one fact per item, in one short sentence: a
+  figure with what it measures, or one other point that was made. Never join two facts in one
+  item. Decisions and tasks go only in "decisions" and "action_items", never in a key point",
+  and under decisions: "A task someone will do goes only in "action_items", not here."
+- Seeds 1–3 (no Ask, no judge): recall 83.8 / 85.3 / 86.8% (was 89.7 / 85.3 / 83.8, mean
+  86.3 → 85.3, inside the 5.9 noise); **citation 100 / 100 / 100%** (was 96.7 / 96.6 / 100).
+  No key point holds more than one fact (seeds 1 and 3 traced).
+- Seed 1 is a reshuffle, not a pure loss: Map now has Omar's hiring plan (clean) and Maria's
+  audit under action items (pdf), but lost the owner of Maria's survey (clean), wrote "6,900"
+  for 69 candidates (pdf, flagged), replaced 340 tickets with "Support queue has been more
+  stable…" (pdf), dropped "keep the onboarding checklist" (noisy), and Reduce no longer
+  recovers two slide-conflict actions. Coverage of seg 0 is step 2's job.
+- Re-baselined (seed 1, Ask + judge, gate pass): recall 83.8%, citation 100%, made-up 1 / 0,
+  uncited 0, support 95.5 → 91.5% (report-only; check in step 2), Ask 98.1 → 96.2%, Ask
+  citation 100%, near-miss 7/12.
+
+### Decision for step 3 (user)
+- Number-guard mis-repair ("$770,000" → 740 via the decimal-comma reading): **option 3**. When
+  looking for a repair candidate, read separators the way the target language writes numbers
+  (en: "," groups thousands, "." decimal; decimal-comma languages the reverse; languages not in
+  the table keep both readings). Keeping a number is unchanged (any reading in the sources).
+  Unit test: "$770,000" with sources {77500, 740} → flagged. No MapFile change. Rejected:
+  never repairing two-reading numbers (loses "$425,000" → $42,500, the D20 case); "comma + 3
+  digits = thousands" (one-sided: German "770.000" keeps the bug).
+
+### 2. Dense segments (2026-10-13, nothing kept)
+Seeds 1–3, no Ask, no judge, each traced; reference is step 1 (recall 83.8 / 85.3 / 86.8%,
+mean 85.3).
+
+| try | recall s1 / s2 / s3 | mean | result |
+|---|---|---|---|
+| A. map.md: "Cover the whole part … list every figure, every decision and every task … A long part needs longer lists, not shorter items." | 85.3 / 86.8 / 82.3 | 84.8 | no gain; made-up open questions 1–2 on s2–s3 (was 0); reverted |
+| B. map.md: JSON keys reordered, decisions / action_items / open_questions before key_points | 80.9 / 72.1 / (stopped) | — | figures drop instead (number recall 78 / 69%); reverted |
+| C. `fuse.window_s=180` (D12 re-check against D16 noise) | 89.7 / 85.3 / 83.8 | 86.3 | +1.0, inside the 5.9 noise; kept 300 s |
+
+- **Seg 0 isn't capped at ~7 key points: it holds 6–7 figures, and Map keeps all of them.**
+  The loss is decisions and tasks: the same six drop on every seed under the step-1 prompt and
+  try A (clean f2; noisy f3, f7; slide-conflict f2, f5, f6). ASR and Map's input are clean
+  ("We decided to move the weekly sync to Thursdays."); most sit a few seconds from another
+  decision, task or open question (clean f2@42 + f3@46, slide-conflict f4@94 + f5@98 + f6@106).
+  A Tiny Aya coverage limit on a 285 s, 7-topic part, not a token or prompt-wording problem.
+- B shows list order moves the loss, it doesn't remove it: whatever comes last gets short.
+- C: with 150–175 s segments the persistent drops mostly come back (slide-conflict f5/f6,
+  noisy f7 on 2 of 3 seeds), but others appear (pdf f7, f11, f14; noisy f15), and on s3
+  Reduce loses four noisy-en tasks Map had (Map repeats them under decisions too). 11 segments
+  instead of 8 on quick (Map ~35% slower per audio hour). D12 stays 300 s.
+- Not tried: a second Map pass for decisions and tasks only (last resort; new prompt, merge,
+  MapFile bump, ~2× Map time). Revisit only if long-en shows the same drops hurting notes.
+
+### 3. Number guard: separators and days (kept, two baselines)
+- **Option 3 (separators):** repair candidates use only the readings that follow the target
+  language's decimal mark (`numbers.DECIMAL_MARK`, `native_readings`). Beyond the decision: a
+  number no native reading fits ("3,36" in English) falls back to every reading, else the
+  correct malformed repairs (3,36 → 336, 4,26 → 426, 7,40 → 740 on seed 1) would become flags.
+  Spanish (written both ways) and ar/fa (own separators) aren't in the table. First version
+  dropped every reading with a "," for English, thousands group included, and the fallback
+  hid it; the "$770,000" test caught it. Seed 1 `--fresh`: recall 83.8% (=), repairs 9 → 8,
+  unverified 2 → 3, unsupported numbers 2 → 1 ($740 gone from the notes). Baseline 39c67a1.
+- **Due misread, prompt first (reverted):** a `due` rule "Keep every digit of a day and the
+  order it was said in: "the 23rd of June" stays "the 23rd of June", never "June 3rd" or
+  "June 23"". Map still wrote `2nd` on seeds 1–3 (seed 1 kept the order: "2nd of November");
+  recall 88.2 / 79.4 / 89.7%. A copy error inside "22nd", out of the prompt's reach.
+- **Guard for days:** a Map ordinal ("2nd") is compared only with the ordinals in the sources
+  (`numbers.ordinals_in`: "22nd", "the twenty-second"; `mapper.source_days`). Against every
+  source number 2 was one edit from 22, 12 and 1 (flagged); among the days said only 22 is.
+  Plain numbers are unchanged. No MapFile change (`number_repairs` already records it).
+  Seed 1 `--fresh`, Ask + judge: recall 83.8 → 85.3%, made-up items 1 → 0, wrong owner/due
+  1 → 0, citation 100% (=), support 92.7 → 93.9%, Ask 96.2% (=), near-miss 7/12 (=).
+  Baseline e59ff20. Only ordinals with a suffix are narrowed: "13 October" (no suffix) still
+  uses every source number.
+
+### 4. Speech/slide conflict (kept: marked, not replaced; MapFile v4)
+- No prompt try: `map.md` already says to use the slide's value on a conflict, and Map has
+  written the misspoken $80,000 on every seed since 6b.
+- **User's choice: mark both values instead of replacing.** A speaker can be correcting an
+  outdated slide, so a guard that always trusts the slide would write wrong notes there.
+  `mapper.slide_conflicts`: a slide table row (Markdown or vision's "label\nvalue" rows) whose
+  one value was never said, while the sentences naming every label word hold exactly one
+  number on no slide. `mark_slide_conflicts` adds " (slide: $18,000)" after the spoken value
+  in Map strings that name the label; `slide_conflicts` records it (MapFile v3 → v4).
+- Dry run on the current runs (4 quick items + long-en, 36 segments): only the planted
+  conflict.
+- Seed 1, Ask + judge, gate pass: **slide_value_used false → true** (notes: "Quarterly budget
+  approved at $80,000 (slide: $18,000) … [1:55] [slide 3]"; R7B kept the note), recall
+  85.3 → 86.8%, citation 100% (=), made-up 0 (=), Ask 96.2% (=), near-miss 7/12 (=).
+  Report-only: support 93.9 → 92.7% (the judge reads the marked claim as "contradicted by the
+  slide"), unsupported numbers 1 → 2 (Map's flagged 6,900, kept by Reduce on the changed
+  input). Baseline 63abd32.
+- Carry-overs: Ask still answers "$80,000" (it reads transcript and slides, not Map notes);
+  " (slide: …)" is English inside notes in any target language (like the `[slide N]`
+  citation marker; check in 6d).
+
+### 5. long-en (run 1 of 2 used; one Reduce-only rerun, reverted)
+- **Run 1** (seed 1, full, gate pass vs 6c): recall 67.5 → **70.0%** (decisions 50 → 75,
+  actions 40 → 40, numbers 90 → 82.5, open questions 75 → 75), citation 98.1 → 96.4%, uncited
+  0, made-up 9 → 8, wrong owner/due 2, Ask 83.3 → **94.4%**, Ask citation 93.8 → 100%,
+  near-miss 4/4, support 80.5% (report-only). Committed as `evals/baseline-long.json`.
+- **Pass 2 no longer drops a third of the decisions.** Traced by text with the eval's match
+  rule: decisions Map 18/20 → pass 1 18 → pass 2 15 (6c: 19 → 15 → 10); pass 2 drops 3
+  (podcast series, quarterly planning, referral bonus).
+- **Actions are misfiled, not lost:** pass 2 holds the text of 15 planted tasks, the eval
+  credits 8. Map writes long-en tasks as decisions ("Tom will update the pricing page by the
+  2nd of November."): 3 only under decisions (pricing page, moving quotes, contract to legal),
+  3 under both (release notes, staging database, customer survey). Pass 1 copies the decision
+  form; the 3 in both lose the action item (and its owner) by pass 2. Step 1's map.md rule
+  holds on quick, not on long-en's segments.
+- Reduce prompts' action example "[owner: ?] [due: ?] Update the release notes" overlaps the
+  generator's "write the release notes"; pass 2 wrote exactly that line (owner lost) once.
+- **Reduce-only rerun (reverted):** `reduce_part.md` and `reduce_pass2.md` got "A task someone
+  will do (such as "Ana will print the event badges by Friday") is an action item with its
+  owner and due, never a decision. When a task is listed both as a decision and as an action
+  item, write it once, under ACTION_ITEMS." and the example "Translate the app store listing".
+  R7B ignored it: pass 1 kept all 6 under DECISIONS word for word; recall 68.8%, made-up 8 →
+  12, actions 40% (=); pass 2 moved `[owner] [due]` after the task. The example didn't leak.
+  Not tried: `reduce_pass2.md` for the 3 dropped decisions (the misfiling is the larger loss).
+
+### Next
+- Carry-overs for the PR / 6e: Map files tasks as decisions on long segments (a pure-Python
+  Map step could move or dedupe them; it would change quick: needs a re-baseline); the
+  release-notes example in `reduce.md` (changing it re-runs quick's Reduce); Ask doesn't see
+  slide conflicts; " (slide: …)" in non-English notes (6d). Step 0's tools are in `scripts/`
+  (throwaway): `trace_facts.py <report.json>` and `map_tokens.py [seed]`.

@@ -123,6 +123,21 @@ def _fmt(v: float) -> str:
 _NUMBER = re.compile(r"\d+(?:\.\d+)?")
 
 
+def ordinals_in(text: str) -> set[float]:
+    """Ordinals, the way days are said: "the 22nd" and "the twenty-second" → 22."""
+    out = {float(m.group(1)) for m in _ORDINAL_SUFFIX.finditer(text)}
+    run: list[str] = []
+    for tok in [*_WORD.findall(text), ""]:
+        low = tok.lower()
+        if low in _NUMBER_WORDS:
+            run.append(low)
+        elif not (low == "-" and run):  # "twenty-second" goes on
+            if run and run[-1] in _ORDINALS:
+                out.add(float(_words_value(run)))
+            run = []
+    return out
+
+
 def numbers_in(text: str) -> set[float]:
     return {float(m) for m in _NUMBER.findall(digits(text))}
 
@@ -188,6 +203,27 @@ def readings(body: str) -> list[Reading]:
             places = len(body.rpartition(dec)[2]) if dec else 0
             out.append(Reading(v, group if group and group in body else None, dec, places))
     return out
+
+
+# Decimal mark by target language, for the guard's repair candidates (6b-2): "." languages group
+# with ",", "," languages with "." or a space. Not listed, so both readings stay: languages
+# written both ways (es: Spain vs. Mexico) or with their own separators (ar, fa).
+DECIMAL_MARK = {
+    **dict.fromkeys(("en", "he", "hi", "ja", "ko", "zh"), "."),
+    **dict.fromkeys(
+        ("cs", "de", "el", "fr", "id", "it", "nl", "pl", "pt", "ro", "ru", "tr", "uk", "vi"), ","
+    ),
+}
+
+
+def native_readings(reads: list[Reading], language: str | None) -> list[Reading]:
+    """The readings written the way `language` writes numbers: in English "770,000" is 770000,
+    never 770.0. All of them when the language isn't in DECIMAL_MARK or no reading fits it
+    (a malformed "3,36" can only be the decimal-comma 3.36)."""
+    mark = DECIMAL_MARK.get(language or "")
+    if mark is None:
+        return reads
+    return [r for r in reads if r.decimal in (None, mark) and r.group != mark] or reads
 
 
 def one_edit(a: str, b: str) -> bool:

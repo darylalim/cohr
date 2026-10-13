@@ -14,6 +14,7 @@ from cohr.schemas import (
     SegmentNotes,
     SegmentsFile,
     Slide,
+    SlideConflict,
     SlidesFile,
 )
 from tests.conftest import ctx_for, fake_manager, make_run
@@ -212,6 +213,62 @@ def test_guard_flags_two_equally_close_candidates() -> None:
     assert _check("by the 2nd", "the 22nd, one item") == ("by the 2nd", [], ["2nd"])  # 22 or 1
 
 
+def test_guard_repairs_only_from_the_target_languages_reading() -> None:
+    # 6b-2: Map wrote "$770,000" for the spoken $77,500; its decimal-comma reading 770.0 is one
+    # digit from 740 (another figure), so without a language it was "repaired" to $740.
+    sources = {77500.0, 740.0}
+    assert mapper.check_numbers("$770,000", sources) == (
+        "$740",
+        [NumberRepair(original="770,000", repaired="740")],
+        [],
+    )
+    assert mapper.check_numbers("$770,000", sources, "en") == ("$770,000", [], ["770,000"])
+    assert mapper.check_numbers("770.000 €", sources, "de") == ("770.000 €", [], ["770.000"])
+    # the D20 case still repairs: in English "$425,000" is 425000, ×10 from 42500
+    assert mapper.check_numbers("$425,000", {42500.0}, "en")[0] == "$42,500"
+    # a language not in the table keeps both readings
+    assert mapper.check_numbers("$770,000", sources, "es")[0] == "$740"
+
+
+def test_guard_falls_back_to_every_reading_when_none_is_native() -> None:
+    # "3,36" isn't an English number; only the decimal-comma 3.36 reads it (×100 → 336)
+    assert mapper.check_numbers("3,36 open tickets", {336.0}, "en")[0] == "336 open tickets"
+
+
+def test_guard_numbers_passes_the_language_on() -> None:
+    notes = SegmentNotes(
+        seg_id=0,
+        summary="Budget $770,000.",
+        key_points=["Page load 740 ms"],
+        decisions=[],
+        action_items=[],
+        open_questions=[],
+        terms=[],
+    )
+    out = mapper.guard_numbers(notes, {77500.0, 740.0}, "en")
+    assert out.summary == "Budget $770,000." and out.unverified_numbers == ["770,000"]
+
+
+def test_guard_repairs_an_ordinal_only_from_the_days_said() -> None:
+    # 6b-2: "by the 22nd of November" → Map "November 2nd" on every seed. Against every source
+    # number 2 is one edit from 22, 12 and 1, so it was flagged; among the days said only 22 is.
+    source = "Nadia, can you prepare the survey by the 22nd of November? 12 seats, 1 team."
+    sources, days = mapper.source_numbers(source, []), mapper.source_days(source, [])
+    assert mapper.check_numbers("by November 2nd", sources)[2] == ["2nd"]
+    assert mapper.check_numbers("by November 2nd", sources, "en", days) == (
+        "by November 22nd",
+        [NumberRepair(original="2", repaired="22")],
+        [],
+    )
+    # a day near no spoken day stays flagged; a plain number still uses every source
+    assert mapper.check_numbers("by the 5th", sources, "en", days)[2] == ["5th"]
+    assert mapper.check_numbers("120 seats", sources, "en", days)[0] == "12 seats"
+
+
+def test_source_days_include_slides() -> None:
+    assert mapper.source_days("due the twenty-second", ["Launch: 3rd of May"]) == {22.0, 3.0}
+
+
 def test_guard_flags_an_invented_iso_year() -> None:
     text, repairs, unverified = _check("Due 2024-11-22", "by the 22nd of November")
     assert text == "Due 2024-11-22" and repairs == []
@@ -286,3 +343,63 @@ def test_stage_guard_can_be_switched_off(tmp_path: Path) -> None:
     notes = _guard_run(tmp_path, Config(map=MapConfig(number_guard=False))).notes[0]
     assert notes.summary == "Budget $420,500 approved."
     assert notes.number_repairs == [] and notes.unverified_numbers == []
+
+
+# --- speech/slide conflicts -------------------------------------------------------------------
+
+_SAID = (
+    "Let's move on to quarterly budget. The approved budget for next quarter is $80,000. "
+    "That's compared with $77,500 last quarter. Can you say that again?"
+)
+_ROWS = ["Metric\nValue", "Approved budget\n$18,000", "Last quarter\n$77,500"]  # vision's rows
+_MARKDOWN = [
+    "| Metric | Value |\n| --- | --- |\n| Approved budget | $18,000 |\n| Last quarter | $77,500 |"
+]
+_BUDGET = SlideConflict(label="Approved budget", spoken=80000.0, slide="$18,000")
+
+
+@pytest.mark.parametrize("tables", [_ROWS, _MARKDOWN])
+def test_slide_conflict_found_in_both_table_forms(tables: list[str]) -> None:
+    assert mapper.slide_conflicts(_SAID, tables) == [_BUDGET]
+
+
+def test_table_rows_skip_markdown_rules() -> None:
+    assert mapper.table_rows(_MARKDOWN) == [
+        ["Metric", "Value"],
+        ["Approved budget", "$18,000"],
+        ["Last quarter", "$77,500"],
+    ]
+
+
+def test_no_conflict_when_the_slide_value_is_said_or_the_label_isnt() -> None:
+    assert mapper.slide_conflicts(_SAID.replace("$80,000", "$18,000"), _ROWS) == []
+    assert mapper.slide_conflicts("The budget is $80,000.", _ROWS) == []  # "approved" unsaid
+    two = "The approved budget is $80,000, maybe $90,000."
+    assert mapper.slide_conflicts(two, _ROWS) == []  # two spoken candidates
+
+
+def test_mark_keeps_the_spoken_value_and_adds_the_slides() -> None:
+    text, used = mapper.mark_conflicts("Quarterly budget approved at $80,000.", [_BUDGET])
+    assert text == "Quarterly budget approved at $80,000 (slide: $18,000)." and used == [_BUDGET]
+    # another string with the same number but not the label; an already marked string
+    assert mapper.mark_conflicts("Hired 80,000 users", [_BUDGET]) == ("Hired 80,000 users", [])
+    assert mapper.mark_conflicts(text, [_BUDGET]) == (text, [])
+
+
+def test_mark_slide_conflicts_walks_the_notes() -> None:
+    notes = SegmentNotes(
+        seg_id=0,
+        summary="Budget of $80,000 approved.",
+        key_points=["Approved budget: $80,000", "Page load 740 ms"],
+        decisions=[],
+        action_items=[MapActionItem(owner="Ann", task="Spend the $80,000 budget", due=None)],
+        open_questions=[],
+        terms=["budget 80,000"],
+    )
+    out = mapper.mark_slide_conflicts(notes, [_BUDGET])
+    assert out.summary == "Budget of $80,000 (slide: $18,000) approved."
+    assert out.key_points == ["Approved budget: $80,000 (slide: $18,000)", "Page load 740 ms"]
+    assert out.action_items[0].task == "Spend the $80,000 (slide: $18,000) budget"
+    assert out.terms == ["budget 80,000"]
+    assert out.slide_conflicts == [_BUDGET]
+    assert mapper.mark_slide_conflicts(notes, []) == notes

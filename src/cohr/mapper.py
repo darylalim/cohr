@@ -16,7 +16,17 @@ from typing import Any
 from cohr import schemas
 from cohr.config import language_name, load_prompt
 from cohr.fuse import slide_text
-from cohr.numbers import SCALE, WRITTEN, Reading, near, numbers_in, readings, write_like
+from cohr.numbers import (
+    SCALE,
+    WRITTEN,
+    Reading,
+    native_readings,
+    near,
+    numbers_in,
+    ordinals_in,
+    readings,
+    write_like,
+)
 from cohr.pipeline import Stage, StageContext
 from cohr.schemas import (
     MapActionItem,
@@ -25,6 +35,7 @@ from cohr.schemas import (
     Segment,
     SegmentNotes,
     SegmentsFile,
+    SlideConflict,
     SlidesFile,
 )
 
@@ -134,11 +145,21 @@ def source_numbers(transcript: str, slides: list[str]) -> set[float]:
     return set().union(numbers_in(transcript), *(numbers_in(s) for s in slides))
 
 
-def check_numbers(text: str, sources: set[float]) -> tuple[str, list[NumberRepair], list[str]]:
+def source_days(transcript: str, slides: list[str]) -> set[float]:
+    """The ordinals said or shown ("the 22nd"): the only repair candidates for a Map ordinal."""
+    return set().union(ordinals_in(transcript), *(ordinals_in(s) for s in slides))
+
+
+def check_numbers(
+    text: str, sources: set[float], language: str | None = None, days: set[float] | None = None
+) -> tuple[str, list[NumberRepair], list[str]]:
     """Keep a number found in the sources; repair it when exactly one source number is near it
     (one digit edit, or a factor of 10/100/1000), in the written style; otherwise keep it as
-    written and flag it. A number with a scale suffix ("42.5k") or grouped with plain spaces
-    ("42 500", which could also be two numbers) is only kept or flagged."""
+    written and flag it. Repair candidates come only from the readings that follow the target
+    `language`'s separators (`native_readings`), and for an ordinal ("2nd") only from `days`
+    when given ("by the 22nd", not "12 seats"); keeping a number accepts any reading. A number
+    with a scale suffix ("42.5k") or grouped with plain spaces ("42 500", which could also be two
+    numbers) is only kept or flagged."""
     repairs: list[NumberRepair] = []
     unverified: list[str] = []
 
@@ -152,8 +173,8 @@ def check_numbers(text: str, sources: set[float]) -> tuple[str, list[NumberRepai
             return written
         near_by: dict[float, Reading] = {}
         if scale == 1.0 and " " not in body:
-            for r in reads:
-                for s in sources:
+            for r in native_readings(reads, language):
+                for s in days if m.group("ordinal") and days is not None else sources:
                     if near(r.value, s):
                         near_by.setdefault(s, r)
         if len(near_by) != 1:
@@ -167,7 +188,12 @@ def check_numbers(text: str, sources: set[float]) -> tuple[str, list[NumberRepai
     return WRITTEN.sub(check, text), repairs, unverified
 
 
-def guard_numbers(notes: SegmentNotes, sources: set[float]) -> SegmentNotes:
+def guard_numbers(
+    notes: SegmentNotes,
+    sources: set[float],
+    language: str | None = None,
+    days: set[float] | None = None,
+) -> SegmentNotes:
     """Run `check_numbers` on every Map string except `terms`. Raw (non-JSON) segments are
     left alone: their text isn't notes, so there is nothing to keep consistent."""
     if notes.raw:
@@ -176,7 +202,7 @@ def guard_numbers(notes: SegmentNotes, sources: set[float]) -> SegmentNotes:
     unverified: list[str] = []
 
     def fix(text: str) -> str:
-        fixed, r, u = check_numbers(text, sources)
+        fixed, r, u = check_numbers(text, sources, language, days)
         repairs.extend(r)
         unverified.extend(u)
         return fixed
@@ -196,6 +222,99 @@ def guard_numbers(notes: SegmentNotes, sources: set[float]) -> SegmentNotes:
             "open_questions": fix_all(notes.open_questions),
             "number_repairs": repairs,
             "unverified_numbers": list(dict.fromkeys(unverified)),
+        }
+    )
+
+
+# --- speech/slide conflicts (pure, §5.5) --------------------------------------------------
+
+_LABEL_WORD = re.compile(r"[^\W\d_]{3,}")
+_SENTENCE_END = re.compile(r"(?<=[.?!])\s+")
+
+
+def label_words(text: str) -> set[str]:
+    return {w.lower() for w in _LABEL_WORD.findall(text)}
+
+
+def table_rows(tables_md: list[str]) -> list[list[str]]:
+    """Cells per row: Markdown tables, or vision's one-row "label\nvalue" strings (§5.2)."""
+    rows: list[list[str]] = []
+    for table in tables_md:
+        if "|" not in table:
+            rows.append([c.strip() for c in table.splitlines() if c.strip()])
+            continue
+        for line in table.splitlines():
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if any(cells) and not all(set(c) <= set("-: ") for c in cells):
+                rows.append(cells)
+    return rows
+
+
+def slide_conflicts(transcript: str, tables_md: list[str]) -> list[SlideConflict]:
+    """Slide rows whose one value was never said, while the sentences naming the row's label
+    (every label word in them) hold exactly one number that is on no slide: the spoken value
+    for the same figure (the slide-conflict-en case: "approved budget … $80,000", slide row
+    "Approved budget | $18,000"). Neither side is assumed right."""
+    rows = table_rows(tables_md)
+    on_slides = set().union(*(numbers_in(c) for row in rows for c in row))
+    spoken = numbers_in(transcript)
+    sentences = _SENTENCE_END.split(transcript)
+    out: list[SlideConflict] = []
+    for label, *cells in rows:
+        words = label_words(label)
+        values = [(c, numbers_in(c)) for c in cells if numbers_in(c)]
+        if not words or len(values) != 1 or len(values[0][1]) != 1:
+            continue
+        written, [value] = values[0]
+        if value in spoken:
+            continue
+        said = set().union(*(numbers_in(s) for s in sentences if words <= label_words(s)))
+        if len(said - on_slides) == 1:
+            [other] = said - on_slides
+            out.append(SlideConflict(label=label, spoken=other, slide=written))
+    return out
+
+
+def mark_conflicts(text: str, conflicts: list[SlideConflict]) -> tuple[str, list[SlideConflict]]:
+    """After each spoken value of a conflict in a string that names its label, add the slide's
+    value: "$80,000" → "$80,000 (slide: $18,000)". The spoken value is never replaced."""
+    used: list[SlideConflict] = []
+    for c in conflicts:
+        note = f" (slide: {c.slide})"
+        if note in text or not label_words(c.label) & label_words(text):
+            continue
+
+        def add(m: re.Match[str], c: SlideConflict = c, note: str = note) -> str:
+            return m.group(0) + note if c.spoken in numbers_in(m.group(0)) else m.group(0)
+
+        marked = WRITTEN.sub(add, text)
+        if marked != text:
+            text = marked
+            used.append(c)
+    return text, used
+
+
+def mark_slide_conflicts(notes: SegmentNotes, conflicts: list[SlideConflict]) -> SegmentNotes:
+    """`mark_conflicts` on every Map string but `terms`; raw segments are left alone."""
+    if notes.raw or not conflicts:
+        return notes
+    used: list[SlideConflict] = []
+
+    def mark(text: str) -> str:
+        marked, u = mark_conflicts(text, conflicts)
+        used.extend(c for c in u if c not in used)
+        return marked
+
+    return notes.model_copy(
+        update={
+            "summary": mark(notes.summary),
+            "key_points": [mark(t) for t in notes.key_points],
+            "decisions": [mark(t) for t in notes.decisions],
+            "action_items": [
+                a.model_copy(update={"task": mark(a.task)}) for a in notes.action_items
+            ],
+            "open_questions": [mark(t) for t in notes.open_questions],
+            "slide_conflicts": used,
         }
     )
 
@@ -275,7 +394,8 @@ def run_stage(ctx: StageContext) -> None:
                 seg_notes = make_notes(seg.seg_id, obj, raw)
                 if cfg.number_guard:
                     sources = source_numbers(seg.transcript_text, seg_slides)
-                    seg_notes = guard_numbers(seg_notes, sources)
+                    days = source_days(seg.transcript_text, seg_slides)
+                    seg_notes = guard_numbers(seg_notes, sources, ctx.config.target_language, days)
                     for fix in seg_notes.number_repairs:
                         ctx.log.info("map: segment %d %s → %s", k, fix.original, fix.repaired)
                     if seg_notes.unverified_numbers:
@@ -283,6 +403,13 @@ def run_stage(ctx: StageContext) -> None:
                             "map: segment %d numbers in no source: %s",
                             k,
                             ", ".join(seg_notes.unverified_numbers),
+                        )
+                    tables = [t for i in seg.slide_ids for t in slides[i].tables_md]
+                    conflicts = slide_conflicts(seg.transcript_text, tables)
+                    seg_notes = mark_slide_conflicts(seg_notes, conflicts)
+                    for c in seg_notes.slide_conflicts:
+                        ctx.log.info(
+                            "map: segment %d %s: said %s, slide %s", k, c.label, c.spoken, c.slide
                         )
                 notes.append(seg_notes)
     ctx.log.info("map: %d segments, %d retried, %d kept as raw text", len(notes), retried, failed)

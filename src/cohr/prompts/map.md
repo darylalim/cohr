@@ -6,7 +6,8 @@ Return only a JSON object, with no other text, using exactly these keys:
 
 {"summary": string, "key_points": [string], "decisions": [string], "action_items": [{"owner": string or null, "task": string, "due": string or null}], "open_questions": [string], "terms": [string]}
 
-- "decisions": things the participants agreed or decided.
+- "key_points": one fact per item, in one short sentence: a figure with what it measures, or one other point that was made. Never join two facts in one item. Decisions and tasks go only in "decisions" and "action_items", never in a key point.
+- "decisions": things the participants agreed or decided. A task someone will do goes only in "action_items", not here.
 - "action_items": tasks someone will do. Take "owner" and "due" only from the sentence that gives that task; use null when that sentence doesn't state them. Never reuse another task's owner or due date.
 - "due": copy the words that were said, for example "Friday", "end of next week" or "the 3rd of June". Never turn them into a calendar date: no numeric dates like 2025-06-03 and never add a year.
 - Only list an action item when someone is asked or agrees to do something. Something that already happened (for example "the dashboard was updated on Monday") is not an action item.

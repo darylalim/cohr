@@ -320,6 +320,11 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
     and the output's separator style and decimal places ("$420,500" → "$42,500"; "420.500" →
     "42.500"). The segment's `number_repairs` lists each one (`{original, repaired}`), and the
     run log names it.
+    Candidates (6b-2): the output number is read only the way the target language writes numbers
+    (`numbers.DECIMAL_MARK`; in English "$770,000" is 770000, never 770.0; languages written
+    both ways, and numbers no native reading fits, keep every reading), and an ordinal ("2nd")
+    is only compared with the ordinals in the sources ("the 22nd", "the twenty-second"), not
+    with counts and amounts.
   - Otherwise (no candidate, or more than one): **kept and flagged**, never dropped and never
     guessed. The segment's `unverified_numbers` lists them (`MapFile` v3, §19) and the run log
     warns. An invented year such as `2024` in `2024-11-24` lands here.
@@ -332,7 +337,12 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
     words in the source are not normalized (English only, like the eval), so a target language
     whose transcript spells numbers out may flag more; the eval's cross-language items show it.
   - The guard does not resolve a speech/slide conflict (§18 `slide-conflict-en`): both values
-    are in the sources, so both pass. That stays a prompt problem.
+    are in the sources, so both pass. Map ignores `map.md`'s slide rule, so (6b-2, user's
+    choice) a pure-Python step **marks** the conflict instead of picking a side: a slide table
+    row whose one value was never said, while the sentences naming its label hold exactly one
+    number on no slide, gets the slide's value added after the spoken one in every Map string
+    naming the label ("$80,000 (slide: $18,000)"). Recorded in `slide_conflicts` (MapFile v4).
+    A speaker may be correcting an outdated slide, so neither value is replaced.
 - **Invalid JSON:** same rule as §5.3. Retry once with "Return only valid JSON". If it still fails,
   store the raw text as `summary`, leave the lists empty, set `raw: true` on that segment's entry,
   and log a warning. The retry prompt (`prompts/map_retry.md`) also ends with the target language.
@@ -1062,7 +1072,7 @@ compared with a committed baseline:
   bundled key points (Reduce copies them; key-point citations land on the bundle, 6b-2); pass 2
   of two-pass dropping about a third of pass 1's decisions on `long-en`; near-miss under the cap
   (4/12 vs 7/12); `long-en` German-after-history (0/1).
-- **6b-2: Map fixes** (after 6c, from 6b and 6c): measurement first (each planted fact's path
+- **6b-2: Map fixes** (done 2026-10-13, NOTES.md; after 6c, from 6b and 6c): measurement first (each planted fact's path
   transcript → Map → notes, and whether Map replies hit `map.max_tokens`); then Map's bundled
   key points (6c: Reduce copies them, so key-point citations land on the bundle), Map dropping
   facts on long, dense segments (~280 s, 7 topics: ~7 key points kept), the due-date misread
@@ -1072,6 +1082,13 @@ compared with a committed baseline:
   every metric: one re-baseline per kept change. Not in 6b-2: Ask near-miss under the cap
   (4/12 vs 7/12) and `long-en` German-after-history (one question), left for 6e's long-meeting
   check. Kickoff prompt in §21.
+  Results: one fact per Map key point (citation 100% on seeds 1–3); dense-segment drops not
+  fixed (Tiny Aya coverage; D12 re-checked, 300 s kept); number guard reads separators by
+  target language and repairs ordinals only to days said (D20); speech/slide conflicts shown
+  with both values (D28, MapFile v4); `long-en` re-baselined (recall 70.0%, decisions 75%, Ask
+  94.4%; pass 2 keeps 15 of 18 decisions). Carry-overs (6e): Map files long-en tasks as
+  decisions (actions 40%; a Reduce rule was ignored); `reduce.md`'s "Update the release notes"
+  example overlaps a generator task; Ask doesn't see slide conflicts.
 - **6d: languages.** "Other (beta)" target languages with translation that keeps citations
   (§5.6); the `xling-{es,ja}` and `en → {de,ar}` items; optional regional Map models (§5.5):
   `map_model_by_lang` filled only for languages that pass D18 (may stay empty).
@@ -1675,7 +1692,7 @@ exact checks with no human labels and no LLM judge.
 | `clean-en` | Baseline |
 | `noisy-en` | VAD and transcription with background noise and music gaps |
 | `pdf-slides-en` | Audio + a PDF deck (no video): slide **text alignment** (§5.4); metric = share of slides placed in the window where they're discussed |
-| `slide-conflict-en` | A number is *misspoken* in speech but correct on the slide (e.g. "forty" vs `14`). Correct output uses the slide value (§5.5 rule). |
+| `slide-conflict-en` | A number is *misspoken* in speech but correct on the slide (e.g. "forty" vs `14`). Correct output uses the slide value (§5.5 rule); since 6b-2 the notes show both ("$80,000 (slide: $18,000)"), which counts as the slide value used. |
 | `xling-{es,ja}` → target `en` | Source language ≠ target language |
 | `en` → target `{de,ar}` | Output in a non-English target, including right-to-left text |
 | `long-en` (~2.5 h, audio + PDF deck, own `long` set; 6c) | Two-pass reduce (§4) and Ask ranking (§5.7). Realistic density (user, 6c): the topic loop once per region (5 regions × 8 topics, 40 slides), 36 discussion lines per topic, 88 facts (40 numbers, 20 decisions, 20 actions, 8 open questions). The region is in the spoken metric, the fact label and the slide title. Ask asks a fixed sample: 12 number, 6 action, the follow-up, 2 German, 3 near-miss |
@@ -1868,7 +1885,7 @@ section.
 | D9 | `torch` in the lockfile (§1, §15) | Must be absent | `uv tree --invert --package torch` | Phase 0 || Absent from `uv.lock`; never imported |
 | D10 | Speed target realistic (§9) | ≤ 20 min per audio hour | Phase 0 per-stage timings | Phase 0 || Realistic: ≈ 9–10 min per audio hour projected |
 | D11 | Slide alignment threshold (§5.4) | 0.15 | Maximize `pdf-slides-en` accuracy | Phase 3, re-check Phase 4b-1 | **0.15**: on `pdf-slides-en` all 8 slides align correctly at every threshold 0.05–0.35 (best scores 0.35–0.50); 0.15 stays between those and the 0.125 of an undiscussed slide (Phase 3 fixture) |
-| D12 | Fuse window length (§5.4) | 300 s | Fact recall vs. speed on `quick` | Phase 4b-1 | **300 s**: vs 120 s, recall 82.3% vs 79.4%, made-up items 3 vs 6, Map 123 vs 180 s/audio h (one seed per item; re-check against D16 noise) |
+| D12 | Fuse window length (§5.4) | 300 s | Fact recall vs. speed on `quick` | Phase 4b-1 | **300 s**: vs 120 s, recall 82.3% vs 79.4%, made-up items 3 vs 6, Map 123 vs 180 s/audio h (one seed per item; re-check against D16 noise). Re-checked in 6b-2 (seeds 1–3): 180 s recall 89.7 / 85.3 / 83.8% vs 300 s 83.8 / 85.3 / 86.8% (mean +1.0, inside the 5.9 noise), 11 vs 8 segments on `quick`; **300 s kept** |
 | D13 | Notes column `width=880` shrinks below 880 px (§7) | 880 | Resize check | Phase 5 | **Shrinks, 880 kept**: 377 px at a 420 px window, 422 at 800 (sidebar closed), 559 at 1512, capped at 880 at 2560. But at 800 px with the sidebar open the columns get 209 / 128 px (they only stack at ≤ 640) |
 | D14 | Anchors scroll the Sources panel (§7) | Anchors | Click check; fallback = drawer buttons | Phase 5 | **Anchors work**: clicking `[5:41](#seg-1)` scrolled the Sources container 0 → 2358 px and brought its block to the top; no drawer needed |
 | D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4b-2 | **Pass, no margin**: 3-way 80.0% (24/30), yes vs not-yes 96.7% (29/30). All 12 "yes" right; 4 of 8 "partial" judged "no" (an added detail read as a contradiction), 1 "partial" judged "yes", 1 "no" judged "partial". Support rate counts only "yes", so the partial/no confusion barely moves it. Judge metrics stay out of the gate until D16 (Phase 6) |
@@ -1876,7 +1893,7 @@ section.
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 6c (Ask ranking needs it; was Phase 7) | **Available**: uv's Python 3.13.12 has SQLite 3.50.4 with `ENABLE_FTS5`; the `trigram` tokenizer works on Japanese. Trigram can't match terms under 3 characters, so CJK questions are split into 3-character windows |
 | D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6d | |
 | D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | **0.1 and ±15 s, plus a sentence offset inside the chunk**: chunk `t0` alone was a median 12.5 s early (61% within 15 s); with the offset 98% (53 of 54 errors ≤ 5 s, so 15 s hides nothing). Min score 0.0 = 0.1 > 0.2 (94.6%) > 0.3 (91.1%) |
-| D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | **Default rule kept**: 8 repairs on `quick`, all to the transcript's value (0 wrong); number recall 81.2% → 87.5%, fact recall 82.3% → 85.3%, made-up 3 → 3, citation accuracy 98.2% → 100%; numbers in no source 6 → 1 (a flagged `3,360` with two candidates). Short numbers are weak evidence (any one-digit number is one edit from the next): watch on `full` |
+| D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | **Default rule kept**: 8 repairs on `quick`, all to the transcript's value (0 wrong); number recall 81.2% → 87.5%, fact recall 82.3% → 85.3%, made-up 3 → 3, citation accuracy 98.2% → 100%; numbers in no source 6 → 1 (a flagged `3,360` with two candidates). Short numbers are weak evidence (any one-digit number is one edit from the next): watch on `full`. **6b-2 narrowed the candidates** (user chose the separator rule): a wrong repair ("$770,000" → $740 via the decimal-comma reading) is now flagged, and "November 2nd" is repaired to the only day said (22nd); `quick` seed 1: recall 83.8 → 85.3%, made-up 1 → 0, wrong owner/due 1 → 0, unsupported numbers 2 → 1 |
 | D21 | Notes layout in medium windows (§7) | Two columns; close the sidebar | Options within the no-CSS rule (NOTES.md 2026-10-11 5a finding) | Before 5b | **Beside/Below toggle** in the Notes header, default Beside, per session. Rejected: Sources always in the drawer (undoes D14, loses side-by-side on wide screens), a "close the sidebar" hint only, `initial_sidebar_state="collapsed"` on Notes (localStorage overrides it). Built in 5b |
 | D22 | Ask history format (§5.7) | R7B's multi-turn `rag` messages | Manual check on clean-en: follow-ups cited and answered | Phase 5b | **Folded into one user turn** (Reduce's `prompt()`), language line last. Native multi-turn: 4 of 6 answers were a new tool call, no answer. Native + `<|START_RESPONSE|>` prefill: answered, but follow-ups lost their citations. Folded: every English answer cited, jump times inside the truth spans |
 | D23 | Ask answer-language detection (§5.7) | lingua, fallback = target language | lingua confidences on sample questions in 9 languages | Phase 5b | **≥ 2 words (or CJK), confidence ≥ 0.2, lead ≥ 0.05**: "Priya?" read as Indonesian at 0.56 and "Wat is het budget?" tied nl/en at 0.25; full sentences scored 0.25–1.0 with a clear lead |
@@ -1884,6 +1901,7 @@ section.
 | D25 | Citation-accuracy gate after the bundling fix (§18) | −3 (D16) | Reduce bundling fix first (one fact per claim), then D16's rule on 3 `quick` runs (seeds 1–3): max(3, 2 × noise) | Phase 6c | **−6.9 points (noise 3.4: 96.7 / 96.6 / 100%)** after `reduce.md`'s one-fact-per-item rule (recall 82.3 → 89.7%, citation 92.9 → 96.7%). Fact-recall noise on the same runs rose to 5.9 (89.7 / 85.3 / 83.8%); its gate stays −5.9 (user: seed 1 is the high point). Key points stay bundled: Reduce copies Map's bundled key points word for word (6b-2) |
 | D26 | Two-pass reduce grouping (§4) | Groups of consecutive segments filling ~75% of `max_input_tokens` | `quick` with a lowered cap forcing 2–3 groups vs single pass on the same media: citation accuracy within D25, no uncited rise, every pass-2 citation resolves; then `long-en` | Phase 6c | **40% (`GROUP_FILL` 0.4), with `reduce_part.md` (decisions/actions before figures-only key points) and 4096 output tokens.** `quick` at cap 4000 (2 groups per item) vs single pass: recall 89.7 = 89.7%, citation 100 vs 96.7%, uncited 0, made-up 3 vs 2, 91 of 91 pass-2 citations by claim match. `long-en` (2.2 h, 32K cap): at 75% (2 groups of ~23K) pass 1 ran out of output inside KEY_POINTS (recall 11.3 → 37.5% with the prompts and 4096); 0.4 (4–5 groups of ~12K) recall 53.8% on the same media, 67.5% after fact-free filler (citation 98.1%, 5 group fallbacks of 139). Pass 2 still loses about a third of pass 1's decisions (carry-over, §9 6c) |
 | D27 | Ask ranking under the cap (§5.7) | FTS5 BM25 over segment + slide documents, question terms OR'ed, top-ranked that fit | Ask accuracy on `quick` with a lowered cap vs the full-document baseline, and on `long-en`'s question sample | Phase 6c | **FTS5 BM25 over the question plus the last turn, at most the top 12 documents that fit, sent in meeting order.** `quick` at cap 4000 vs no cap / vs the old transcript trimming: Ask accuracy 96.2 vs 98.1 / 98.1%, citation 98.0 vs 100 / 100%, follow-up 3/4 vs 3/4 / 1/4, near-miss 4/12 vs 7/12 / 5/12 (any way of fitting the cap costs near-misses; ranking is within one question of trimming and scales). `long-en`: filling the 32K cap (~60 documents) gave 61% at ~100 s per answer and citation loops; top 12 gives 83.3%, citation 93.8%, ~32 s |
+| D28 | Speech/slide conflict (§5.5, §18 `slide-conflict-en`) | Prompt: use the slide's value | Map ignores the prompt rule on every seed; a guard that swaps in the slide value would be wrong when a speaker corrects an outdated slide | Phase 6b-2 | **Show both** (user): a slide table row whose one value was never said, while the sentences naming its label hold exactly one number on no slide, gets "(slide: $18,000)" after the spoken value in Map's strings; `slide_conflicts` in MapFile v4. `quick` seed 1: slide_value_used false → true, recall 85.3 → 86.8%; dry run on 36 real segments found only the planted conflict |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).
