@@ -1413,10 +1413,32 @@ changes which numbers the guard repairs).
   never repairing two-reading numbers (loses "$425,000" → $42,500, the D20 case); "comma + 3
   digits = thousands" (one-sided: German "770.000" keeps the bug).
 
-### Next (new session)
-- Continue 6b-2 at step 2 (dense segments, prompt route: replies are not truncated), then
-  3 (due misread + option 3), 4 (slide conflict), 5 (long-en). Step 0's tools are in
-  `scripts/` (throwaway, like Phase 0's): `trace_facts.py <report.json>` (per-fact path and
+### 2. Dense segments (2026-10-13, nothing kept)
+Seeds 1–3, no Ask, no judge, each traced; reference is step 1 (recall 83.8 / 85.3 / 86.8%,
+mean 85.3).
+
+| try | recall s1 / s2 / s3 | mean | result |
+|---|---|---|---|
+| A. map.md: "Cover the whole part … list every figure, every decision and every task … A long part needs longer lists, not shorter items." | 85.3 / 86.8 / 82.3 | 84.8 | no gain; made-up open questions 1–2 on s2–s3 (was 0); reverted |
+| B. map.md: JSON keys reordered, decisions / action_items / open_questions before key_points | 80.9 / 72.1 / (stopped) | — | figures drop instead (number recall 78 / 69%); reverted |
+| C. `fuse.window_s=180` (D12 re-check against D16 noise) | 89.7 / 85.3 / 83.8 | 86.3 | +1.0, inside the 5.9 noise; kept 300 s |
+
+- **Seg 0 isn't capped at ~7 key points: it holds 6–7 figures, and Map keeps all of them.**
+  The loss is decisions and tasks: the same six drop on every seed under the step-1 prompt and
+  try A (clean f2; noisy f3, f7; slide-conflict f2, f5, f6). ASR and Map's input are clean
+  ("We decided to move the weekly sync to Thursdays."); most sit a few seconds from another
+  decision, task or open question (clean f2@42 + f3@46, slide-conflict f4@94 + f5@98 + f6@106).
+  A Tiny Aya coverage limit on a 285 s, 7-topic part, not a token or prompt-wording problem.
+- B shows list order moves the loss, it doesn't remove it: whatever comes last gets short.
+- C: with 150–175 s segments the persistent drops mostly come back (slide-conflict f5/f6,
+  noisy f7 on 2 of 3 seeds), but others appear (pdf f7, f11, f14; noisy f15), and on s3
+  Reduce loses four noisy-en tasks Map had (Map repeats them under decisions too). 11 segments
+  instead of 8 on quick (Map ~35% slower per audio hour). D12 stays 300 s.
+- Not tried: a second Map pass for decisions and tasks only (last resort; new prompt, merge,
+  MapFile bump, ~2× Map time). Revisit only if long-en shows the same drops hurting notes.
+
+### Next
+- Step 3 (due misread + option 3), then 4 (slide conflict), 5 (long-en). Step 0's tools are
+  in `scripts/` (throwaway, like Phase 0's): `trace_facts.py <report.json>` (per-fact path and
   facts per key point, no models; run it right after the eval, before the next run replaces
-  evals/data/runs) and `map_tokens.py [seed]` (Map reply tokens, loads Tiny Aya). Trace every
-  step-2 variant: one seed's recall moves by reshuffles (step 1).
+  evals/data/runs) and `map_tokens.py [seed]` (Map reply tokens, loads Tiny Aya).
