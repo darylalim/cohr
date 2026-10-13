@@ -23,6 +23,7 @@ from cohr.numbers import (
     native_readings,
     near,
     numbers_in,
+    ordinals_in,
     readings,
     write_like,
 )
@@ -143,13 +144,19 @@ def source_numbers(transcript: str, slides: list[str]) -> set[float]:
     return set().union(numbers_in(transcript), *(numbers_in(s) for s in slides))
 
 
+def source_days(transcript: str, slides: list[str]) -> set[float]:
+    """The ordinals said or shown ("the 22nd"): the only repair candidates for a Map ordinal."""
+    return set().union(ordinals_in(transcript), *(ordinals_in(s) for s in slides))
+
+
 def check_numbers(
-    text: str, sources: set[float], language: str | None = None
+    text: str, sources: set[float], language: str | None = None, days: set[float] | None = None
 ) -> tuple[str, list[NumberRepair], list[str]]:
     """Keep a number found in the sources; repair it when exactly one source number is near it
     (one digit edit, or a factor of 10/100/1000), in the written style; otherwise keep it as
     written and flag it. Repair candidates come only from the readings that follow the target
-    `language`'s separators (`native_readings`); keeping a number accepts any reading. A number
+    `language`'s separators (`native_readings`), and for an ordinal ("2nd") only from `days`
+    when given ("by the 22nd", not "12 seats"); keeping a number accepts any reading. A number
     with a scale suffix ("42.5k") or grouped with plain spaces ("42 500", which could also be two
     numbers) is only kept or flagged."""
     repairs: list[NumberRepair] = []
@@ -166,7 +173,7 @@ def check_numbers(
         near_by: dict[float, Reading] = {}
         if scale == 1.0 and " " not in body:
             for r in native_readings(reads, language):
-                for s in sources:
+                for s in days if m.group("ordinal") and days is not None else sources:
                     if near(r.value, s):
                         near_by.setdefault(s, r)
         if len(near_by) != 1:
@@ -181,7 +188,10 @@ def check_numbers(
 
 
 def guard_numbers(
-    notes: SegmentNotes, sources: set[float], language: str | None = None
+    notes: SegmentNotes,
+    sources: set[float],
+    language: str | None = None,
+    days: set[float] | None = None,
 ) -> SegmentNotes:
     """Run `check_numbers` on every Map string except `terms`. Raw (non-JSON) segments are
     left alone: their text isn't notes, so there is nothing to keep consistent."""
@@ -191,7 +201,7 @@ def guard_numbers(
     unverified: list[str] = []
 
     def fix(text: str) -> str:
-        fixed, r, u = check_numbers(text, sources, language)
+        fixed, r, u = check_numbers(text, sources, language, days)
         repairs.extend(r)
         unverified.extend(u)
         return fixed
@@ -290,7 +300,8 @@ def run_stage(ctx: StageContext) -> None:
                 seg_notes = make_notes(seg.seg_id, obj, raw)
                 if cfg.number_guard:
                     sources = source_numbers(seg.transcript_text, seg_slides)
-                    seg_notes = guard_numbers(seg_notes, sources, ctx.config.target_language)
+                    days = source_days(seg.transcript_text, seg_slides)
+                    seg_notes = guard_numbers(seg_notes, sources, ctx.config.target_language, days)
                     for fix in seg_notes.number_repairs:
                         ctx.log.info("map: segment %d %s → %s", k, fix.original, fix.repaired)
                     if seg_notes.unverified_numbers:

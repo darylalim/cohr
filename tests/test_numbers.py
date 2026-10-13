@@ -3,7 +3,16 @@
 
 import pytest
 
-from cohr.numbers import WRITTEN, Reading, near, one_edit, readings, write_like
+from cohr.numbers import (
+    WRITTEN,
+    Reading,
+    native_readings,
+    near,
+    one_edit,
+    ordinals_in,
+    readings,
+    write_like,
+)
 
 
 def _values(body: str) -> set[float]:
@@ -71,3 +80,17 @@ def test_written_skips_names_and_reads_suffixes() -> None:
         ("42.5", None, "k"),
         ("34", None, None),
     ]
+
+
+def test_ordinals_in_reads_digit_and_word_days() -> None:
+    text = "by the 22nd of November, the twenty-second, the third of October, 12 seats, 1st"
+    assert ordinals_in(text) == {22.0, 3.0, 1.0}
+    assert ordinals_in("the thirteenth of October and twenty first") == {13.0, 21.0}
+    assert ordinals_in("12 seats and forty-two items") == set()
+
+
+def test_native_readings_follow_the_decimal_mark() -> None:
+    assert [r.value for r in native_readings(readings("770,000"), "en")] == [770000.0]
+    assert [r.value for r in native_readings(readings("770.000"), "de")] == [770000.0]
+    assert len(native_readings(readings("770,000"), "es")) == 2  # not in the table
+    assert [r.value for r in native_readings(readings("3,36"), "en")] == [3.36]  # fallback

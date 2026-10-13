@@ -248,6 +248,26 @@ def test_guard_numbers_passes_the_language_on() -> None:
     assert out.summary == "Budget $770,000." and out.unverified_numbers == ["770,000"]
 
 
+def test_guard_repairs_an_ordinal_only_from_the_days_said() -> None:
+    # 6b-2: "by the 22nd of November" → Map "November 2nd" on every seed. Against every source
+    # number 2 is one edit from 22, 12 and 1, so it was flagged; among the days said only 22 is.
+    source = "Nadia, can you prepare the survey by the 22nd of November? 12 seats, 1 team."
+    sources, days = mapper.source_numbers(source, []), mapper.source_days(source, [])
+    assert mapper.check_numbers("by November 2nd", sources)[2] == ["2nd"]
+    assert mapper.check_numbers("by November 2nd", sources, "en", days) == (
+        "by November 22nd",
+        [NumberRepair(original="2", repaired="22")],
+        [],
+    )
+    # a day near no spoken day stays flagged; a plain number still uses every source
+    assert mapper.check_numbers("by the 5th", sources, "en", days)[2] == ["5th"]
+    assert mapper.check_numbers("120 seats", sources, "en", days)[0] == "12 seats"
+
+
+def test_source_days_include_slides() -> None:
+    assert mapper.source_days("due the twenty-second", ["Launch: 3rd of May"]) == {22.0, 3.0}
+
+
 def test_guard_flags_an_invented_iso_year() -> None:
     text, repairs, unverified = _check("Due 2024-11-22", "by the 22nd of November")
     assert text == "Due 2024-11-22" and repairs == []

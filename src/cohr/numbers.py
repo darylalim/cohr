@@ -123,6 +123,21 @@ def _fmt(v: float) -> str:
 _NUMBER = re.compile(r"\d+(?:\.\d+)?")
 
 
+def ordinals_in(text: str) -> set[float]:
+    """Ordinals, the way days are said: "the 22nd" and "the twenty-second" → 22."""
+    out = {float(m.group(1)) for m in _ORDINAL_SUFFIX.finditer(text)}
+    run: list[str] = []
+    for tok in [*_WORD.findall(text), ""]:
+        low = tok.lower()
+        if low in _NUMBER_WORDS:
+            run.append(low)
+        elif not (low == "-" and run):  # "twenty-second" goes on
+            if run and run[-1] in _ORDINALS:
+                out.add(float(_words_value(run)))
+            run = []
+    return out
+
+
 def numbers_in(text: str) -> set[float]:
     return {float(m) for m in _NUMBER.findall(digits(text))}
 
