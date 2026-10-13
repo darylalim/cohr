@@ -1,7 +1,8 @@
-# Lang eval set (PLAN §18, 6d-1): English meetings, notes in another language. Same scripts and
-# media as the quick items of the same seed; only the target changes. Scored with
-# cross-language matching (exact fields + judge recall). Report-only baseline:
-# evals/baseline-lang.json.
+# Lang eval set (PLAN §18): notes language ≠ meeting language, scored with cross-language
+# matching (exact fields + judge recall). 6d-1: English meetings, notes in another language
+# (same scripts and media as the quick items of the same seed; only the target changes).
+# 6d-2: meetings in Spanish and Japanese, English notes (xling-*; slides in the meeting's
+# language). Report-only baseline: evals/baseline-lang.json.
 # Run: uv run cohr eval --set lang -c seed=1 --no-ask
 items:
   - id: conflict-de  # slide-conflict-en, German notes: the "(slide: …)" note in German
@@ -22,6 +23,22 @@ items:
   - id: clean-sw  # clean-en, "Other (beta)" Swahili: English notes translated by Tiny Aya
     seed: 1
     target: sw
+    media: video
+    slides: video
+    gaps: [silence]
+
+  - id: xling-es  # clean-en's plan spoken in Spanish (es_ES + es_MX voices), English notes
+    seed: 1
+    language: es
+    target: en
+    media: video
+    slides: video
+    gaps: [silence]
+
+  - id: xling-ja  # clean-en's plan spoken in Japanese, English notes; CER, not WER
+    seed: 1
+    language: ja
+    target: en
     media: video
     slides: video
     gaps: [silence]

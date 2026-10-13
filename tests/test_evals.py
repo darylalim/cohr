@@ -52,6 +52,8 @@ from cohr.schemas import (
 from evals.gen import build as gen_build
 from evals.gen.script import (
     DECISIONS,
+    EN,
+    LANGS,
     MORE_DECISIONS,
     MORE_DISCUSSION,
     MORE_OPEN_QUESTIONS,
@@ -101,6 +103,26 @@ def test_wer_text_makes_spoken_and_written_forms_equal() -> None:
     spoken = "The budget is fourteen thousand five hundred dollars, up thirty eight percent."
     written = "the budget is $14,500, up 38%."
     assert wer_text(spoken) == wer_text(written)
+
+
+def test_asr_error_in_spanish_and_japanese() -> None:
+    # 6d-2: Transcribe writes the script's plain "42500" as "42.500" or "42,500" and "34 por
+    # ciento" as "34%" (say → Transcribe round trip); neither is an error.
+    script = "El presupuesto es de 42500 dólares, frente al 34 por ciento."
+    heard = "El presupuesto es de 42.500 dólares, frente al 34%."
+    assert evals.asr_error(script, heard, "es") == ("wer", 0.0)
+    assert evals.asr_error(script, heard.replace("42.500", "42,500"), "es") == ("wer", 0.0)
+    kind, err = evals.asr_error(script, heard.replace("presupuesto", "precio"), "es")
+    assert kind == "wer" and err == pytest.approx(1 / 11)  # "por ciento" is two words
+    ja = "承認された予算は42500ドルです。再訪率は34パーセントです。"
+    assert evals.asr_error(ja, "承認された予算は42,500ドルです 再訪率は34%です", "ja") == (
+        "cer",
+        0.0,
+    )
+    kind, err = evals.asr_error(ja, ja.replace("承認", "使用"), "ja")
+    assert kind == "cer" and 0 < err < 0.1
+    # English is the old WER, unchanged.
+    assert evals.asr_error("It is $42,500.", "it is 42500 dollars", "en") == ("wer", 0.0)
 
 
 @pytest.mark.parametrize(
@@ -698,10 +720,17 @@ def test_lang_items_reuse_the_quick_scripts() -> None:
     # 6d-1: only the notes language changes, so lang and quick results compare item to item.
     twins = {"conflict-de": "slide-conflict-en", "clean-ar": "clean-en", "clean-sw": "clean-en"}
     lang = evals.load_set("lang", ROOT)
-    targets = {i.id: i.target for i in lang.items}
-    assert targets == {"conflict-de": "de", "clean-ar": "ar", "clean-sw": "sw"}
+    targets = {i.id: (i.language, i.target) for i in lang.items}
+    assert targets == {
+        "conflict-de": ("en", "de"),
+        "clean-ar": ("en", "ar"),
+        "clean-sw": ("en", "sw"),
+        "xling-es": ("es", "en"),
+        "xling-ja": ("ja", "en"),
+    }
     for spec in lang.items:
-        assert spec.language == "en"
+        if spec.id not in twins:
+            continue
         assert (
             _fingerprint(generate(spec.seed, gen_build.variant(spec)))
             == QUICK_SCRIPTS[twins[spec.id]]
@@ -725,6 +754,51 @@ def test_planted_texts_stay_distinguishable() -> None:
     # Long-meeting filler states nothing Map could list as a decision, task or question.
     cues = ("?", "let's", "we should", "i'd like", "happy to", "will ", "keep an eye", "asked")
     assert not [t for t in MORE_DISCUSSION if any(c in t.casefold() for c in cues)]
+
+
+@pytest.mark.parametrize("code", ["es", "ja"])
+def test_language_tables_line_up_with_english(code: str) -> None:
+    # 6d-2: the same seed draws the same facts in every language, so the lists line up.
+    lang = LANGS[code]
+    for name in ("decisions", "tasks", "open_questions", "weekdays", "relative_dues", "topics"):
+        assert len(getattr(lang, name)) == len(getattr(EN, name)), name
+    for name in ("decision_lines", "action_lines", "open_question_lines", "topic_intros"):
+        assert len(getattr(lang, name)) == len(getattr(EN, name)), name
+    assert [(t.unit, t.lo, t.hi, t.step) for t in lang.topics] == [
+        (t.unit, t.lo, t.hi, t.step) for t in EN.topics
+    ]
+    assert len(set(lang.voices)) == 3
+
+
+@pytest.mark.parametrize("code", ["es", "ja"])
+def test_planted_texts_stay_distinguishable_per_language(code: str) -> None:
+    lang = LANGS[code]
+    texts = [*lang.decisions, *lang.tasks, *lang.open_questions]
+    assert len(set(texts)) == len(texts)
+    sets = [evals.content(t) for t in texts]
+    for i, a in enumerate(sets):
+        for j in range(i):
+            assert len(a & sets[j]) / min(len(a), len(sets[j])) < 0.6, (texts[i], texts[j])
+    assert not any(numbers_in(t) for t in texts)
+
+
+@pytest.mark.parametrize("code", ["es", "ja"])
+def test_script_in_another_language_plants_the_english_seed_facts(code: str) -> None:
+    en, other = generate(1, Variant()), generate(1, Variant(language=code))
+    assert len(other.lines) == len(en.lines) and other.project == en.project
+    assert [(f.kind, f.line, f.owner, f.due, f.value) for f in other.facts] == [
+        (f.kind, f.line, f.owner, f.due, f.value) for f in en.facts
+    ]
+    voices = set(LANGS[code].voices)
+    assert {line.voice for line in other.lines} <= voices
+    # The words are the language's own: no English template is left.
+    english = {line.text for line in en.lines}
+    assert not english & {line.text for line in other.lines}
+    for f in other.facts:
+        if f.kind == "action":
+            assert f.owner and f.owner in other.lines[f.line].text  # Latin name, as said
+        if f.kind == "number":
+            assert str(int(f.value or 0)) in other.lines[f.line].text  # plain digits for `say`
 
 
 def test_long_meeting_facts_are_unique() -> None:

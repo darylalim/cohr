@@ -29,6 +29,7 @@ import shutil
 import subprocess
 import sys
 import time
+import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import UTC, datetime
@@ -492,6 +493,40 @@ def wer(reference: str, hypothesis: str) -> float:
     return float(jiwer.wer(wer_text(reference), wer_text(hypothesis)))
 
 
+CER_LANGUAGES = ("ja", "ko", "zh")  # no spaces between words: scored by character (§18)
+_GROUPED = re.compile(r"(?<=\d)[.,\u00a0\u202f ](?=\d{3}(?!\d))")
+_UNIT_WORDS = {
+    "es": {"%": " por ciento ", "$": " dólares "},
+    "ja": {"%": "パーセント", "$": "ドル"},
+}
+
+
+def asr_text(text: str, language: str) -> str:
+    """Text normalized for WER/CER in a language other than English (6d-2): NFKC, thousands
+    separators dropped between digits ("42.500", "42,500" → "42500", as Transcribe writes
+    either for the script's plain "42500"), "%" spelled the way the script says it, no
+    punctuation. Number words aren't read: the script writes digits."""
+    text = _GROUPED.sub("", unicodedata.normalize("NFKC", text))
+    for sign, word in _UNIT_WORDS.get(language, {}).items():
+        text = text.replace(sign, word)
+    text = re.sub(r"[^\w\s]", " ", text.casefold())
+    if language in CER_LANGUAGES:
+        return "".join(text.split())
+    return " ".join(text.split())
+
+
+def asr_error(reference: str, hypothesis: str, language: str) -> tuple[str, float]:
+    """("wer", WER) in English (unchanged) and other spaced languages, ("cer", CER) in ja/ko/zh."""
+    import jiwer  # eval dependency group
+
+    if language == "en":
+        return "wer", wer(reference, hypothesis)
+    ref, hyp = asr_text(reference, language), asr_text(hypothesis, language)
+    if language in CER_LANGUAGES:
+        return "cer", float(jiwer.cer(ref, hyp))
+    return "wer", float(jiwer.wer(ref, hyp))
+
+
 def _slide_body(slide: Slide) -> str:
     return "\n".join([slide.title, slide.text_md, *slide.tables_md])
 
@@ -695,6 +730,8 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
     repairs = [f"{r.original} → {r.repaired}" for n in map_notes for r in n.number_repairs]
     unverified = [u for n in map_notes for u in n.unverified_numbers]
     unsupported = unsupported_numbers(all_claims, transcript, slides, spec.target)
+    heard = " ".join(i.text for i in transcript.items)
+    asr_kind, asr_err = asr_error(truth.script_text, heard, spec.language)
 
     metrics: dict[str, float | int | None] = {
         "facts": len(scored),
@@ -713,7 +750,8 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
         "gap_words": words,
         "gap_minutes": round(gap_min, 3),
         "gap_words_per_min": round(words / gap_min, 2) if gap_min else 0.0,
-        "wer": round(wer(truth.script_text, " ".join(i.text for i in transcript.items)), 4),
+        "wer": round(asr_err, 4) if asr_kind == "wer" else None,
+        "cer": round(asr_err, 4) if asr_kind == "cer" else None,  # ja/ko/zh scripts (6d-2)
         **slide_metrics(truth.slides, slides, ids),
         "output_language_ok": int(lang == spec.target),
         "map_numbers_repaired": len(repairs),
@@ -1416,6 +1454,7 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         "gap_words_per_min": round(total("gap_words") / gap_min, 2) if gap_min else 0.0,
         "vad_speech_f1": mean("vad_speech_f1"),
         "wer": mean("wer"),
+        "cer": mean("cer"),
         "slide_title_exact": mean("slide_title_exact"),
         "slide_cell_accuracy": mean("slide_cell_accuracy"),
         "slide_number_recall": mean("slide_number_recall"),
@@ -1526,6 +1565,7 @@ PCT_KEYS = {
     "citation_accuracy",
     "vad_speech_f1",
     "wer",
+    "cer",
     "slides_found",
     "slide_title_exact",
     "slide_cell_accuracy",
@@ -1583,6 +1623,7 @@ def render_markdown(report: Report) -> str:
         "uncited_claims",
         "gap_words",
         "wer",
+        "cer",
         "slide_alignment",
         "support_rate",
         "ask_accuracy",
