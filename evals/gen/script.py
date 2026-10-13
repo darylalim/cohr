@@ -752,7 +752,7 @@ JA = Lang(
         "次回への宿題です。{q}かどうか、まだ誰も答えを持っていません。",
     ),
     weekdays=("月曜日", "水曜日", "金曜日"),
-    relative_dues=("来週末", "月末"),
+    relative_dues=("来週の終わり", "月末"),
     date=lambda month, day: f"{10 + month}月{day}日",
     opening=(
         "皆さん、おはようございます。{project}プロジェクトの週次定例を始めます。",
