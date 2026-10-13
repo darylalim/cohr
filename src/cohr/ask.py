@@ -289,7 +289,8 @@ def ask(
         raise AskError("Ask a question.")
     if not sources.segments and not sources.slides:
         raise AskError("This run has no transcript or slides to answer from.")
-    language = answer_language(question, config.target_language, detect)
+    # An "Other (beta)" target falls back to the notes' English: R7B doesn't write it (6d-1).
+    language = answer_language(question, config.notes_language, detect)
     fitted = fit(lm, question, history, language, sources, config.reduce.max_input_tokens)
     reply = lm.generate(
         fitted.prompt,

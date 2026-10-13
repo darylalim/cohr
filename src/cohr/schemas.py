@@ -281,6 +281,21 @@ class NotesDoc(RunFile):
     two_pass: TwoPass | None = None  # passes == 2 only
 
 
+class TranslatedNotes(RunFile):
+    """The notes in an "Other (beta)" target language (§5.6, 6d-1): notes.json's claims, in the
+    same sections and order, with the same citations; only the text (and an action item's due
+    date) is translated. Written by the translate stage; absent for R7B's 23 languages."""
+
+    FORMAT_VERSION: ClassVar[int] = 1
+    FILENAME: ClassVar[str] = "notes_translated.json"
+
+    sections: NotesSections
+    language: str  # the target language
+    source_language: str  # notes.json's language ("en")
+    untranslated: int  # claims kept in the source language (reply unreadable twice)
+    raw: list[str]  # Tiny Aya's replies, as generated (debugging, evals)
+
+
 # --- I/O -----------------------------------------------------------------------------------
 
 RUN_FILES: tuple[type[RunFile], ...] = (
@@ -292,6 +307,7 @@ RUN_FILES: tuple[type[RunFile], ...] = (
     SegmentsFile,
     MapFile,
     NotesDoc,
+    TranslatedNotes,
 )
 
 

@@ -307,6 +307,7 @@ def test_default_stages_order() -> None:
         "fuse",
         "map",
         "reduce",
+        "translate",
         "render",
     ]
 

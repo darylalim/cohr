@@ -439,7 +439,7 @@ def run_stage(ctx: StageContext) -> None:
             for k, seg in enumerate(segments):
                 ctx.report(k / len(segments), f"segment {k + 1}/{len(segments)}")
                 seg_slides = [slide_text(slides[i]) for i in seg.slide_ids]
-                values = prompt_values(seg, seg_slides, ctx.config.target_language)
+                values = prompt_values(seg, seg_slides, ctx.config.notes_language)
                 size = lm.count_tokens(values["transcript"] + "".join(seg_slides))
                 if size > budget:
                     ctx.log.warning("map: segment %d is %d tokens (budget %d)", k, size, budget)
@@ -462,7 +462,7 @@ def run_stage(ctx: StageContext) -> None:
                 if cfg.number_guard:
                     sources = source_numbers(seg.transcript_text, seg_slides)
                     days = source_days(seg.transcript_text, seg_slides)
-                    seg_notes = guard_numbers(seg_notes, sources, ctx.config.target_language, days)
+                    seg_notes = guard_numbers(seg_notes, sources, ctx.config.notes_language, days)
                     for fix in seg_notes.number_repairs:
                         ctx.log.info("map: segment %d %s → %s", k, fix.original, fix.repaired)
                     if seg_notes.unverified_numbers:
@@ -476,8 +476,8 @@ def run_stage(ctx: StageContext) -> None:
                     seg_notes = mark_slide_conflicts(
                         seg_notes,
                         conflicts,
-                        ctx.config.target_language,
-                        ctx.config.target_language != ctx.config.source_language,
+                        ctx.config.notes_language,
+                        ctx.config.notes_language != ctx.config.source_language,
                     )
                     for c in seg_notes.slide_conflicts:
                         ctx.log.info(
@@ -485,7 +485,7 @@ def run_stage(ctx: StageContext) -> None:
                         )
                 notes.append(seg_notes)
     ctx.log.info("map: %d segments, %d retried, %d kept as raw text", len(notes), retried, failed)
-    schemas.save(ctx.run_dir, MapFile(target_language=ctx.config.target_language, notes=notes))
+    schemas.save(ctx.run_dir, MapFile(target_language=ctx.config.notes_language, notes=notes))
 
 
 STAGE = Stage(

@@ -18,3 +18,10 @@ items:
     media: video
     slides: video
     gaps: [silence]
+
+  - id: clean-sw  # clean-en, "Other (beta)" Swahili: English notes translated by Tiny Aya
+    seed: 1
+    target: sw
+    media: video
+    slides: video
+    gaps: [silence]

@@ -237,6 +237,14 @@ def test_new_run_from_a_local_path_starts_a_job(tmp_path: Path) -> None:
     assert job is not None and job.wait(5) and job.snapshot().status == "done"
 
 
+def test_new_run_offers_beta_languages_after_r7bs() -> None:
+    at = app("app_pages/new_run.py")
+    box = at.selectbox(key="nr_target_lang")
+    assert box.value == "en"
+    assert "Swahili (beta)" in box.options[23:] and "German" in box.options[:23]
+    assert not any("(beta)" in o for o in box.options[:23])
+
+
 def test_recovery_runs_on_app_start(tmp_path: Path) -> None:
     run_dir = make_fixture_run(tmp_path)
     manifest = schemas.load(run_dir, Manifest)

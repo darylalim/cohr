@@ -13,6 +13,7 @@ Uncited claims are kept and flagged in every mode.
 """
 
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Literal
 
 from cohr import atomic, schemas
@@ -28,9 +29,12 @@ from cohr.schemas import (
     SegmentsFile,
     Slide,
     SlidesFile,
+    TranslatedNotes,
 )
 
 FORMAT_VERSION = 2  # of notes.md; bump when the rendering changes (2: RTL isolates, 6d-1)
+
+Notes = NotesDoc | TranslatedNotes  # what render shows: the same sections and citations
 FILENAME = "notes.md"
 EXCERPT_CHARS = 200
 
@@ -362,7 +366,7 @@ def excerpt(text: str, limit: int = EXCERPT_CHARS) -> str:
 
 
 def sources_md(
-    notes: NotesDoc, segments: Mapping[int, Segment], slides: Mapping[int, Slide]
+    notes: Notes, segments: Mapping[int, Segment], slides: Mapping[int, Slide]
 ) -> list[str]:
     """One entry per cited segment (time range, slides, transcript excerpt) and per cited slide."""
     cited = [
@@ -384,7 +388,7 @@ def sources_md(
 
 
 def render(
-    notes: NotesDoc, segments: Sequence[Segment], slides: Sequence[Slide], mode: Mode = "portable"
+    notes: Notes, segments: Sequence[Segment], slides: Sequence[Slide], mode: Mode = "portable"
 ) -> str:
     words = labels(notes.language)
     by_seg = {s.seg_id: s for s in segments}
@@ -410,11 +414,19 @@ def render(
     return "\n".join(out).rstrip() + "\n"
 
 
+def shown_notes(run_dir: Path) -> Notes:
+    """The notes people read: notes_translated.json for an "Other (beta)" target (the translate
+    stage deletes it otherwise), else notes.json."""
+    if (run_dir / TranslatedNotes.FILENAME).is_file():
+        return schemas.load(run_dir, TranslatedNotes)
+    return schemas.load(run_dir, NotesDoc)
+
+
 # --- stage ---------------------------------------------------------------------------------
 
 
 def run_stage(ctx: StageContext) -> None:
-    notes = schemas.load(ctx.run_dir, NotesDoc)
+    notes = shown_notes(ctx.run_dir)
     segments = schemas.load(ctx.run_dir, SegmentsFile).segments
     slides = schemas.load(ctx.run_dir, SlidesFile).slides
     atomic.write_text(ctx.run_dir / FILENAME, render(notes, segments, slides, "portable"))

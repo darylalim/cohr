@@ -46,6 +46,7 @@ from cohr.schemas import (
     StageState,
     Transcript,
     TranscriptItem,
+    TranslatedNotes,
     TwoPass,
 )
 from evals.gen import build as gen_build
@@ -587,6 +588,24 @@ def test_score_item_end_to_end(tmp_path: Path) -> None:
     assert rep.number_repairs == ["4,090 → 409"] and rep.unverified_numbers == ["2024"]
     assert m["unsupported_numbers"] == 3
     assert rep.unsupported_numbers == ["2024", "3100", "1610000"]  # plain digits, no 1.61e+06
+    assert m["translation_citations_same"] is None and m["untranslated_claims"] is None
+    # "Other (beta)" (6d-1): the translated notes are scored, against the English citations.
+    english = schemas.load(run_dir, NotesDoc)
+
+    def translated(sections: NotesSections) -> None:
+        doc = TranslatedNotes(
+            sections=sections, language="sw", source_language="en", untranslated=1, raw=[]
+        )
+        schemas.save(run_dir, doc)
+
+    translated(english.sections)
+    m2 = evals.score_item(truth, run_dir).metrics
+    assert m2["translation_citations_same"] == 1 and m2["untranslated_claims"] == 1
+    assert m2["fact_recall"] == 1.0
+    first, second = english.sections.key_points
+    swapped = [first.model_copy(update={"citations": []}), second]
+    translated(english.sections.model_copy(update={"key_points": swapped}))
+    assert evals.score_item(truth, run_dir).metrics["translation_citations_same"] == 0
     assert rep.stages["map"] == evals.StageCost(
         seconds=6.0, s_per_audio_hour=360.0, peak_mem_gb=9.0, reused=False
     )
@@ -677,9 +696,10 @@ def test_quick_scripts_are_unchanged_by_the_long_generator() -> None:
 
 def test_lang_items_reuse_the_quick_scripts() -> None:
     # 6d-1: only the notes language changes, so lang and quick results compare item to item.
-    twins = {"conflict-de": "slide-conflict-en", "clean-ar": "clean-en"}
+    twins = {"conflict-de": "slide-conflict-en", "clean-ar": "clean-en", "clean-sw": "clean-en"}
     lang = evals.load_set("lang", ROOT)
-    assert {i.id: i.target for i in lang.items} == {"conflict-de": "de", "clean-ar": "ar"}
+    targets = {i.id: i.target for i in lang.items}
+    assert targets == {"conflict-de": "de", "clean-ar": "ar", "clean-sw": "sw"}
     for spec in lang.items:
         assert spec.language == "en"
         assert (

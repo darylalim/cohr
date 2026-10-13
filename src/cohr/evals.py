@@ -37,7 +37,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from cohr import ask, atomic, judge, pipeline, schemas, storage
+from cohr import ask, atomic, judge, pipeline, render, schemas, storage
 from cohr.config import Config, prompt_hash
 from cohr.fuse import slide_text, tokens
 from cohr.judge import CachedJudge, Generate, Label, Supported
@@ -47,6 +47,7 @@ from cohr.reduce import SECTIONS, slide_label, slide_snippet
 from cohr.schemas import (
     ActionItem,
     ChunksFile,
+    Citation,
     Claim,
     Manifest,
     MapFile,
@@ -57,6 +58,7 @@ from cohr.schemas import (
     SlidesFile,
     Span,
     Transcript,
+    TranslatedNotes,
 )
 
 CITATION_TOLERANCE_S = 15.0  # D19
@@ -323,7 +325,15 @@ RECALL_KINDS = ("decision", "action", "number")
 TEXT_KINDS = ("decision", "open_question")  # matched by text only: judge-only cross-language
 
 
-def claims_by_section(doc: NotesDoc) -> dict[Section, list[Claim]]:
+Notes = NotesDoc | TranslatedNotes
+
+
+def citation_lists(doc: Notes) -> list[list[list[Citation]]]:
+    """Each section's claims' citations, in order: identical before and after translation."""
+    return [[c.citations for c in getattr(doc.sections, name)] for name in SECTIONS]
+
+
+def claims_by_section(doc: Notes) -> dict[Section, list[Claim]]:
     return {name: list(getattr(doc.sections, name)) for name in SECTIONS}
 
 
@@ -355,7 +365,7 @@ def citation_check(
 
 def score_facts(
     facts: Sequence[TruthFact],
-    doc: NotesDoc,
+    doc: Notes,
     slide_ids: Mapping[int, int],
     cross_language: bool = False,
     language: str | None = None,
@@ -395,7 +405,7 @@ def score_facts(
 
 def made_up(
     facts: Sequence[TruthFact],
-    doc: NotesDoc,
+    doc: Notes,
     cross_language: bool = False,
     language: str | None = None,
 ) -> tuple[list[str], list[str]]:
@@ -422,7 +432,7 @@ def made_up(
 
 
 def made_up_questions(
-    facts: Sequence[TruthFact], doc: NotesDoc, cross_language: bool = False
+    facts: Sequence[TruthFact], doc: Notes, cross_language: bool = False
 ) -> list[str]:
     """Open-questions claims that match no planted open question (token overlap). Filler talk
     turned into a question lands here (4b-2). Cross-language: not checkable without the judge."""
@@ -561,7 +571,7 @@ def alignment_accuracy(
     return ok / len(truth) if truth else 0.0
 
 
-def notes_language(doc: NotesDoc, candidates: Iterable[str]) -> str | None:
+def notes_language(doc: Notes, candidates: Iterable[str]) -> str | None:
     from lingua import IsoCode639_1, LanguageDetectorBuilder
 
     text = " ".join(c.text for name in SECTIONS for c in getattr(doc.sections, name))
@@ -665,7 +675,9 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
     chunks = schemas.load(run_dir, ChunksFile)
     transcript = schemas.load(run_dir, Transcript)
     slides = schemas.load(run_dir, SlidesFile).slides
-    doc = schemas.load(run_dir, NotesDoc)
+    english = schemas.load(run_dir, NotesDoc)
+    doc = render.shown_notes(run_dir)  # notes_translated.json for an "Other (beta)" target
+    translated = isinstance(doc, TranslatedNotes)
     map_notes = schemas.load(run_dir, MapFile).notes
     cross = spec.language != spec.target
 
@@ -707,9 +719,17 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
         "map_numbers_repaired": len(repairs),
         "map_numbers_unverified": len(unverified),
         "unsupported_numbers": len(unsupported),
-        "reduce_groups": len(doc.two_pass.groups) if doc.two_pass else 0,
+        "reduce_groups": len(english.two_pass.groups) if english.two_pass else 0,
         # two-pass (§4, D26): how pass-2 citations of a group resolved
-        **{f"pass2_{k}": (doc.two_pass.resolved.get(k, 0) if doc.two_pass else 0) for k in PASS2},
+        **{
+            f"pass2_{k}": (english.two_pass.resolved.get(k, 0) if english.two_pass else 0)
+            for k in PASS2
+        },
+        # "Other (beta)" (6d-1): every claim keeps the English notes' citations, in order
+        "translation_citations_same": (
+            int(citation_lists(doc) == citation_lists(english)) if translated else None
+        ),
+        "untranslated_claims": doc.untranslated if isinstance(doc, TranslatedNotes) else None,
     }
     if spec.slides == "pdf":
         metrics["slide_alignment"] = alignment_accuracy(truth.slides, slides, ids, chunks.chunks)
@@ -802,7 +822,7 @@ def judge_item(report: ItemReport, run_dir: Path, judge_: CachedJudge) -> ItemRe
     every judge_only fact. Uncited claims aren't judged (they're counted as uncited)."""
     segments = {s.seg_id: s for s in schemas.load(run_dir, SegmentsFile).segments}
     slides = {s.slide_id: s for s in schemas.load(run_dir, SlidesFile).slides}
-    sections = claims_by_section(schemas.load(run_dir, NotesDoc))
+    sections = claims_by_section(render.shown_notes(run_dir))
     support = []
     for name, claims in sections.items():
         for claim in claims:
@@ -1401,6 +1421,13 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         "slide_number_recall": mean("slide_number_recall"),
         "slide_alignment": mean("slide_alignment"),
         "output_language_ok": mean("output_language_ok"),
+        # "Other (beta)" items only (6d-1); None when the set has none
+        "translation_citations_same": mean("translation_citations_same"),
+        "untranslated_claims": (
+            total("untranslated_claims")
+            if any(it.metrics.get("untranslated_claims") is not None for it in items)
+            else None
+        ),
         **{f"recall_{kind}": recall(kind) for kind in (*RECALL_KINDS, "open_question")},
         "map_numbers_repaired": total("map_numbers_repaired"),
         "map_numbers_unverified": total("map_numbers_unverified"),

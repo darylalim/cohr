@@ -6,7 +6,14 @@ import streamlit as st
 
 from cohr import storage, ui
 from cohr.asr import LANGUAGES
-from cohr.config import TARGET_LANGUAGES, Config, FuseConfig, language_name, runs_dir
+from cohr.config import (
+    BETA_LANGUAGES,
+    TARGET_LANGUAGES,
+    Config,
+    FuseConfig,
+    language_name,
+    runs_dir,
+)
 from cohr.ingest import IngestError, probe
 from cohr.jobs import JobBusy
 from cohr.models import PIPELINE_MODELS, ModelsMissing
@@ -126,13 +133,19 @@ with st.form("new_run", border=False):
         format_func=language_name,
         key="nr_source_lang",
     )
-    targets = list(TARGET_LANGUAGES)
+    # R7B's 23 first, then "Other (beta)": Tiny Aya translates English notes (§5.6, 6d-1).
+    targets = [*TARGET_LANGUAGES, *sorted(BETA_LANGUAGES, key=language_name)]
     right.selectbox(
         "Notes language",
         targets,
         index=targets.index("en"),
-        format_func=language_name,
+        format_func=lambda c: (
+            f"{language_name(c)} (beta)" if c in BETA_LANGUAGES else language_name(c)
+        ),
         key="nr_target_lang",
+        help="Languages marked (beta): the notes are written in English, then translated by "
+        "the Map model. Headings stay in English; Ask answers in English unless asked in "
+        "another language.",
     )
     st.text_input("Run name (optional)", key="nr_name", placeholder="Defaults to the file name")
     with st.expander("Advanced"):

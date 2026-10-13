@@ -706,7 +706,7 @@ def fit_prompt(
 
 def run_stage(ctx: StageContext) -> None:
     cfg = ctx.config.reduce
-    language = ctx.config.target_language
+    language = ctx.config.notes_language  # English for an "Other (beta)" target
     segments = schemas.load(ctx.run_dir, SegmentsFile).segments
     slides = schemas.load(ctx.run_dir, SlidesFile).slides
     map_notes = {n.seg_id: n for n in schemas.load(ctx.run_dir, MapFile).notes}
