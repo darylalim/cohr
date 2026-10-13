@@ -174,6 +174,32 @@ def test_cross_language_matches_exact_fields_only() -> None:
     assert evals.fact_fit(claim, decision, True) == "none"  # judge only (4b-2)
 
 
+def test_cross_language_numbers_are_read_in_the_notes_language() -> None:
+    # 6d-1: a German "3.550" is the planted 3,550, not 3.55 (scored as missed before).
+    number = fact("number", text="New trial signups: 3,550", value=3550.0)
+    claim = Claim(text="Neue Trial-Signups: 3.550 (dieses Monat)", citations=[])
+    assert evals.fact_fit(claim, number, True) == "none"  # read as English
+    assert evals.fact_fit(claim, number, True, "de") == "match"
+    f = fact()  # due 20 October
+    assert action_fit(item("Preisseite", "Priya", "20. Oktober"), f, True, "de") == "match"
+    assert action_fit(item("Preisseite", "Priya", "21. Oktober"), f, True, "de") == "wrong"
+
+
+def test_unsupported_numbers_in_another_language() -> None:
+    transcript = Transcript(
+        language="en",
+        runtime="mlx-speech",
+        items=[
+            TranscriptItem(chunk_id=0, t0=0, t1=5, text="The budget is $42,500, signups 3,550.")
+        ],
+    )
+    de = [Claim(text="Budget 42.500 $, Signups 3.550, Kosten 9.900 $", citations=[])]
+    assert evals.unsupported_numbers(de, transcript, [], "de") == ["9900"]
+    assert evals.unsupported_numbers(de, transcript, []) == ["3.55", "9.9", "42.5"]  # English read
+    ar = [Claim(text="الميزانية 42,500 دولار", citations=[])]  # also 42.5: one reading is enough
+    assert evals.unsupported_numbers(ar, transcript, [], "ar") == []
+
+
 def test_citation_tolerance_and_slides() -> None:
     f = fact("number", text="Open tickets: 409", value=409.0, slide=2)
     near = Claim(text="x", citations=[Citation(kind="seg", id=0, t=115.0)])

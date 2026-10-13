@@ -1600,3 +1600,17 @@ text, so its Map column is blank for de/ar text facts):
   owners: R7B copies Map's Arabic task text, and the Map fallback (overlap ≥ 0.6) fills them.
 - `quick` seed 1 `--fresh`, Ask + judge: **gate pass**, recall 86.8% (= baseline), citation
   100%, made-up 0, Ask 96.2%, near-miss 7/12, support 92.7%. Baseline unchanged.
+
+### 1. Scoring that reads the notes language (kept)
+- `numbers.notes_numbers(text, language)`: English (or None) is `numbers_in`, unchanged;
+  other languages read digits with the guard's `native_readings` (de "3.550" = 3550; ar,
+  not in DECIMAL_MARK, keeps both readings). `written_values` gives each written number's
+  readings. Used for number facts, cross-language due dates, made-up items,
+  `misspoken_value_used`, and `unsupported_numbers` (there a number counts if any reading is
+  in the sources, the guard's keep rule, so ar "42,500" isn't listed as 42.5). No
+  Arabic-Indic digits: R7B wrote none (step 0). Tests include the English reading not firing.
+- Same runs re-scored (seed 1 / 2 / 3, judge cached): **recall 80.8 / 73.1 / 69.2%** (step 0b:
+  69.2 / 61.5 / 57.7), numbers 87.5 / 93.8 / 87.5%; conflict-de 76.9% on every seed, its only
+  number miss is now the slide conflict ($18,000, step 2). unsupported 2 / 0 / 1 (seed 3:
+  750000, a real one). clean-ar's 4,650 (seeds 1, 3) is a real Reduce drop (Map seg 1 has it).
+- `quick` seed 1 re-scored: gate pass, recall 86.8% (=), unsupported 2 (=).

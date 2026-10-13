@@ -8,10 +8,12 @@ from cohr.numbers import (
     Reading,
     native_readings,
     near,
+    notes_numbers,
     one_edit,
     ordinals_in,
     readings,
     write_like,
+    written_values,
 )
 
 
@@ -94,3 +96,16 @@ def test_native_readings_follow_the_decimal_mark() -> None:
     assert [r.value for r in native_readings(readings("770.000"), "de")] == [770000.0]
     assert len(native_readings(readings("770,000"), "es")) == 2  # not in the table
     assert [r.value for r in native_readings(readings("3,36"), "en")] == [3.36]  # fallback
+
+
+def test_notes_numbers_read_the_notes_language() -> None:
+    # 6d-1: German notes write "3.550" and "80.000 $"; read in English they were 3.55 and 80.
+    assert notes_numbers("Neue Trial-Signups: 3.550, Budget 80.000 $", "de") == {3550, 80000}
+    assert notes_numbers("Ladezeit 0,74 s, Quote 37 %", "de") == {0.74, 37}
+    # English notes are read as before (number words too): the German reading must not fire.
+    assert notes_numbers("3.55 points, up from 3,550, forty two", "en") == {3.55, 3550, 42}
+    assert notes_numbers("3.55 points", None) == {3.55}
+    # A language not in DECIMAL_MARK keeps both readings (ar writes Western digits, "42,500").
+    assert notes_numbers("الميزانية 42,500 دولار", "ar") == {42500, 42.5}
+    assert written_values("42,500 دولار و 34%", "ar") == [{42500, 42.5}, {34}]
+    assert written_values("Q3: 42.5k", "de") == [{42500}]  # "Q3" is a name; scale applied
