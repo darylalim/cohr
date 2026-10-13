@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-12T17:02:43.067756-10:00",
+  "created_at": "2026-10-13T06:45:00.710961-10:00",
   "set": "quick",
-  "git_sha": "c4023de",
+  "git_sha": "b3d6c69",
   "overrides": {
     "seed": 1
   },
@@ -28,7 +28,7 @@
   "items": [
     {
       "id": "clean-en",
-      "run_id": "20261012-112917-clean-en",
+      "run_id": "20261013-063546-clean-en",
       "seed": 1,
       "duration_s": 357.88,
       "metrics": {
@@ -841,27 +841,27 @@
       ],
       "stages": {
         "ingest": {
-          "seconds": 1.55,
-          "s_per_audio_hour": 15.6,
+          "seconds": 1.52,
+          "s_per_audio_hour": 15.3,
           "peak_mem_gb": null,
           "reused": true
         },
         "vad": {
-          "seconds": 3.05,
-          "s_per_audio_hour": 30.6,
+          "seconds": 2.6,
+          "s_per_audio_hour": 26.1,
           "peak_mem_gb": 0.05,
           "reused": true
         },
         "transcribe": {
-          "seconds": 12.02,
-          "s_per_audio_hour": 120.9,
+          "seconds": 11.36,
+          "s_per_audio_hour": 114.3,
           "peak_mem_gb": 5.63,
           "reused": true
         },
         "vision": {
-          "seconds": 34.37,
-          "s_per_audio_hour": 345.8,
-          "peak_mem_gb": 4.46,
+          "seconds": 39.65,
+          "s_per_audio_hour": 398.9,
+          "peak_mem_gb": 8.59,
           "reused": true
         },
         "fuse": {
@@ -871,15 +871,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 13.94,
-          "s_per_audio_hour": 140.2,
-          "peak_mem_gb": 7.54,
+          "seconds": 14.04,
+          "s_per_audio_hour": 141.3,
+          "peak_mem_gb": 11.68,
           "reused": true
         },
         "reduce": {
-          "seconds": 26.58,
-          "s_per_audio_hour": 267.3,
-          "peak_mem_gb": 12.62,
+          "seconds": 26.87,
+          "s_per_audio_hour": 270.3,
+          "peak_mem_gb": 16.76,
           "reused": true
         },
         "render": {
@@ -892,7 +892,7 @@
     },
     {
       "id": "noisy-en",
-      "run_id": "20261012-113210-noisy-en",
+      "run_id": "20261013-063722-noisy-en",
       "seed": 2,
       "duration_s": 360.68,
       "metrics": {
@@ -1695,27 +1695,27 @@
       ],
       "stages": {
         "ingest": {
-          "seconds": 1.41,
-          "s_per_audio_hour": 14.1,
+          "seconds": 1.59,
+          "s_per_audio_hour": 15.9,
           "peak_mem_gb": 0.0,
           "reused": true
         },
         "vad": {
-          "seconds": 2.26,
-          "s_per_audio_hour": 22.5,
+          "seconds": 3.71,
+          "s_per_audio_hour": 37.1,
           "peak_mem_gb": 15.41,
           "reused": true
         },
         "transcribe": {
-          "seconds": 12.07,
-          "s_per_audio_hour": 120.5,
+          "seconds": 11.05,
+          "s_per_audio_hour": 110.3,
           "peak_mem_gb": 16.82,
           "reused": true
         },
         "vision": {
-          "seconds": 31.76,
-          "s_per_audio_hour": 317.0,
-          "peak_mem_gb": 12.53,
+          "seconds": 35.76,
+          "s_per_audio_hour": 356.9,
+          "peak_mem_gb": 16.66,
           "reused": true
         },
         "fuse": {
@@ -1725,15 +1725,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 12.15,
-          "s_per_audio_hour": 121.2,
-          "peak_mem_gb": 12.06,
+          "seconds": 12.16,
+          "s_per_audio_hour": 121.4,
+          "peak_mem_gb": 16.19,
           "reused": true
         },
         "reduce": {
-          "seconds": 24.22,
-          "s_per_audio_hour": 241.7,
-          "peak_mem_gb": 12.62,
+          "seconds": 24.21,
+          "s_per_audio_hour": 241.6,
+          "peak_mem_gb": 16.76,
           "reused": true
         },
         "render": {
@@ -1746,7 +1746,7 @@
     },
     {
       "id": "pdf-slides-en",
-      "run_id": "20261012-113442-pdf-slides-en",
+      "run_id": "20261013-063850-pdf-slides-en",
       "seed": 3,
       "duration_s": 357.21,
       "metrics": {
@@ -2555,27 +2555,27 @@
       ],
       "stages": {
         "ingest": {
-          "seconds": 0.33,
-          "s_per_audio_hour": 3.3,
+          "seconds": 0.41,
+          "s_per_audio_hour": 4.2,
           "peak_mem_gb": 0.0,
           "reused": true
         },
         "vad": {
-          "seconds": 2.17,
-          "s_per_audio_hour": 21.9,
+          "seconds": 2.11,
+          "s_per_audio_hour": 21.2,
           "peak_mem_gb": 15.43,
           "reused": true
         },
         "transcribe": {
-          "seconds": 12.5,
-          "s_per_audio_hour": 126.0,
+          "seconds": 10.47,
+          "s_per_audio_hour": 105.6,
           "peak_mem_gb": 16.83,
           "reused": true
         },
         "vision": {
-          "seconds": 31.8,
-          "s_per_audio_hour": 320.5,
-          "peak_mem_gb": 12.53,
+          "seconds": 36.55,
+          "s_per_audio_hour": 368.3,
+          "peak_mem_gb": 16.66,
           "reused": true
         },
         "fuse": {
@@ -2585,15 +2585,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.09,
-          "s_per_audio_hour": 111.8,
-          "peak_mem_gb": 12.06,
+          "seconds": 11.14,
+          "s_per_audio_hour": 112.2,
+          "peak_mem_gb": 16.19,
           "reused": true
         },
         "reduce": {
-          "seconds": 22.58,
-          "s_per_audio_hour": 227.5,
-          "peak_mem_gb": 12.62,
+          "seconds": 22.56,
+          "s_per_audio_hour": 227.4,
+          "peak_mem_gb": 16.76,
           "reused": true
         },
         "render": {
@@ -2606,7 +2606,7 @@
     },
     {
       "id": "slide-conflict-en",
-      "run_id": "20261012-113717-slide-conflict-en",
+      "run_id": "20261013-064014-slide-conflict-en",
       "seed": 4,
       "duration_s": 350.12,
       "metrics": {
@@ -2630,9 +2630,9 @@
         "slide_cell_accuracy": 1.0,
         "slide_number_recall": 1.0,
         "output_language_ok": 1,
-        "map_numbers_repaired": 3,
-        "map_numbers_unverified": 0,
-        "unsupported_numbers": 1,
+        "map_numbers_repaired": 2,
+        "map_numbers_unverified": 1,
+        "unsupported_numbers": 0,
         "reduce_groups": 0,
         "pass2_marker": 0,
         "pass2_claim": 0,
@@ -2651,9 +2651,9 @@
         "ask_xlang_history": 1.0,
         "ask_near_miss": 0.6667,
         "cited_claims": 18,
-        "support_rate": 0.8889,
+        "support_rate": 0.9444,
         "support_partial": 0,
-        "support_no": 2,
+        "support_no": 1,
         "support_unjudged": 0,
         "judge_covered": 0,
         "judge_recall": null
@@ -2918,13 +2918,12 @@
       },
       "number_repairs": [
         "446 → 426",
-        "800,000 → 80,000",
-        "770,000 → 740"
+        "800,000 → 80,000"
       ],
-      "unverified_numbers": [],
-      "unsupported_numbers": [
-        "74000"
+      "unverified_numbers": [
+        "770,000"
       ],
+      "unsupported_numbers": [],
       "support": [
         {
           "section": "summary",
@@ -2964,13 +2963,13 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Quarterly budget approved at $80,000, up from $74,000 last quarter.",
+          "claim": "Key point: Quarterly budget approved at $80,000, up from $77,500 last quarter.",
           "citations": [
             "seg 0",
             "slide 2"
           ],
-          "supported": "no",
-          "reason": "The claim states the budget increased from $74,000 to $80,000, but the cited text says it increased from $77,500 to $80,000."
+          "supported": "yes",
+          "reason": "The cited text states the approved budget for next quarter is $80,000 compared with $77,500 last quarter."
         },
         {
           "section": "key_points",
@@ -3407,27 +3406,27 @@
       ],
       "stages": {
         "ingest": {
-          "seconds": 1.38,
-          "s_per_audio_hour": 14.1,
+          "seconds": 1.44,
+          "s_per_audio_hour": 14.8,
           "peak_mem_gb": 0.0,
           "reused": true
         },
         "vad": {
-          "seconds": 2.33,
-          "s_per_audio_hour": 23.9,
+          "seconds": 2.13,
+          "s_per_audio_hour": 21.9,
           "peak_mem_gb": 15.41,
           "reused": true
         },
         "transcribe": {
-          "seconds": 11.64,
-          "s_per_audio_hour": 119.6,
+          "seconds": 9.98,
+          "s_per_audio_hour": 102.6,
           "peak_mem_gb": 16.83,
           "reused": true
         },
         "vision": {
-          "seconds": 31.75,
-          "s_per_audio_hour": 326.4,
-          "peak_mem_gb": 12.53,
+          "seconds": 32.12,
+          "s_per_audio_hour": 330.3,
+          "peak_mem_gb": 16.66,
           "reused": true
         },
         "fuse": {
@@ -3437,15 +3436,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 10.84,
-          "s_per_audio_hour": 111.5,
-          "peak_mem_gb": 12.06,
+          "seconds": 10.89,
+          "s_per_audio_hour": 112.0,
+          "peak_mem_gb": 16.19,
           "reused": true
         },
         "reduce": {
-          "seconds": 22.81,
-          "s_per_audio_hour": 234.5,
-          "peak_mem_gb": 12.62,
+          "seconds": 22.84,
+          "s_per_audio_hour": 234.9,
+          "peak_mem_gb": 16.76,
           "reused": true
         },
         "render": {
@@ -3479,17 +3478,17 @@
     "recall_action": 0.75,
     "recall_number": 0.9062,
     "recall_open_question": 0.8,
-    "map_numbers_repaired": 9,
-    "map_numbers_unverified": 2,
-    "unsupported_numbers": 2,
+    "map_numbers_repaired": 8,
+    "map_numbers_unverified": 3,
+    "unsupported_numbers": 1,
     "reduce_groups": 0,
     "pass2_marker": 0,
     "pass2_claim": 0,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.9146,
+    "support_rate": 0.9268,
     "support_partial": 1,
-    "support_no": 6,
+    "support_no": 5,
     "support_unjudged": 0,
     "judge_recall": null,
     "ask_questions": 76,
@@ -3504,39 +3503,39 @@
   },
   "stages": {
     "ingest": {
-      "s_per_audio_hour": 11.8,
+      "s_per_audio_hour": 12.5,
       "peak_mem_gb": 0.0
     },
     "vad": {
-      "s_per_audio_hour": 24.8,
+      "s_per_audio_hour": 26.6,
       "peak_mem_gb": 15.43
     },
     "transcribe": {
-      "s_per_audio_hour": 121.8,
+      "s_per_audio_hour": 108.2,
       "peak_mem_gb": 16.83
     },
     "vision": {
-      "s_per_audio_hour": 327.4,
-      "peak_mem_gb": 12.53
+      "s_per_audio_hour": 363.8,
+      "peak_mem_gb": 16.66
     },
     "fuse": {
       "s_per_audio_hour": 0.0,
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 121.2,
-      "peak_mem_gb": 12.06
+      "s_per_audio_hour": 121.8,
+      "peak_mem_gb": 16.19
     },
     "reduce": {
-      "s_per_audio_hour": 242.9,
-      "peak_mem_gb": 12.62
+      "s_per_audio_hour": 243.6,
+      "peak_mem_gb": 16.76
     },
     "render": {
       "s_per_audio_hour": 0.0,
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 849.9,
+      "s_per_audio_hour": 876.5,
       "peak_mem_gb": 16.83
     }
   },
