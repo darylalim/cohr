@@ -1328,3 +1328,61 @@ recall 89.7%, citation 96.7%, uncited 0, made-up 2 / 0, support 95.5%, Ask 98.1%
 
 ### Next
 - Phase 6b-2 in a new session with the §21 prompt.
+
+## 2026-10-12 · Phase 6b-2 (Map fixes)
+
+quick evals with `-c seed=1` against `evals/baseline.json`; each kept Map change gets its own
+baseline commit.
+
+### 0. Measurement (no fixes)
+On the 6c final-gate runs (seed 1, report `20261012-113844-quick`), each planted fact traced
+transcript → Map (segment containing `t0`, which list, how many facts the Map string holds) →
+notes.json. Map replies re-generated with the same prompt and seed to count tokens (identical
+output; key points differ only where the guard repaired a number).
+
+**Map replies are not truncated.** Out tokens per segment: clean 595 / 280, noisy 395 / 374,
+pdf 481 / 311, slide-conflict 413 / 273, all ending in `<|END_RESPONSE|>` (max_tokens 1024).
+No retries, no raw segments. Map stops on its own on the dense segments: step 2 is a prompt
+problem, not `map.max_tokens`.
+
+| item | seg | s | facts in seg | Map key points (facts each) | dec | act | oq |
+|---|---|---|---|---|---|---|---|
+| clean-en | 0 | 291 | 13 | 7 (3, 1, 1, 2, 1, 2, 1) | 5 | 3 | 0 |
+| clean-en | 1 | 66 | 5 | 5 (1, 1, 0, 1, 1) | 2 | 1 | 1 |
+| noisy-en | 0 | 275 | 13 | 7 (1 each) | 3 | 1 | 1 |
+| noisy-en | 1 | 84 | 5 | 7 (0, 0, 0, 1, 1, 1, 1) | 2 | 3 | 0 |
+| pdf-slides-en | 0 | 271 | 14 | 6 (1 each) | 4 | 3 | 1 |
+| pdf-slides-en | 1 | 85 | 4 | 5 (1, 1, 0, 0, 1) | 2 | 1 | 0 |
+| slide-conflict-en | 0 | 285 | 15 | 7 (1 each) | 2 | 2 | 0 |
+| slide-conflict-en | 1 | 64 | 4 | 5 (1, 1, 0, 1, 1) | 1 | 0 | 1 |
+
+- **ASR is right for every planted fact** (the slide-conflict budget is misspoken by design).
+- **Map has 58/68 recall facts in their home list; notes have 61/68** (89.7%, the baseline).
+  Reduce recovers 3 from the transcript (slide-conflict: Nadia and Grace actions in seg 0,
+  Omar in seg 1, which Map's action list left out). **Every notes miss is a Map miss**:
+  | cause | facts |
+  |---|---|
+  | dense seg 0: dropped | clean f5 (Omar: hiring plan), noisy f7 (Victor: venue), slide-conflict f2 (decision: sync to Thursdays) |
+  | wrong list | pdf f14 (Maria: security audit, under decisions as "Maria will review…") |
+  | short seg 1: number dropped | noisy f16 (MRR $248,000: "Revenue has shown more stability…") |
+  | due misread | pdf f16 ("22nd of November" → "November 2nd"; guard flags `2nd`; scored wrong + made up) |
+  | slide conflict | slide-conflict f7 ($80,000 spoken, $18,000 on the slide) |
+  Planted open question dropped by Map: slide-conflict f4 (ASR drops the colon, as in 6b).
+- **Bundling is one segment:** clean-en seg 0's key points join a number with the decision or
+  task said next to it ("Support Queue: 390 … New logo on website approved. Laura to send
+  contract to legal by Friday.", 3 facts; cloud + Victor; retention + Maria). The same segment
+  repeats its 3 actions under decisions. The other 7 segments write one fact per key point. On
+  seed 1 the bundles cost no citation (f1, f7, f10 within ±15 s); 6c saw them cost 3.
+- **Citation misses (2): one is the number guard.** slide-conflict f11 (page load 740 ms)
+  matches "Quarterly budget approved at $80,000, compared to $740 last quarter.": Map wrote
+  "$770,000" for the spoken $77,500; its decimal-comma reading 770.0 is one digit from 740
+  (page load), the only candidate, so the guard "repaired" it to a wrong number. The other
+  (clean f13, 75 candidates) cites seg 0 163 s early: a single-fact key point, Reduce's citation.
+
+**Order:** 1 → 2 → 3 → 4 as planned. Step 1 (one fact per key point; decisions and tasks only
+in their lists) also targets the wrong-list case (pdf f14) and the duplicated actions. Step 2:
+prompt (list every decision and task said in this part), aimed at the 3 dense drops; the
+short-segment number drop (noisy f16) says it's coverage, not only length. Step 3 adds the
+guard's decimal-comma mis-repair: in "$770,000" a 3-digit group after a comma is a thousands
+group, so the 770.0 reading shouldn't make a repair candidate (to confirm with the user: it
+changes which numbers the guard repairs).
