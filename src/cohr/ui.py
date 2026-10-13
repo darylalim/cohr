@@ -19,7 +19,16 @@ from cohr.jobs import JobRunner, JobState
 from cohr.mapper import clock
 from cohr.models import PIPELINE_MODELS, ModelManager
 from cohr.reduce import SECTIONS, slide_label
-from cohr.schemas import Citation, FramesFile, InputKind, Manifest, NotesDoc, Segment, Slide
+from cohr.schemas import (
+    Citation,
+    FramesFile,
+    InputKind,
+    Manifest,
+    NotesDoc,
+    Segment,
+    Slide,
+    TranslatedNotes,
+)
 
 STAGE_LABELS = {
     "ingest": "Ingest",
@@ -150,15 +159,17 @@ def stage_rows(manifest: Manifest) -> list[dict[str, Any]]:
     return rows
 
 
-def all_claims(notes: NotesDoc) -> list[Any]:
+def all_claims(notes: NotesDoc | TranslatedNotes) -> list[Any]:
     return [c for name in SECTIONS for c in getattr(notes.sections, name)]
 
 
-def uncited_count(notes: NotesDoc) -> int:
+def uncited_count(notes: NotesDoc | TranslatedNotes) -> int:
     return sum(1 for c in all_claims(notes) if not c.citations)
 
 
-def cited_times(notes: NotesDoc, seg_t0: dict[int, float]) -> dict[int, list[float]]:
+def cited_times(
+    notes: NotesDoc | TranslatedNotes, seg_t0: dict[int, float]
+) -> dict[int, list[float]]:
     """{seg_id: sorted refined jump times} (§5.6); a missing `t` falls back to the segment start."""
     out: dict[int, set[float]] = {}
     for claim in all_claims(notes):

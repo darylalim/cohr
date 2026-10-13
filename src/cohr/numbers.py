@@ -226,6 +226,28 @@ def native_readings(reads: list[Reading], language: str | None) -> list[Reading]
     return [r for r in reads if r.decimal in (None, mark) and r.group != mark] or reads
 
 
+def written_values(text: str, language: str | None) -> list[set[float]]:
+    """Each number written with digits in `text`, as the values its `language` readings give
+    (scale suffix applied): German "3.550 $" → [{3550}], English "42,500" → [{42500}], a
+    language not in DECIMAL_MARK (ar) → both readings, [{42500, 42.5}]."""
+    out: list[set[float]] = []
+    for m in WRITTEN.finditer(text):
+        scale = SCALE.get(m.group("scale") or "", 1.0)
+        values = {r.value * scale for r in native_readings(readings(m.group("body")), language)}
+        if values:
+            out.append(values)
+    return out
+
+
+def notes_numbers(text: str, language: str | None) -> set[float]:
+    """The numbers in notes written in `language` (eval, 6d-1). English: `numbers_in`, number
+    words included. Other languages: digits read the way the language writes them, so German
+    "42.500" is 42500, not 42.5 (their number words aren't read, as in the guard)."""
+    if language in (None, "en"):
+        return numbers_in(text)
+    return set().union(*written_values(text, language))
+
+
 def one_edit(a: str, b: str) -> bool:
     """One character inserted, dropped or changed."""
     if a == b or abs(len(a) - len(b)) > 1:

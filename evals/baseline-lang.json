@@ -1,0 +1,1815 @@
+{
+  "created_at": "2026-10-13T10:37:14.061030-10:00",
+  "set": "lang",
+  "git_sha": "defdf0b-dirty",
+  "overrides": {
+    "seed": 1
+  },
+  "models": {
+    "vad": "mlx-community/silero-vad-v6@2ebf4a5",
+    "transcribe": "mlx-community/cohere-transcribe-03-2026-mlx-8bit@a0acb7f",
+    "vision": "mlx-community/North-Micro-Vision-Instruct-8bit@26e6b3a",
+    "map": "mlx-community/tiny-aya-global-8bit-mlx@5d5dc68",
+    "reduce": "mlx-community/c4ai-command-r7b-12-2024-4bit@2ae601b",
+    "judge": "mlx-community/Qwen3-4B-Instruct-2507-4bit@50d4277"
+  },
+  "prompts": {
+    "vision": "7fad52bf1b0a",
+    "map": "e14f41287bdb",
+    "map_retry": "413335f44c4c",
+    "reduce": "c1d304379433",
+    "judge": "9376307c9b8d",
+    "judge_coverage": "e5750994ae0f",
+    "judge_retry": "4b4aaa239c8a"
+  },
+  "items": [
+    {
+      "id": "conflict-de",
+      "run_id": "20261013-103200-conflict-de",
+      "seed": 4,
+      "duration_s": 350.12,
+      "metrics": {
+        "facts": 13,
+        "facts_found": 10,
+        "fact_recall": 0.7692,
+        "citation_accuracy": 1.0,
+        "claims": 22,
+        "uncited_claims": 0,
+        "made_up_items": 0,
+        "made_up_open_questions": null,
+        "wrong_owner_or_due": 0,
+        "judge_only_facts": 6,
+        "vad_speech_f1": 0.9317,
+        "gap_words": 0,
+        "gap_minutes": 0.2,
+        "gap_words_per_min": 0.0,
+        "wer": 0.0123,
+        "slides_found": 1.0,
+        "slide_title_exact": 0.875,
+        "slide_cell_accuracy": 1.0,
+        "slide_number_recall": 1.0,
+        "output_language_ok": 1,
+        "map_numbers_repaired": 2,
+        "map_numbers_unverified": 2,
+        "unsupported_numbers": 0,
+        "reduce_groups": 0,
+        "pass2_marker": 0,
+        "pass2_claim": 0,
+        "pass2_group": 0,
+        "pass2_uncited": 0,
+        "translation_citations_same": null,
+        "untranslated_claims": null,
+        "recall_decision": null,
+        "recall_action": 0.4,
+        "recall_number": 1.0,
+        "recall_open_question": null,
+        "cited_claims": 22,
+        "support_rate": 0.8636,
+        "support_partial": 3,
+        "support_no": 0,
+        "support_unjudged": 0,
+        "judge_covered": 4,
+        "judge_recall": 0.6667
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "kind": "number",
+          "text": "New trial signups: 3,550",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Neue Trial-Signups: 3.550 (dieses Monat) im Vergleich zu 1.750 (vorheriger Monat)",
+          "citation_ok": true,
+          "t_error": 0.39,
+          "slide_cited": true
+        },
+        {
+          "id": "f2",
+          "kind": "decision",
+          "text": "move the weekly sync to Thursdays",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": false,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f3",
+          "kind": "number",
+          "text": "Open tickets: 336",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Support-Tickets: 336 (aktuell) im Vergleich zu 426 (vorherige Woche)",
+          "citation_ok": true,
+          "t_error": -0.4,
+          "slide_cited": true
+        },
+        {
+          "id": "f4",
+          "kind": "open_question",
+          "text": "run the user conference online",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f5",
+          "kind": "action",
+          "text": "send the contract to legal",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f6",
+          "kind": "action",
+          "text": "write the release notes",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f7",
+          "kind": "number",
+          "text": "Approved budget: $18,000",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Quartalsbudget: 80.000 $ (Folie: 18.000 $) (aktuell) im Vergleich zu 77.500 $ (vorheriger Quartal)",
+          "citation_ok": true,
+          "t_error": -114.93,
+          "slide_cited": true
+        },
+        {
+          "id": "f8",
+          "kind": "action",
+          "text": "prepare the customer survey",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Vorbereitung der Kundensurvey",
+          "citation_ok": true,
+          "t_error": -0.02,
+          "slide_cited": false
+        },
+        {
+          "id": "f9",
+          "kind": "number",
+          "text": "Monthly cloud bill: $10,700",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Cloud-Kosten: 10.700 $ (aktuell) im Vergleich zu 10.300 $ (vorheriger Monat)",
+          "citation_ok": true,
+          "t_error": -0.42,
+          "slide_cited": true
+        },
+        {
+          "id": "f10",
+          "kind": "decision",
+          "text": "use the new logo on the website",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f11",
+          "kind": "number",
+          "text": "Page load (ms): 740",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Site-Speed: 740 ms (aktuell) im Vergleich zu 330 ms (vorherige Veröffentlichung)",
+          "citation_ok": true,
+          "t_error": -1.58,
+          "slide_cited": true
+        },
+        {
+          "id": "f12",
+          "kind": "action",
+          "text": "draft the hiring plan",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f13",
+          "kind": "number",
+          "text": "Monthly recurring revenue: $140,000",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Monatlicher wiederkehrender Umsatz: 140.000 $ (aktuell) im Vergleich zu 371.000 $ (vorheriger Monat)",
+          "citation_ok": true,
+          "t_error": -0.52,
+          "slide_cited": true
+        },
+        {
+          "id": "f14",
+          "kind": "decision",
+          "text": "freeze new features until the beta ships",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": false,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f15",
+          "kind": "number",
+          "text": "Candidates in pipeline: 85",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Kandidaten in der Pipeline: 85 (aktuell) im Vergleich zu 88 (vorheriger Monat)",
+          "citation_ok": true,
+          "t_error": -0.32,
+          "slide_cited": true
+        },
+        {
+          "id": "f16",
+          "kind": "action",
+          "text": "book the venue for the offsite",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Veranstaltungsort für das Offsite bis Freitag buchen.",
+          "citation_ok": true,
+          "t_error": 0.94,
+          "slide_cited": false
+        },
+        {
+          "id": "f17",
+          "kind": "number",
+          "text": "Week-2 return rate: 37%",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Wöchentliche Rückkehrrate für Testnutzer: 37 % (letzten Monat: 54 %)",
+          "citation_ok": true,
+          "t_error": 0.39,
+          "slide_cited": true
+        },
+        {
+          "id": "f18",
+          "kind": "open_question",
+          "text": "partner with a reseller in Japan",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f19",
+          "kind": "decision",
+          "text": "drop the legacy export feature",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        }
+      ],
+      "made_up": [],
+      "made_up_questions": [],
+      "wrong_fields": [],
+      "uncited": [],
+      "gap_texts": [],
+      "conflict": {
+        "slide_value_used": true,
+        "misspoken_value_used": true
+      },
+      "number_repairs": [
+        "800.000 → 80.000",
+        "775.000 → 77.500"
+      ],
+      "unverified_numbers": [
+        "4",
+        "44"
+      ],
+      "unsupported_numbers": [],
+      "support": [
+        {
+          "section": "summary",
+          "claim": "Summary: Die wöchentliche Sync-Sitzung des Cedar-Projekts umfasste Updates zu Trial-Signups, Support Queue, Quartalsbudget, Cloud-Kosten, Site-Speed, Umsatz und Einstellungsprozessen.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting transcript confirms updates on all listed topics including trial signups, support queue, quarterly budget, cloud costs, site speed, revenue, and hiring."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Neue Trial-Signups: 3.550 (dieses Monat) im Vergleich zu 1.750 (vorheriger Monat)",
+          "citations": [
+            "seg 0",
+            "slide 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of new trial signups this month is 3,550 compared to 1,750 last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Support-Tickets: 336 (aktuell) im Vergleich zu 426 (vorherige Woche)",
+          "citations": [
+            "seg 0",
+            "slide 1"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of open support tickets is 336 compared to 426 last week."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Quartalsbudget: 80.000 $ (Folie: 18.000 $) (aktuell) im Vergleich zu 77.500 $ (vorheriger Quartal)",
+          "citations": [
+            "seg 0",
+            "slide 2"
+          ],
+          "supported": "partial",
+          "reason": "The claimed quarterly budget of $80,000 is stated in the transcript and matches the slide's reference to $18,000 as a component, though the slide only lists the approved budget for one team, not the total."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Cloud-Kosten: 10.700 $ (aktuell) im Vergleich zu 10.300 $ (vorheriger Monat)",
+          "citations": [
+            "seg 0",
+            "slide 3"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the monthly cloud bill is $10,700 compared to $10,300 last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Site-Speed: 740 ms (aktuell) im Vergleich zu 330 ms (vorherige Veröffentlichung)",
+          "citations": [
+            "seg 0",
+            "slide 4"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the average page load time is 740 milliseconds compared to 330 milliseconds from the last release."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Monatlicher wiederkehrender Umsatz: 140.000 $ (aktuell) im Vergleich zu 371.000 $ (vorheriger Monat)",
+          "citations": [
+            "seg 0",
+            "slide 5"
+          ],
+          "supported": "yes",
+          "reason": "The claim accurately reflects the revenue metric stated in the transcript and slide."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Kandidaten in der Pipeline: 85 (aktuell) im Vergleich zu 88 (vorheriger Monat)",
+          "citations": [
+            "seg 0",
+            "slide 6"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of candidates in the pipeline is 85 compared to 88 last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Wöchentliche Rückkehrrate für Testnutzer: 37 % (letzten Monat: 54 %)",
+          "citations": [
+            "seg 1",
+            "slide 7"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the week-2 return rate for trial users is 37%, compared with 54% last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Die Messung der Retention hat sich seit dem Frühling nicht geändert.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states that 'the way we measure retention hasn't changed since the spring'"
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Die Trends in den Zahlen entsprechen den Erwartungen.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states that 'the trend is roughly what we expected', which directly supports the claim."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Die Dashboards für Hiring und Retention wurden am Montag aktualisiert.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the dashboard for hiring was updated on Monday and the dashboard for retention was updated on Monday."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Es gibt eine saisonale Komponente in den Hiring- und Retention-Daten.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The cited text explicitly mentions seasonality in hiring and retention."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Die Legacy Export-Funktion wurde gestrichen.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The text states 'We agreed to drop the legacy export feature.'"
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Verwendung des neuen Logos auf der Website.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting decided to use the new logo on the website."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Die Legacy Export-Funktion wurde gestrichen.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The meeting agreed to drop the legacy export feature."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Omar wird den Veranstaltungsort für das Offsite bis Freitag buchen.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states Omar will book the venue for the offsite by Friday."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Vorbereitung der Kundensurvey (owner: Maria; due: Mittwoch)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "partial",
+          "reason": "The cited text states 'Action item for Maria, prepare the customer survey by Wednesday.'"
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Erstellung des Einstellungsplans bis Ende nächsten Woche",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "partial",
+          "reason": "The claim translates a German phrase to English, but the cited text states 'Tom will draft the hiring plan by the end of next week', which matches the action and timeline."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Veranstaltungsort für das Offsite bis Freitag buchen. (owner: Omar; due: Freitag)",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "Omar will book the venue for the offsite by Friday."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Soll die Benutzerkonferenz online stattfinden?",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting mentions that 'one thing we haven't settled should we run the user conference online?'"
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Soll ein Partner in Japan gefunden werden?",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The open question is phrased as 'Do we partner with a reseller in Japan?', which is equivalent to 'Soll ein Partner in Japan gefunden werden?' in German."
+        }
+      ],
+      "ask": [],
+      "stages": {
+        "ingest": {
+          "seconds": 1.6,
+          "s_per_audio_hour": 16.4,
+          "peak_mem_gb": null,
+          "reused": true
+        },
+        "vad": {
+          "seconds": 2.75,
+          "s_per_audio_hour": 28.2,
+          "peak_mem_gb": 0.05,
+          "reused": true
+        },
+        "transcribe": {
+          "seconds": 11.33,
+          "s_per_audio_hour": 116.5,
+          "peak_mem_gb": 5.61,
+          "reused": true
+        },
+        "vision": {
+          "seconds": 33.89,
+          "s_per_audio_hour": 348.5,
+          "peak_mem_gb": 8.59,
+          "reused": true
+        },
+        "fuse": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "map": {
+          "seconds": 15.51,
+          "s_per_audio_hour": 159.5,
+          "peak_mem_gb": 11.68,
+          "reused": true
+        },
+        "reduce": {
+          "seconds": 29.23,
+          "s_per_audio_hour": 300.6,
+          "peak_mem_gb": 16.76,
+          "reused": true
+        },
+        "translate": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "render": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        }
+      }
+    },
+    {
+      "id": "clean-ar",
+      "run_id": "20261013-103334-clean-ar",
+      "seed": 1,
+      "duration_s": 357.88,
+      "metrics": {
+        "facts": 13,
+        "facts_found": 11,
+        "fact_recall": 0.8462,
+        "citation_accuracy": 1.0,
+        "claims": 18,
+        "uncited_claims": 0,
+        "made_up_items": 0,
+        "made_up_open_questions": null,
+        "wrong_owner_or_due": 0,
+        "judge_only_facts": 5,
+        "vad_speech_f1": 0.9335,
+        "gap_words": 0,
+        "gap_minutes": 0.2,
+        "gap_words_per_min": 0.0,
+        "wer": 0.0077,
+        "slides_found": 1.0,
+        "slide_title_exact": 0.875,
+        "slide_cell_accuracy": 1.0,
+        "slide_number_recall": 1.0,
+        "output_language_ok": 1,
+        "map_numbers_repaired": 0,
+        "map_numbers_unverified": 0,
+        "unsupported_numbers": 0,
+        "reduce_groups": 0,
+        "pass2_marker": 0,
+        "pass2_claim": 0,
+        "pass2_group": 0,
+        "pass2_uncited": 0,
+        "translation_citations_same": null,
+        "untranslated_claims": null,
+        "recall_decision": null,
+        "recall_action": 0.8,
+        "recall_number": 0.875,
+        "recall_open_question": null,
+        "cited_claims": 18,
+        "support_rate": 0.8889,
+        "support_partial": 1,
+        "support_no": 1,
+        "support_unjudged": 0,
+        "judge_covered": 2,
+        "judge_recall": 0.4
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "kind": "number",
+          "text": "Open tickets: 390",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "عدد التذاكر المفتوحة في دعم الطوابير هو 390، مقارنة بـ 233 في الأسبوع الماضي.",
+          "citation_ok": true,
+          "t_error": 0.21,
+          "slide_cited": false
+        },
+        {
+          "id": "f2",
+          "kind": "decision",
+          "text": "use the new logo on the website",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f3",
+          "kind": "action",
+          "text": "send the contract to legal",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "إرسال العقد إلى قسم القانون بحلول يوم الجمعة.",
+          "citation_ok": true,
+          "t_error": 0.84,
+          "slide_cited": false
+        },
+        {
+          "id": "f4",
+          "kind": "number",
+          "text": "Page load (ms): 950",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "متوسط وقت تحميل الصفحة هو 950 مللي ثانية، مقارنة بـ 820 مللي ثانية في الإصدار الأخير.",
+          "citation_ok": true,
+          "t_error": -0.33,
+          "slide_cited": false
+        },
+        {
+          "id": "f5",
+          "kind": "action",
+          "text": "draft the hiring plan",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "إعداد خطة التوظيف بحلول نهاية الأسبوع القادم.",
+          "citation_ok": true,
+          "t_error": 0.35,
+          "slide_cited": false
+        },
+        {
+          "id": "f6",
+          "kind": "number",
+          "text": "Approved budget: $42,500",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "الميزانية المعتمدة للربع القادم هي 42,500 دولار، مقارنة بـ 59,500 دولار في الربع السابق.",
+          "citation_ok": true,
+          "t_error": 0.92,
+          "slide_cited": false
+        },
+        {
+          "id": "f7",
+          "kind": "number",
+          "text": "Monthly cloud bill: $11,800",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "فاتورة الحوسبة السحابية الشهرية هي 11,800 دولار، مقارنة بـ 7,700 دولار في الشهر الماضي.",
+          "citation_ok": true,
+          "t_error": 1.99,
+          "slide_cited": false
+        },
+        {
+          "id": "f8",
+          "kind": "action",
+          "text": "write the release notes",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "كتابة ملاحظات الإصدار بحلول نهاية الأسبوع القادم.",
+          "citation_ok": true,
+          "t_error": 0.74,
+          "slide_cited": false
+        },
+        {
+          "id": "f9",
+          "kind": "number",
+          "text": "Monthly recurring revenue: $354,000",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "الإيرادات الشهرية المتكررة هي 354,000 دولار، مقارنة بـ 134,000 دولار في الشهر الماضي.",
+          "citation_ok": true,
+          "t_error": -0.45,
+          "slide_cited": false
+        },
+        {
+          "id": "f10",
+          "kind": "number",
+          "text": "Week-2 return rate: 34%",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "معدل العودة في الأسبوع الثاني للمستخدمين التجريبيين هو 34%، مقارنة بـ 82% في الشهر الماضي.",
+          "citation_ok": true,
+          "t_error": 0.22,
+          "slide_cited": false
+        },
+        {
+          "id": "f11",
+          "kind": "action",
+          "text": "prepare the customer survey",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "إعداد استطلاع للعملاء بحلول نهاية الأسبوع القادم.",
+          "citation_ok": true,
+          "t_error": 0.87,
+          "slide_cited": false
+        },
+        {
+          "id": "f12",
+          "kind": "decision",
+          "text": "keep the onboarding checklist",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": false,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f13",
+          "kind": "number",
+          "text": "Candidates in pipeline: 75",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "عدد المرشحين في خط التوظيف هو 75، مقارنة بـ 85 في الشهر الماضي.",
+          "citation_ok": true,
+          "t_error": -0.03,
+          "slide_cited": false
+        },
+        {
+          "id": "f14",
+          "kind": "open_question",
+          "text": "offer a tablet version",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f15",
+          "kind": "decision",
+          "text": "move the weekly sync to Thursdays",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": false,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f16",
+          "kind": "number",
+          "text": "New trial signups: 4,650",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f17",
+          "kind": "action",
+          "text": "record the onboarding video",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f18",
+          "kind": "decision",
+          "text": "publish the roadmap to customers",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": false,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        }
+      ],
+      "made_up": [],
+      "made_up_questions": [],
+      "wrong_fields": [],
+      "uncited": [],
+      "gap_texts": [],
+      "conflict": {},
+      "number_repairs": [],
+      "unverified_numbers": [],
+      "unsupported_numbers": [],
+      "support": [
+        {
+          "section": "summary",
+          "claim": "Summary: تم مناقشة مجموعة من المواضيع المتعلقة بمشروع Harbor، بما في ذلك دعم الطوابير، وسرعة الموقع، والميزانية ربع السنوية، وتكاليف الحوسبة السحابية، والإيرادات، والاحتفاظ بالمستخدمين، والتوظيف. تم اتخاذ قرارات وإجراءات محددة، مثل استخدام الشعار الجديد، وتحديث لوحة معلومات سرعة الموقع، وإعداد تقرير عن التكاليف، وإجراء استطلاع للعملاء. تم أيضًا تحديد مهام محددة للأفراد، مثل إعداد خطة التوظيف، وإعداد تقرير عن التكاليف، وإعداد استطلاع للعملاء.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting discussed all the topics listed and included decisions and actions as stated in the transcript."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: عدد التذاكر المفتوحة في دعم الطوابير هو 390، مقارنة بـ 233 في الأسبوع الماضي.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the number of open support tickets is 390, compared with 233 last week."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: متوسط وقت تحميل الصفحة هو 950 مللي ثانية، مقارنة بـ 820 مللي ثانية في الإصدار الأخير.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the average page load time is 950 milliseconds compared with 820 milliseconds last release."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: الميزانية المعتمدة للربع القادم هي 42,500 دولار، مقارنة بـ 59,500 دولار في الربع السابق.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The approved budget for next quarter is $42,500, compared with $59,500 last quarter."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: فاتورة الحوسبة السحابية الشهرية هي 11,800 دولار، مقارنة بـ 7,700 دولار في الشهر الماضي.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the monthly cloud bill is $11,800 compared with $7,700 last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: الإيرادات الشهرية المتكررة هي 354,000 دولار، مقارنة بـ 134,000 دولار في الشهر الماضي.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the monthly recurring revenue is $354,000 compared with $134,000 last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: معدل العودة في الأسبوع الثاني للمستخدمين التجريبيين هو 34%، مقارنة بـ 82% في الشهر الماضي.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the week 2 return rate for trial users is 34%, compared with 82% last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: عدد المرشحين في خط التوظيف هو 75، مقارنة بـ 85 في الشهر الماضي.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of candidates in the pipeline is 75, compared with 85 last month."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: استخدام الشعار الجديد على الموقع الإلكتروني.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting agreed to use the new logo on the website."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: إرسال العقد إلى قسم القانون بحلول يوم الجمعة.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The action item was agreed to by Laura to send the contract to legal by Friday."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: إعداد تقرير عن التكاليف السحابية.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The cited text does not mention preparing a cloud cost report as a decision."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: إجراء استطلاع للعملاء.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "partial",
+          "reason": "The claim mentions a customer survey, which is mentioned in the transcript when Maria is assigned to prepare the customer survey."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: إعداد خطة التوظيف بحلول نهاية الأسبوع القادم.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The claim is a translation of the decision to have Omar draft the hiring plan by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: إرسال العقد إلى قسم القانون بحلول يوم الجمعة. (owner: Laura; due: Friday)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states Laura is assigned to send the contract to legal by Friday."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: كتابة ملاحظات الإصدار بحلول نهاية الأسبوع القادم. (owner: Victor; due: Next week)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "Victor is assigned to write the release notes by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: إعداد خطة التوظيف بحلول نهاية الأسبوع القادم. (owner: Omar; due: Next week)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "Omar will draft the hiring plan by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: إعداد استطلاع للعملاء بحلول نهاية الأسبوع القادم. (owner: Maria; due: Next week)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states Maria will prepare the customer survey by the end of next week."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: هل سيتم تقديم نسخة من الجهاز اللوحي؟",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The open question about offering a tablet version is directly stated in the transcript."
+        }
+      ],
+      "ask": [],
+      "stages": {
+        "ingest": {
+          "seconds": 1.47,
+          "s_per_audio_hour": 14.8,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "vad": {
+          "seconds": 1.98,
+          "s_per_audio_hour": 19.9,
+          "peak_mem_gb": 15.41,
+          "reused": true
+        },
+        "transcribe": {
+          "seconds": 10.36,
+          "s_per_audio_hour": 104.2,
+          "peak_mem_gb": 16.85,
+          "reused": true
+        },
+        "vision": {
+          "seconds": 40.14,
+          "s_per_audio_hour": 403.8,
+          "peak_mem_gb": 16.66,
+          "reused": true
+        },
+        "fuse": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "map": {
+          "seconds": 14.98,
+          "s_per_audio_hour": 150.7,
+          "peak_mem_gb": 16.19,
+          "reused": true
+        },
+        "reduce": {
+          "seconds": 26.08,
+          "s_per_audio_hour": 262.4,
+          "peak_mem_gb": 16.78,
+          "reused": true
+        },
+        "translate": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "render": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        }
+      }
+    },
+    {
+      "id": "clean-sw",
+      "run_id": "20261013-103509-clean-sw",
+      "seed": 1,
+      "duration_s": 357.88,
+      "metrics": {
+        "facts": 13,
+        "facts_found": 12,
+        "fact_recall": 0.9231,
+        "citation_accuracy": 1.0,
+        "claims": 23,
+        "uncited_claims": 0,
+        "made_up_items": 0,
+        "made_up_open_questions": null,
+        "wrong_owner_or_due": 0,
+        "judge_only_facts": 5,
+        "vad_speech_f1": 0.9335,
+        "gap_words": 0,
+        "gap_minutes": 0.2,
+        "gap_words_per_min": 0.0,
+        "wer": 0.0077,
+        "slides_found": 1.0,
+        "slide_title_exact": 0.875,
+        "slide_cell_accuracy": 1.0,
+        "slide_number_recall": 1.0,
+        "output_language_ok": 1,
+        "map_numbers_repaired": 3,
+        "map_numbers_unverified": 0,
+        "unsupported_numbers": 0,
+        "reduce_groups": 0,
+        "pass2_marker": 0,
+        "pass2_claim": 0,
+        "pass2_group": 0,
+        "pass2_uncited": 0,
+        "translation_citations_same": 1,
+        "untranslated_claims": 4,
+        "recall_decision": null,
+        "recall_action": 0.8,
+        "recall_number": 1.0,
+        "recall_open_question": null,
+        "cited_claims": 23,
+        "support_rate": 0.2174,
+        "support_partial": 2,
+        "support_no": 16,
+        "support_unjudged": 0,
+        "judge_covered": 3,
+        "judge_recall": 0.6
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "kind": "number",
+          "text": "Open tickets: 390",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Mstari wa Msaada: tikiti 390 zimefunguliwa (up kutoka 233 wiki iliyopita), utendaji thabiti, msimu umeonekana.",
+          "citation_ok": true,
+          "t_error": 0.21,
+          "slide_cited": false
+        },
+        {
+          "id": "f2",
+          "kind": "decision",
+          "text": "use the new logo on the website",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f3",
+          "kind": "action",
+          "text": "send the contract to legal",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Tuma mkataba kwa mshauri wa kisheria ifikapo Ijumaa.",
+          "citation_ok": true,
+          "t_error": 0.84,
+          "slide_cited": false
+        },
+        {
+          "id": "f4",
+          "kind": "number",
+          "text": "Page load (ms): 950",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Kasi ya Tovuti: sekunde 950 za kupakia ukurasa (up kutoka 820 kutolewa kwa mwisho), dashibodi imesasishwa, msimu umeidhinishwa.",
+          "citation_ok": true,
+          "t_error": -0.33,
+          "slide_cited": false
+        },
+        {
+          "id": "f5",
+          "kind": "action",
+          "text": "draft the hiring plan",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Andika mpango wa kuajiri ifikapo mwisho wa wiki ijayo.",
+          "citation_ok": true,
+          "t_error": 0.35,
+          "slide_cited": false
+        },
+        {
+          "id": "f6",
+          "kind": "number",
+          "text": "Approved budget: $42,500",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Quarterly Budget: $42,500 approved (down from $59,500 last quarter), trend aligns with expectations.",
+          "citation_ok": true,
+          "t_error": 0.92,
+          "slide_cited": false
+        },
+        {
+          "id": "f7",
+          "kind": "number",
+          "text": "Monthly cloud bill: $11,800",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Cloud Costs: $11,800 monthly bill (down from $7,700 last month), seasonality noted.",
+          "citation_ok": true,
+          "t_error": 1.99,
+          "slide_cited": false
+        },
+        {
+          "id": "f8",
+          "kind": "action",
+          "text": "write the release notes",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Andika maelezo ya kutolewa ifikapo mwisho wa wiki ijayo.",
+          "citation_ok": true,
+          "t_error": 0.74,
+          "slide_cited": false
+        },
+        {
+          "id": "f9",
+          "kind": "number",
+          "text": "Monthly recurring revenue: $354,000",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Revenue: $354,000 monthly (up from $134,000 last month), trend aligns with expectations.",
+          "citation_ok": true,
+          "t_error": -0.45,
+          "slide_cited": false
+        },
+        {
+          "id": "f10",
+          "kind": "number",
+          "text": "Week-2 return rate: 34%",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Retention: 34% week-2 return rate (down from 82% last month), trend more stable than expected.",
+          "citation_ok": true,
+          "t_error": 0.22,
+          "slide_cited": false
+        },
+        {
+          "id": "f11",
+          "kind": "action",
+          "text": "prepare the customer survey",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f12",
+          "kind": "decision",
+          "text": "keep the onboarding checklist",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f13",
+          "kind": "number",
+          "text": "Candidates in pipeline: 75",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Kuajiri: wagombea 75 katika mstari wa mbele (up kutoka 85 mwezi uliopita), mwenendo unaendana na matarajio.",
+          "citation_ok": true,
+          "t_error": -0.03,
+          "slide_cited": false
+        },
+        {
+          "id": "f14",
+          "kind": "open_question",
+          "text": "offer a tablet version",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": false,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f15",
+          "kind": "decision",
+          "text": "move the weekly sync to Thursdays",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": false,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f16",
+          "kind": "number",
+          "text": "New trial signups: 4,650",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Usajili mpya wa majaribio umeongezeka kutoka 2,600 mwezi uliopita hadi 4,650 mwezi huu.",
+          "citation_ok": true,
+          "t_error": 0.84,
+          "slide_cited": false
+        },
+        {
+          "id": "f17",
+          "kind": "action",
+          "text": "record the onboarding video",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Rekodi video ya kujiunga ifikapo Jumatatu.",
+          "citation_ok": true,
+          "t_error": 0.58,
+          "slide_cited": false
+        },
+        {
+          "id": "f18",
+          "kind": "decision",
+          "text": "publish the roadmap to customers",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        }
+      ],
+      "made_up": [],
+      "made_up_questions": [],
+      "wrong_fields": [],
+      "uncited": [],
+      "gap_texts": [],
+      "conflict": {},
+      "number_repairs": [
+        "425,000 → 42,500",
+        "595,000 → 59,500",
+        "1,180 → 11,800"
+      ],
+      "unverified_numbers": [],
+      "unsupported_numbers": [],
+      "support": [
+        {
+          "section": "summary",
+          "claim": "Summary: Mr. Mkuki alishangaa jinsi alivyoweza kumaliza kazi hiyo kwa haraka sana.",
+          "citations": [
+            "seg 0",
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The claim is in a language not present in the cited text and contains no factual content that matches the meeting notes."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Mstari wa Msaada: tikiti 390 zimefunguliwa (up kutoka 233 wiki iliyopita), utendaji thabiti, msimu umeonekana.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "partial",
+          "reason": "The cited text states the number of open support tickets is 390, compared with 233 last week, and mentions that Support Queue has been more stable than expected."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Kasi ya Tovuti: sekunde 950 za kupakia ukurasa (up kutoka 820 kutolewa kwa mwisho), dashibodi imesasishwa, msimu umeidhinishwa.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "partial",
+          "reason": "The claim mentions 'sekunde 950 za kupakia ukurasa' and 'dashibodi imesasishwa', which correspond to the cited text's 'average page load time in milliseconds is 950 milliseconds' and 'the dashboard for site speed was updated on Monday, so these are fresh numbers', respectively."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Quarterly Budget: $42,500 approved (down from $59,500 last quarter), trend aligns with expectations.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the approved budget for next quarter is $42,500 compared with $59,500 last quarter, and that the trend is roughly what was expected."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Cloud Costs: $11,800 monthly bill (down from $7,700 last month), seasonality noted.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the monthly cloud bill is $11,800 compared to $7,700 last month and notes seasonality in cloud costs."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Revenue: $354,000 monthly (up from $134,000 last month), trend aligns with expectations.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the monthly recurring revenue is $354,000 compared with $134,000 last month, and that the trend is roughly what was expected."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Retention: 34% week-2 return rate (down from 82% last month), trend more stable than expected.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the week 2 return rate is 34% and compares it to 82% last month, and notes retention has been more stable than expected."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Kuajiri: wagombea 75 katika mstari wa mbele (up kutoka 85 mwezi uliopita), mwenendo unaendana na matarajio.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The claim mentions a number and trend not present in the cited text."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Sasisho la kila wiki limehamishwa kwa Alhamisi.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The claim is in a language not present in the cited text and contains no information that matches the content of the transcript."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Usajili mpya wa majaribio umeongezeka kutoka 2,600 mwezi uliopita hadi 4,650 mwezi huu.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The claim translates the cited text's statement about trial signups increasing from 2,600 to 4,650, which is directly stated in the transcript."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Usajili wa majaribio ulionyesha msimu, lakini mwenendo ulikubaliana na matarajio.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The claim is in Swahili and does not correspond to any content in the cited text."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Dashibodi ya usajili wa majaribio imesasishwa Jumatatu.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The claim mentions a language or term 'Dashibodi ya usajili wa majaribio' which is not in the cited text, and 'Jumatatu' (Saturday) is not mentioned as a day for publishing the roadmap."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Tumia alama mpya kwenye tovuti.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The claim uses a language not present in the cited text."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Laura atumie mkataba kwa mshauri wa kisheria ifikapo Ijumaa.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The claim mentions a person and a decision not present in the cited text."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Victor andika maelezo ya kutolewa ifikapo mwisho wa wiki ijayo.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The claim is in Swahili and does not match any content in the cited text."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Endelea na orodha ya kuingiza.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The claim is in Swahili and refers to a decision not present in the cited text."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Chapisha njia ya kufanya kazi kwa wateja.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The claim is in Swahili and does not correspond to any decision or action in the cited text."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Tuma mkataba kwa mshauri wa kisheria ifikapo Ijumaa. (owner: Laura; due: Ijumaa)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The cited text mentions an action item for Laura to send the contract to legal by Friday, not a task related to 'Tuma mkataba kwa mshauri wa kisheria ifikapo Ijumaa' or any similar phrase."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Andika mpango wa kuajiri ifikapo mwisho wa wiki ijayo. (owner: Omar; due: Mwisho wa wiki ijayo)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The cited text mentions Omar drafting the hiring plan by the end of next week, not an action item for Andika mpango wa kuajiri."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Andika maelezo ya kutolewa ifikapo mwisho wa wiki ijayo. (owner: Victor; due: Mwisho wa wiki ijayo)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The cited text states Victor will write the release notes by the end of next week, not at the end of this week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Andaa utafiti wa wateja ifikapo mwisho wa wiki ijayo. (due: Mwisho wa wiki ijayo)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The claim is in Swahili and not present in the cited text."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Rekodi video ya kujiunga ifikapo Jumatatu. (owner: Tom; due: Jumatatu)",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The cited text mentions an action item for Tom to record the onboarding video by Monday, not on Jumatatu (Saturday), and the claim uses a different language and incorrect date."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Je, tunatoa toleo la kibao?",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The open question in the transcript is about offering a tablet version, not the Māori phrase."
+        }
+      ],
+      "ask": [],
+      "stages": {
+        "ingest": {
+          "seconds": 1.49,
+          "s_per_audio_hour": 15.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "vad": {
+          "seconds": 2.11,
+          "s_per_audio_hour": 21.2,
+          "peak_mem_gb": 15.41,
+          "reused": true
+        },
+        "transcribe": {
+          "seconds": 10.71,
+          "s_per_audio_hour": 107.8,
+          "peak_mem_gb": 16.85,
+          "reused": true
+        },
+        "vision": {
+          "seconds": 40.14,
+          "s_per_audio_hour": 403.7,
+          "peak_mem_gb": 16.66,
+          "reused": true
+        },
+        "fuse": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "map": {
+          "seconds": 11.9,
+          "s_per_audio_hour": 119.7,
+          "peak_mem_gb": 16.19,
+          "reused": true
+        },
+        "reduce": {
+          "seconds": 24.39,
+          "s_per_audio_hour": 245.3,
+          "peak_mem_gb": 16.76,
+          "reused": true
+        },
+        "translate": {
+          "seconds": 14.96,
+          "s_per_audio_hour": 150.5,
+          "peak_mem_gb": 16.03,
+          "reused": true
+        },
+        "render": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        }
+      }
+    }
+  ],
+  "summary": {
+    "items": 3,
+    "facts": 39,
+    "fact_recall": 0.8462,
+    "citation_accuracy": 1.0,
+    "uncited_claims": 0,
+    "made_up_items": 0,
+    "made_up_open_questions": 0,
+    "wrong_owner_or_due": 0,
+    "gap_words": 0,
+    "gap_words_per_min": 0.0,
+    "vad_speech_f1": 0.9329,
+    "wer": 0.0092,
+    "slide_title_exact": 0.875,
+    "slide_cell_accuracy": 1.0,
+    "slide_number_recall": 1.0,
+    "slide_alignment": null,
+    "output_language_ok": 1.0,
+    "translation_citations_same": 1.0,
+    "untranslated_claims": 4,
+    "recall_decision": null,
+    "recall_action": 0.6667,
+    "recall_number": 0.9583,
+    "recall_open_question": null,
+    "map_numbers_repaired": 5,
+    "map_numbers_unverified": 2,
+    "unsupported_numbers": 0,
+    "reduce_groups": 0,
+    "pass2_marker": 0,
+    "pass2_claim": 0,
+    "pass2_group": 0,
+    "pass2_uncited": 0,
+    "support_rate": 0.6349,
+    "support_partial": 6,
+    "support_no": 17,
+    "support_unjudged": 0,
+    "judge_recall": 0.5625,
+    "audio_s": 1065.9
+  },
+  "stages": {
+    "ingest": {
+      "s_per_audio_hour": 15.4,
+      "peak_mem_gb": 0.0
+    },
+    "vad": {
+      "s_per_audio_hour": 23.1,
+      "peak_mem_gb": 15.41
+    },
+    "transcribe": {
+      "s_per_audio_hour": 109.4,
+      "peak_mem_gb": 16.85
+    },
+    "vision": {
+      "s_per_audio_hour": 385.6,
+      "peak_mem_gb": 16.66
+    },
+    "fuse": {
+      "s_per_audio_hour": 0.0,
+      "peak_mem_gb": 0.0
+    },
+    "map": {
+      "s_per_audio_hour": 143.2,
+      "peak_mem_gb": 16.19
+    },
+    "reduce": {
+      "s_per_audio_hour": 269.2,
+      "peak_mem_gb": 16.78
+    },
+    "translate": {
+      "s_per_audio_hour": 50.5,
+      "peak_mem_gb": 16.03
+    },
+    "render": {
+      "s_per_audio_hour": 0.0,
+      "peak_mem_gb": 0.0
+    },
+    "total": {
+      "s_per_audio_hour": 996.4,
+      "peak_mem_gb": 16.85
+    }
+  },
+  "citation_errors": [
+    -114.93,
+    -1.58,
+    -0.52,
+    -0.45,
+    -0.45,
+    -0.42,
+    -0.4,
+    -0.33,
+    -0.33,
+    -0.32,
+    -0.03,
+    -0.03,
+    -0.02,
+    0.21,
+    0.21,
+    0.22,
+    0.22,
+    0.35,
+    0.35,
+    0.39,
+    0.39,
+    0.58,
+    0.74,
+    0.74,
+    0.84,
+    0.84,
+    0.84,
+    0.87,
+    0.92,
+    0.92,
+    0.94,
+    1.99,
+    1.99
+  ],
+  "judge": {
+    "loaded": false,
+    "calls": 0,
+    "cached": 79,
+    "seconds": 0.01,
+    "s_per_audio_hour": 0.0,
+    "peak_mem_gb": null
+  },
+  "ask": null,
+  "baseline": null,
+  "regressions": []
+}

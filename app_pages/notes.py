@@ -42,7 +42,7 @@ if not (run_dir / NotesDoc.FILENAME).is_file():
     )
     st.stop()
 
-notes = schemas.load(run_dir, NotesDoc)
+notes = render.shown_notes(run_dir)
 segs = schemas.load(run_dir, SegmentsFile)
 slides = schemas.load(run_dir, SlidesFile).slides
 media = ui.run_media(run_dir, manifest, slides)

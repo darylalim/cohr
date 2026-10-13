@@ -1529,3 +1529,174 @@ mean 85.3).
 
 ### Next
 - Phase 6d-1 in a new session with the §21 prompt.
+
+## 2026-10-13 · Phase 6d-1 (notes in other languages)
+
+### 0. Measurement (no fixes)
+`lang` set (`evals/sets/lang.yaml`): `conflict-de` (slide-conflict-en's script and media,
+target de) and `clean-ar` (clean-en's, target ar); a test checks both scripts equal their quick
+twins. Seed 1, `--no-ask`, judge on (report `20261013-085449-lang`). Baseline not written yet:
+step 0 is broken by the finding below, so `evals/baseline-lang.json` waits for its fix.
+
+| item | recall (exact) | numbers | actions | judge recall | citation | made-up | lang ok | support |
+|---|---|---|---|---|---|---|---|---|
+| conflict-de | 23.1% (3/13) | 3/8 | 0/5 | 0/6 | 100% | 0 | de ✓ | 88.9% |
+| clean-ar | 53.8% (7/13) | 7/8 | 0/5 | 0/5 | 100% | 0 | ar ✓ | 87.0% |
+
+- **The five section markers don't survive in de or ar: everything lands in Summary.** R7B
+  translates them and wraps them in citation spans: `## <co>Zusammenfassung</co: 0:[0]>`,
+  `## <co>Schlüsselpunkte</co…>`, `## <co>Aktionspunkte</co…>`; Arabic `## <co>ملخص</co…>`,
+  `نقاط رئيسية`, `قرارات`, `مهام`, `أسئلة مفتوحة`. The parser logs "unknown section markers" and keeps
+  the text in Summary (§5.6), so Key points, Decisions, Action items and Open questions are
+  empty in both notes. This alone explains actions 0/10 (home section empty) and judge
+  recall 0/11 (the judge reads the right section's claims). `reduce.md` already says
+  "in English … whatever language" and repeats it on the last line. The translated headings
+  don't match render's `LABELS` either (de "Kernpunkte"/"Aufgaben", ar "الملخص").
+- **Owner/due lines:** de keeps the English labels, inside a citation span:
+  `- <co>[owner: Maria] [due: Mittwoch]</co: 0:[0]> <co>Vorbereitung der Kundensurvey</co…>`.
+  ar drops the labels and every owner name: `- <co>إرسال العقد إلى قسم القانون بحلول يوم
+  الجمعة.</co…>` (Map had `owner: Laura`, Latin script, for all 5 ar tasks). Map's `due` stays
+  English in both ("Friday", "Next week"); de Map wrote "Mi", "Do. 4:44" for Wednesday and
+  "end of next week" (Tom's task).
+- **Digits:** de writes German separators, the `$` after: "80.000 $", "3.550", "10.700 $".
+  ar writes Western digits with English separators ("42,500 دولار", "34%"), no Arabic-Indic
+  digits or `٬`: English readings already fit Arabic, Arabic-Indic support isn't needed for
+  what R7B writes (keep it out unless 6d-2 shows it).
+- **Number guard in German:** 2 correct repairs (Map "800.000" → "80.000", "775.000" →
+  "77.500", the decimal-mark rule from 6b-2 works in de); 2 flagged (4, 44). The eval's
+  `unsupported_numbers` lists 10 (1.75, 3.55, 77.5, 80, …): the English reading of German
+  separators, a scoring artifact like fact recall's.
+- **Slide-conflict note: not added in German.** The conflict is detected (`Approved budget`,
+  spoken 80000, slide `$18,000`), but `mark_conflicts` needs a label word in the Map string
+  ("Quartalsbudget" ≠ {approved, budget}) and reads the spoken value with English `numbers_in`
+  ("80.000" = 80.0). Both have to change before step 2's word matters.
+
+**Each miss, scoring or real** (Map read by hand: trace_facts matches Map strings by English
+text, so its Map column is blank for de/ar text facts):
+| item | miss | cause |
+|---|---|---|
+| conflict-de | f1 3,550, f9 $10,700, f13 $140,000 | scoring: "3.550" read as 3.55 (in the notes, Summary is a home section for numbers) |
+| conflict-de | f7 $18,000 | not marked (above); Map/notes say only 80.000 $ |
+| conflict-de | f17 37% | real: in Map seg 1, Reduce wrote nothing from seg 1's key points |
+| conflict-de | f5, f6, f8, f12, f16 actions | markers (empty section); f5 (Nadia) also missing in Map, f6 has no owner in Map |
+| conflict-de | 6 judge facts | markers; f2, f14 also missing in Map, f10 written 3 times |
+| clean-ar | f16 4,650 | real: in Map seg 1, dropped by Reduce |
+| clean-ar | 5 actions | markers + owners dropped by Reduce (labels gone) |
+| clean-ar | 5 judge facts | markers; ar Decisions repeat 3 tasks |
+
+### 0b. Section markers: reply prefill (kept; user chose prompt first, then a fallback)
+- **Prompt try A (reverted):** `reduce.md`'s last line "A program splits the notes on the
+  markers, so copy them exactly as written above, in English, never translated: ## SUMMARY,
+  …". Seed 1: R7B wrote the same translated markers, word for word.
+- **Prefill (kept):** Reduce appends `<|START_RESPONSE|>## SUMMARY\n` to the prompt and puts
+  it back in front of the reply (`reduce.REPLY_START`, single pass and both two-pass passes;
+  Ask has no prefill, D22). Scratch check on the step-0 runs: all five markers in English on
+  de and ar, seeds 1–3 (6/6), 18–21 citation spans per reply, notes still in de/ar. No prompt
+  change, so REDUCE_HASH stays; a code-only change, so runs need `--fresh`.
+- `lang`, `--fresh --no-ask`, judge on, seeds 1 / 2 / 3: recall **69.2 / 61.5 / 57.7%**
+  (step 0: 38.5), actions 70 / 40 / 40%, numbers 68.8 / 75 / 68.8% (still English-read
+  separators: step 1), judge recall 54.5 / 63.6 / 90.9% (was 0), citation 100%, made-up
+  0 / 4 / 3 (all clean-ar), no marker warning in any run log. ar's action items now get their
+  owners: R7B copies Map's Arabic task text, and the Map fallback (overlap ≥ 0.6) fills them.
+- `quick` seed 1 `--fresh`, Ask + judge: **gate pass**, recall 86.8% (= baseline), citation
+  100%, made-up 0, Ask 96.2%, near-miss 7/12, support 92.7%. Baseline unchanged.
+
+### 1. Scoring that reads the notes language (kept)
+- `numbers.notes_numbers(text, language)`: English (or None) is `numbers_in`, unchanged;
+  other languages read digits with the guard's `native_readings` (de "3.550" = 3550; ar,
+  not in DECIMAL_MARK, keeps both readings). `written_values` gives each written number's
+  readings. Used for number facts, cross-language due dates, made-up items,
+  `misspoken_value_used`, and `unsupported_numbers` (there a number counts if any reading is
+  in the sources, the guard's keep rule, so ar "42,500" isn't listed as 42.5). No
+  Arabic-Indic digits: R7B wrote none (step 0). Tests include the English reading not firing.
+- Same runs re-scored (seed 1 / 2 / 3, judge cached): **recall 80.8 / 73.1 / 69.2%** (step 0b:
+  69.2 / 61.5 / 57.7), numbers 87.5 / 93.8 / 87.5%; conflict-de 76.9% on every seed, its only
+  number miss is now the slide conflict ($18,000, step 2). unsupported 2 / 0 / 1 (seed 3:
+  750000, a real one). clean-ar's 4,650 (seeds 1, 3) is a real Reduce drop (Map seg 1 has it).
+- `quick` seed 1 re-scored: gate pass, recall 86.8% (=), unsupported 2 (=).
+
+### 2. Slide-conflict note in the notes language (kept)
+- `mapper.SLIDE_WORD`: the note's word for R7B's 23 languages (English when missing), a static
+  table like render's LABELS. Three changes were needed, not only the word (step 0):
+  the spoken value is read with `native_readings` for the target language ("80.000" = 80000
+  in de); in notes in another language than the meeting's the spoken value alone finds the
+  string (a German string can't name "Approved budget"); and the slide value is written in
+  the spoken value's style ("$18.000": German-read "$18,000" is 18, the eval would miss it).
+  The note goes after a trailing currency or percent sign ("80.000 $ (Folie: $18.000)").
+  Tests: the value alone doesn't mark same-language notes; "80,000" read as German isn't the
+  spoken value; a language without a word gets "slide".
+- Code-only Map change: Map's config hash doesn't move, so existing runs keep the old note
+  until re-run (`--fresh` in the eval).
+- `lang` `--fresh`, seeds 1 / 2 / 3: **slide_value_used true on every seed** (was false);
+  R7B kept it in German style: "Quartalsbudget: 80.000 $ (Folie: 18.000 $) [1:55]". Recall
+  80.8 / 73.1 / 73.1%, numbers 93.8% each; conflict-de 76.9 / 76.9 / 84.6%.
+- `quick` seed 1 `--fresh`, Ask + judge: gate pass, recall 86.8% (=), slide_value_used true
+  (=), Ask 96.2%, near-miss 7/12, support 92.7% (all =).
+
+### 3. Arabic in the Notes page and notes.md (kept: Unicode isolates, D29)
+- Checked with Claude in Chrome (user's choice) on `clean-ar` seed 3, app on 127.0.0.1 with
+  `COHR_RUNS_DIR=evals/data/runs/clean-ar`. Streamlit lays every paragraph out left to right
+  (left-aligned, bullets on the left). Lines in Arabic only read right: the line is one
+  right-to-left run, so the citation (`0:12`) and the final period sit at its visual left, the
+  end of the sentence for an Arabic reader. **A line with Latin text breaks**: Tom's task with
+  "(المسؤول: Tom; الموعد: Monday)" had the citation on the far right and the task in the middle.
+- Fix within the rules: `render.isolate` wraps each claim line, the summary paragraph and Ask
+  answers in RLI … PDI (U+2067 / U+2069) for ar, fa, he, ur. After: Tom's line reads like the
+  others (task, owner/due, citation at the end); clicking `5:40` still scrolls Sources to its
+  segment. `notes.md` FORMAT_VERSION 1 → 2 (render re-runs on old runs). Left alignment and
+  left bullets stay: changing them needs `dir="rtl"` or CSS. Test: isolates for ar in both
+  modes, none for en/de, headings untouched.
+- Found on the way: on seeds 2–3 R7B writes Arabic owners in Arabic script ("المسؤول: لورا" for
+  Laura), so the eval's owner match misses them (clean-ar actions 40%); the name is right,
+  only transliterated. Map keeps Latin owners. Not fixed (a Reduce rule "keep names as
+  written" exists already); carry-over.
+
+### 4. "Other (beta)" target languages (kept: own translate stage, D30)
+- User's choices: own stage (not inside reduce); the New run page lists R7B's 23, then the 44
+  beta languages labelled "(beta)" (one selectbox: the page is an `st.form`, so a second box
+  shown on "Other" wouldn't appear before submit). Beta list = Tiny Aya card's 67 `language:`
+  codes minus R7B's 23 (`config.BETA_LANGUAGES`, source and revision in the comment).
+- `Config.notes_language` ("en" for a beta target) feeds Map and Reduce, and Ask's fallback
+  language (R7B doesn't write Swahili). Equal to the target for R7B's 23: no existing hash moves.
+- `translate` stage (Tiny Aya, `TranslateConfig`, temperature 0), `TranslatedNotes` v1 (new
+  snapshot; NotesDoc unchanged). Nothing written for R7B's languages (a stale file is deleted,
+  no model loaded). `render.shown_notes` picks it for render, the Notes page and the eval. New
+  metrics: `translation_citations_same`, `untranslated_claims`. `lang` gets `clean-sw`.
+- **Try 1 (prompt with an example, section line sent):** 18–24 of ~24 claims kept English per
+  run, notes detected as English. Tiny Aya translated the example lines (printer, warehouse)
+  along with ours and the "## …" line, so markers came back extra or missing; when lines did
+  parse, money lost a digit ("$42,500" → "$4,500", "$11,800" → "$1,800", every seed).
+  Translate 770–914 s per audio hour (retries).
+- **Try 2:** no example, no section line, rules then the lines, target language last. Plus a
+  number check: the line must keep the digits. 3–4 claims kept English, Swahili detected, 145
+  s/h. But "34%" → "3.4%" passed the digit check (seed 2 lost the return-rate fact),
+  `<|END_RESPONSE|>` stayed in the last line's text, and the labels came back translated
+  ("[mmiliki: Laura] [tarehe: Ijumaa]"), so they were left inside the task text.
+- **Kept (try 3):** `same_numbers` compares values (each source number, read the English way,
+  matches one translated number under some reading: "42.500 $" passes, "3.4%" and "$4,500"
+  don't); special tokens stripped; any two leading bracket labels read back (owner always
+  the original name, due translated). `clean-sw` `--fresh`, seeds 1 / 2 / 3: **output language
+  sw 3/3, citations identical 3/3, exact recall 92.3% each = the English notes' 92.3%** (same
+  run, scored by the same rules), 4 claims kept English per run
+  (the money key points), made-up 0, translate ~145 s per audio hour.
+- **Limits (beta):** support rate 22–33% (report-only): the Qwen-4B judge reads Swahili claims
+  against an English transcript; and on seed 1 the one-sentence summary came back invented
+  ("Mr. Mkuki alishangaa…", no number for the check to catch). Headings stay English. A
+  back-translation or length check could catch the invented sentence; not tried.
+
+### Final gate (seed 1, `--fresh`)
+- `quick` with Ask + judge: **pass**, recall 86.8%, citation 100%, made-up 0, uncited 0, Ask
+  96.2%, Ask citation 100%, near-miss 7/12, support 92.7%, slide_value_used true (all = baseline).
+- `lang` (no Ask): recall **84.6%** (conflict-de 76.9, clean-ar 84.6, clean-sw 92.3), numbers
+  95.8%, actions 66.7%, citation 100%, made-up 0, language 3/3, clean-sw citations identical,
+  4 untranslated, judge recall 56.2%, support 63.5% (clean-sw 21.7%). Written as
+  `evals/baseline-lang.json` (report-only, like long).
+
+### Next
+- Carry-overs: R7B writes Arabic owner names in Arabic script on some seeds (eval owner match
+  misses them); "Other (beta)" leaves ~4 money claims English per run and once invented the
+  one-sentence summary (a back-translation or length check, not tried); beta headings English.
+  From 6b-2 still open: long-en tasks filed as decisions; reduce.md's release-notes example;
+  Ask doesn't see slide conflicts.
+- Phase 6d-2 (other source languages, regional Map models, D18) in a new session; kickoff
+  prompt to write from these findings.

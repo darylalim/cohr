@@ -92,7 +92,7 @@ class Stage:
 
 
 def default_stages() -> list[Stage]:
-    from cohr import asr, fuse, ingest, mapper, reduce, render, vad, vision  # these import us
+    from cohr import asr, fuse, ingest, mapper, reduce, render, translate, vad, vision  # import us
 
     return [
         ingest.STAGE,
@@ -102,6 +102,7 @@ def default_stages() -> list[Stage]:
         fuse.STAGE,
         mapper.STAGE,
         reduce.STAGE,
+        translate.STAGE,
         render.STAGE,
     ]
 

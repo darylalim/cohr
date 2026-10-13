@@ -57,6 +57,11 @@ CLAIM_MATCH_MIN = 0.5  # pass-2 span → pass-1 claim token overlap, when the sp
 # them on key points before DECISIONS/ACTION_ITEMS. The long-meeting prompts also list those
 # before KEY_POINTS (figures only); this raises the floor for both passes.
 TWO_PASS_MAX_TOKENS = 4096
+# The reply is started with the first marker (6d-1): in German and Arabic notes R7B translated
+# all five markers ("## Zusammenfassung", "## ملخص") whatever the prompt said, so every claim
+# fell into Summary. Started this way it writes the other four in English too (de, ar, seeds
+# 1–3) and keeps its citations. Reduce only: Ask's replies have no sections (D22).
+REPLY_START = "<|START_RESPONSE|>## SUMMARY\n"
 
 _WRAPPER = re.compile(r"<\|[A-Z_]+\|>")
 _HEADING = re.compile(r"^[ \t]*#{1,6}[ \t]*(.+?)[ \t]*$")
@@ -701,7 +706,7 @@ def fit_prompt(
 
 def run_stage(ctx: StageContext) -> None:
     cfg = ctx.config.reduce
-    language = ctx.config.target_language
+    language = ctx.config.notes_language  # English for an "Other (beta)" target
     segments = schemas.load(ctx.run_dir, SegmentsFile).segments
     slides = schemas.load(ctx.run_dir, SlidesFile).slides
     map_notes = {n.seg_id: n for n in schemas.load(ctx.run_dir, MapFile).notes}
@@ -718,8 +723,11 @@ def run_stage(ctx: StageContext) -> None:
     refine = segment_refiner(segments, items, cfg.citation_min_score)
 
     def generate(prompt: str, max_tokens: int = cfg.max_tokens) -> str:
-        return lm.generate(
-            prompt, max_tokens=max_tokens, temperature=cfg.temperature, seed=ctx.config.seed
+        return REPLY_START + lm.generate(
+            prompt + REPLY_START,
+            max_tokens=max_tokens,
+            temperature=cfg.temperature,
+            seed=ctx.config.seed,
         )
 
     with ctx.model("reduce") as lm:

@@ -147,3 +147,21 @@ def test_every_citation_survives_both_modes() -> None:
     for mode, md in (("portable", portable), ("app", app)):
         labels = [render.citation_md(c, by_seg, mode) for c in cited]
         assert sum(md.count(lbl) for lbl in set(labels)) == len(labels)
+
+
+def test_right_to_left_lines_are_isolated() -> None:
+    # 6d-1: a left-to-right page reordered Arabic lines holding Latin names or dates; each line
+    # (and the summary paragraph) is a right-to-left isolate. Headings and bullets are not.
+    rli, pdi = render.RLI, render.PDI
+    for mode in ("portable", "app"):
+        md = render.render(_notes("ar"), SEGMENTS, SLIDES, mode)
+        lines = md.splitlines()
+        items = [line for line in lines if line.startswith("- ") and "Priya" in line]
+        assert items and all(i.startswith(f"- {rli}") and i.endswith(pdi) for i in items)
+        assert any(line.startswith(rli) and "Budget approved." in line for line in lines)
+        assert all(not line.startswith(f"## {rli}") for line in lines)
+        assert "[slide 1]" in md or "(#slide-0)" in md  # citations kept inside the isolate
+    for language in ("en", "de"):  # left-to-right languages: no marks
+        assert rli not in render.render(_notes(language), SEGMENTS, SLIDES, "app")
+    answer = render.answer_md(_notes("ar").sections.summary, SEGMENTS, "ar")
+    assert answer.startswith(rli) and answer.endswith(pdi)

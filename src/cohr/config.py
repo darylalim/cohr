@@ -82,8 +82,60 @@ TARGET_LANGUAGES: dict[str, str] = {
 }
 
 
+# "Other (beta)" target languages (§5.6, 6d-1): the languages Tiny Aya supports beyond R7B's
+# 23, from the `language:` list of the Map model's card (mlx-community/tiny-aya-global-8bit-mlx
+# README.md at revision 5d5dc68, 67 languages). Map and Reduce run in English for these, and
+# Tiny Aya translates the notes (the translate stage).
+BETA_LANGUAGES: dict[str, str] = {
+    "am": "Amharic",
+    "bg": "Bulgarian",
+    "bn": "Bengali",
+    "ca": "Catalan",
+    "cy": "Welsh",
+    "da": "Danish",
+    "et": "Estonian",
+    "eu": "Basque",
+    "fi": "Finnish",
+    "ga": "Irish",
+    "gl": "Galician",
+    "gu": "Gujarati",
+    "ha": "Hausa",
+    "hr": "Croatian",
+    "hu": "Hungarian",
+    "ig": "Igbo",
+    "jv": "Javanese",
+    "km": "Khmer",
+    "lo": "Lao",
+    "lt": "Lithuanian",
+    "lv": "Latvian",
+    "mg": "Malagasy",
+    "mr": "Marathi",
+    "ms": "Malay",
+    "mt": "Maltese",
+    "my": "Burmese",
+    "ne": "Nepali",
+    "no": "Norwegian",
+    "pa": "Punjabi",
+    "sk": "Slovak",
+    "sl": "Slovenian",
+    "sn": "Shona",
+    "sr": "Serbian",
+    "sv": "Swedish",
+    "sw": "Swahili",
+    "ta": "Tamil",
+    "te": "Telugu",
+    "th": "Thai",
+    "tl": "Tagalog",
+    "ur": "Urdu",
+    "wo": "Wolof",
+    "xh": "Xhosa",
+    "yo": "Yoruba",
+    "zu": "Zulu",
+}
+
+
 def language_name(code: str) -> str:
-    return TARGET_LANGUAGES.get(code, code)
+    return TARGET_LANGUAGES.get(code) or BETA_LANGUAGES.get(code, code)
 
 
 class IngestConfig(_Section):
@@ -136,6 +188,11 @@ class ReduceConfig(_Section):
     citation_min_score: float = 0.1  # D19
 
 
+class TranslateConfig(_Section):
+    max_tokens: int = 1024  # per section
+    temperature: float = 0.0
+
+
 class Config(_Section):
     source_language: str = "en"
     target_language: str = "en"
@@ -149,7 +206,18 @@ class Config(_Section):
     fuse: FuseConfig = FuseConfig()
     map: MapConfig = MapConfig()
     reduce: ReduceConfig = ReduceConfig()
+    translate: TranslateConfig = TranslateConfig()
     models: dict[str, ModelSpec] = Field(default_factory=lambda: dict(DEFAULT_MODELS))
+
+    @property
+    def notes_language(self) -> str:
+        """The language Map and Reduce write: the target, or English for an "Other (beta)"
+        target, which the translate stage then produces from the English notes."""
+        return "en" if self.target_language in BETA_LANGUAGES else self.target_language
+
+    @property
+    def translated(self) -> bool:
+        return self.target_language in BETA_LANGUAGES
 
 
 def runs_dir() -> Path:

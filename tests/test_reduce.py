@@ -301,6 +301,7 @@ class FakeR7B:
         self.instructions: list[str] = []
         self.docs: list[list[dict[str, str]]] = []
         self.calls: list[dict[str, float]] = []
+        self.prompts: list[str] = []
 
     def prompt(self, instruction: str, docs: list[dict[str, str]]) -> str:
         self.instructions.append(instruction)
@@ -312,6 +313,7 @@ class FakeR7B:
 
     def generate(self, prompt: str, *, max_tokens: int, temperature: float, seed: int) -> str:
         self.calls.append({"max_tokens": max_tokens, "temperature": temperature, "seed": seed})
+        self.prompts.append(prompt)
         return self.replies[min(len(self.calls), len(self.replies)) - 1]
 
 
@@ -344,6 +346,22 @@ def test_stage_writes_notes(tmp_path: Path) -> None:
     assert "Write meeting notes in Japanese" in lm.instructions[0]
     assert lm.instructions[0].rstrip().endswith("keeping the five English section markers.")
     assert len(lm.docs[0]) == 5
+
+
+def test_stage_starts_the_reply_with_the_first_marker(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    # 6d-1: R7B translated the markers in de/ar notes; the reply is started with "## SUMMARY"
+    # and the model writes on from there, so its reply has no first marker of its own.
+    run_dir = _run(tmp_path, Config(target_language="de"))
+    lm = FakeR7B(REPLY.removeprefix(reduce.REPLY_START))
+    reduce.run_stage(ctx_for(run_dir, "reduce", fake_manager(Config(), tmp_path, reduce=lm)))
+    assert lm.prompts[0].endswith(reduce.REPLY_START)
+    doc = schemas.load(run_dir, NotesDoc)
+    assert doc.raw.startswith(reduce.REPLY_START)
+    assert doc.sections.summary[0].text == "The team approved the 14,500 budget."
+    assert len(doc.sections.decisions) == 2
+    assert "missing section markers" not in caplog.text
 
 
 def test_stage_trims_a_group_over_the_cap(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:

@@ -382,7 +382,9 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
 - **Fixed section markers:** the prompt asks for five sections under fixed English markers, whatever
   the target language: `## SUMMARY`, `## KEY_POINTS`, `## DECISIONS`, `## ACTION_ITEMS`,
   `## OPEN_QUESTIONS`. The parser splits on these exact markers, so German or Japanese notes
-  parse the same way as English ones. `render.py` shows each heading in the target language from
+  parse the same way as English ones. The prompt alone doesn't hold them: in de/ar notes R7B
+  translated all five (6d-1), so Reduce starts R7B's reply with `## SUMMARY` (a prefill; Ask
+  has none, D22), and R7B then writes the other four in English. `render.py` shows each heading in the target language from
   a static table (`LABELS[lang][key]`: the five headings plus "Sources", "owner", "due" and
   "uncited", for all 23 languages; English if the language is missing). Missing or unknown
   markers: log them, and put unmatched text in Summary rather than dropping it.
@@ -427,6 +429,16 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   supports: Reduce then runs in English and Tiny Aya translates the notes section by section.
   Translation must **keep citations intact**: only the text between citation markers is sent for
   translation, and the markers are put back in the same order. Anything else would break links.
+  **Built in 6d-1 (D30):** the 44 languages of Tiny Aya's card beyond R7B's 23
+  (`config.BETA_LANGUAGES`, listed after R7B's on the New run page as "Swahili (beta)"). For
+  these, Map and Reduce write English (`Config.notes_language`), and a **translate** stage
+  (between reduce and render, Tiny Aya, loaded after R7B) writes `notes_translated.json`
+  (`TranslatedNotes`): each section's claims go out as numbered lines (`<3> text`), the number is
+  the only marker, and each translated line goes back on its own claim, so citations never pass
+  through the model. A line must keep every number's value (`translate.same_numbers`; Tiny Aya
+  wrote "$4,500" for "$42,500"); a bad reply is retried one claim at a time, then the claim stays
+  English (`untranslated`). Headings stay English (no LABELS entry); Ask falls back to English.
+  Render, the Notes page and the eval show the translated notes when present.
 
 ### 5.7 Ask
 - Same documents as Reduce, the user's question, and the `rag` template with citations. Answer
@@ -1096,6 +1108,14 @@ compared with a committed baseline:
     the way the notes language writes them; the " (slide: …)" note (6b-2) in the target
     language; Arabic (right-to-left) in the Notes page and `notes.md`; "Other (beta)" target
     languages with translation that keeps citations (§5.6). Kickoff prompt in §21.
+    Results: R7B translated the five section markers in de/ar (everything fell into Summary,
+    recall 38.5%): Reduce now starts the reply with `## SUMMARY`; the eval reads numbers the
+    notes language's way; the "(slide: …)" note is localized and found in German notes; Arabic
+    lines are RTL isolates (D29); "Other (beta)" is its own translate stage (D30). `lang` seed 1:
+    recall 84.6% (conflict-de 76.9, clean-ar 84.6, clean-sw 92.3), citation 100%, made-up 0,
+    language 3/3, slide_value_used true; baseline `evals/baseline-lang.json` (report-only).
+    `quick` unchanged (86.8%). Carry-overs: ar owners in Arabic script (eval misses them);
+    translation keeps ~4 money claims English and once invented the summary.
   - **6d-2: other source languages and regional Map models.** The `xling-{es,ja}` items (the
     generator in Spanish and Japanese: templates, number words, `say` voices; CER for ja);
     optional regional Map models (§5.5, D18) scored on 6d-1's `en → X` items:
@@ -1762,6 +1782,7 @@ script's text can't work when the notes are in another language. For these items
 | Set | Contents | Time | When |
 |---|---|---|---|
 | `quick` | `clean-en`, `noisy-en`, `pdf-slides-en`, `slide-conflict-en` | ~5 min | After prompt or model changes; before every commit to `reduce.py`/`mapper.py` prompts |
+| `lang` | `conflict-de`, `clean-ar` (R7B in de/ar), `clean-sw` ("Other (beta)", translated) | ~10 min | After Reduce, number-reading or translate changes (6d-1); report-only baseline `evals/baseline-lang.json`, `-c seed=1 --no-ask` |
 | `long` | `long-en` | ~1 h (generation, ~40 min pipeline, Ask) | After two-pass Reduce or Ask ranking changes; report-only baseline `evals/baseline-long.json` |
 | `full` | All variants + 14-language FLEURS sample (20 clips each) + 5 AMI meetings | ~1 h | Before every version bump (§16) |
 
@@ -1911,6 +1932,8 @@ section.
 | D26 | Two-pass reduce grouping (§4) | Groups of consecutive segments filling ~75% of `max_input_tokens` | `quick` with a lowered cap forcing 2–3 groups vs single pass on the same media: citation accuracy within D25, no uncited rise, every pass-2 citation resolves; then `long-en` | Phase 6c | **40% (`GROUP_FILL` 0.4), with `reduce_part.md` (decisions/actions before figures-only key points) and 4096 output tokens.** `quick` at cap 4000 (2 groups per item) vs single pass: recall 89.7 = 89.7%, citation 100 vs 96.7%, uncited 0, made-up 3 vs 2, 91 of 91 pass-2 citations by claim match. `long-en` (2.2 h, 32K cap): at 75% (2 groups of ~23K) pass 1 ran out of output inside KEY_POINTS (recall 11.3 → 37.5% with the prompts and 4096); 0.4 (4–5 groups of ~12K) recall 53.8% on the same media, 67.5% after fact-free filler (citation 98.1%, 5 group fallbacks of 139). Pass 2 still loses about a third of pass 1's decisions (carry-over, §9 6c) |
 | D27 | Ask ranking under the cap (§5.7) | FTS5 BM25 over segment + slide documents, question terms OR'ed, top-ranked that fit | Ask accuracy on `quick` with a lowered cap vs the full-document baseline, and on `long-en`'s question sample | Phase 6c | **FTS5 BM25 over the question plus the last turn, at most the top 12 documents that fit, sent in meeting order.** `quick` at cap 4000 vs no cap / vs the old transcript trimming: Ask accuracy 96.2 vs 98.1 / 98.1%, citation 98.0 vs 100 / 100%, follow-up 3/4 vs 3/4 / 1/4, near-miss 4/12 vs 7/12 / 5/12 (any way of fitting the cap costs near-misses; ranking is within one question of trimming and scales). `long-en`: filling the 32K cap (~60 documents) gave 61% at ~100 s per answer and citation loops; top 12 gives 83.3%, citation 93.8%, ~32 s |
 | D28 | Speech/slide conflict (§5.5, §18 `slide-conflict-en`) | Prompt: use the slide's value | Map ignores the prompt rule on every seed; a guard that swaps in the slide value would be wrong when a speaker corrects an outdated slide | Phase 6b-2 | **Show both** (user): a slide table row whose one value was never said, while the sentences naming its label hold exactly one number on no slide, gets "(slide: $18,000)" after the spoken value in Map's strings; `slide_conflicts` in MapFile v4. `quick` seed 1: slide_value_used false → true, recall 85.3 → 86.8%; dry run on 36 real segments found only the planted conflict |
+| D29 | Right-to-left notes on the Notes page and in `notes.md` (§5.6, §7) | Plain Markdown, no direction marks | Browser check of `clean-ar` (6d-1, Claude in Chrome) within the no-CSS rule | Phase 6d-1 | **Unicode isolates per line**: Arabic-only lines read right (one RTL run, citation at the end), but a line with Latin names or dates ("(المسؤول: Tom; الموعد: Monday)") was reordered, citation on the far side. `render.isolate` wraps each claim line, the summary paragraph and Ask answers in RLI … PDI for ar/fa/he/ur (`notes.md` format v2): reading order right, citation links still jump to Sources. Bullets and alignment stay on the left (that needs `dir`/CSS, not allowed) |
+| D30 | Where "Other (beta)" translation runs (§5.6) | — | Proposal before coding (6d-1 kickoff) | Phase 6d-1 | **Own `translate` stage** (user): between reduce and render, new `notes_translated.json` (TranslatedNotes v1), NotesDoc unchanged; a translate-prompt change re-runs only translate + render, and the English notes stay for the eval's citations-identical check. Rejected: inside reduce (two models in one stage, a prompt change re-runs R7B). `clean-sw` seeds 1–3: Swahili 3/3, citations identical 3/3, exact recall 92.3% = the English notes' on each seed, 4 claims kept English per run |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

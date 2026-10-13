@@ -13,6 +13,7 @@ Uncited claims are kept and flagged in every mode.
 """
 
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Literal
 
 from cohr import atomic, schemas
@@ -28,9 +29,12 @@ from cohr.schemas import (
     SegmentsFile,
     Slide,
     SlidesFile,
+    TranslatedNotes,
 )
 
-FORMAT_VERSION = 1  # of notes.md; bump when the rendering changes
+FORMAT_VERSION = 2  # of notes.md; bump when the rendering changes (2: RTL isolates, 6d-1)
+
+Notes = NotesDoc | TranslatedNotes  # what render shows: the same sections and citations
 FILENAME = "notes.md"
 EXCERPT_CHARS = 200
 
@@ -292,6 +296,19 @@ def labels(language: str) -> dict[str, str]:
     return LABELS.get(language, LABELS["en"])
 
 
+# Right-to-left notes languages (6d-1). Streamlit's markdown and most Markdown viewers lay a
+# paragraph out left to right, so a line mixing Arabic with Latin names, dates or citations
+# came out reordered: "(owner: Tom; due: Monday)" split the sentence and the citation ended up
+# on the far side. Each line is wrapped in a right-to-left isolate (RLI … PDI, Unicode bidi):
+# the reading order is right; the bullet and the alignment stay on the left (no custom CSS).
+RTL_LANGUAGES = {"ar", "fa", "he", "ur"}
+RLI, PDI = "\u2067", "\u2069"
+
+
+def isolate(text: str, language: str) -> str:
+    return f"{RLI}{text}{PDI}" if language in RTL_LANGUAGES else text
+
+
 # Semantic colors on the Notes page (§7); the same names in light and dark.
 SECTION_COLORS = {"decisions": "green", "action_items": "orange", "open_questions": "violet"}
 
@@ -335,7 +352,9 @@ def claim_md(
 def answer_md(claims: Sequence[Claim], segments: Sequence[Segment], language: str) -> str:
     """An Ask answer as Streamlit markdown: one paragraph, uncited sentences flagged."""
     by_seg = {s.seg_id: s for s in segments}
-    return " ".join(claim_md(c, by_seg, labels(language), "chat") for c in claims)
+    return isolate(
+        " ".join(claim_md(c, by_seg, labels(language), "chat") for c in claims), language
+    )
 
 
 def excerpt(text: str, limit: int = EXCERPT_CHARS) -> str:
@@ -347,7 +366,7 @@ def excerpt(text: str, limit: int = EXCERPT_CHARS) -> str:
 
 
 def sources_md(
-    notes: NotesDoc, segments: Mapping[int, Segment], slides: Mapping[int, Slide]
+    notes: Notes, segments: Mapping[int, Segment], slides: Mapping[int, Slide]
 ) -> list[str]:
     """One entry per cited segment (time range, slides, transcript excerpt) and per cited slide."""
     cited = [
@@ -369,7 +388,7 @@ def sources_md(
 
 
 def render(
-    notes: NotesDoc, segments: Sequence[Segment], slides: Sequence[Slide], mode: Mode = "portable"
+    notes: Notes, segments: Sequence[Segment], slides: Sequence[Slide], mode: Mode = "portable"
 ) -> str:
     words = labels(notes.language)
     by_seg = {s.seg_id: s for s in segments}
@@ -384,9 +403,9 @@ def render(
         if not rendered:
             out.append("—")
         elif name == "summary":
-            out.append(" ".join(rendered))
+            out.append(isolate(" ".join(rendered), notes.language))
         else:
-            out += [f"- {r}" for r in rendered]
+            out += [f"- {isolate(r, notes.language)}" for r in rendered]
         out.append("")
     if mode == "portable" and (
         sources := sources_md(notes, by_seg, {s.slide_id: s for s in slides})
@@ -395,11 +414,19 @@ def render(
     return "\n".join(out).rstrip() + "\n"
 
 
+def shown_notes(run_dir: Path) -> Notes:
+    """The notes people read: notes_translated.json for an "Other (beta)" target (the translate
+    stage deletes it otherwise), else notes.json."""
+    if (run_dir / TranslatedNotes.FILENAME).is_file():
+        return schemas.load(run_dir, TranslatedNotes)
+    return schemas.load(run_dir, NotesDoc)
+
+
 # --- stage ---------------------------------------------------------------------------------
 
 
 def run_stage(ctx: StageContext) -> None:
-    notes = schemas.load(ctx.run_dir, NotesDoc)
+    notes = shown_notes(ctx.run_dir)
     segments = schemas.load(ctx.run_dir, SegmentsFile).segments
     slides = schemas.load(ctx.run_dir, SlidesFile).slides
     atomic.write_text(ctx.run_dir / FILENAME, render(notes, segments, slides, "portable"))

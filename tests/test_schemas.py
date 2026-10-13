@@ -33,6 +33,7 @@ from cohr.schemas import (
     StageState,
     Transcript,
     TranscriptItem,
+    TranslatedNotes,
 )
 
 
@@ -142,6 +143,19 @@ SAMPLES: list[RunFile] = [
         passes=1,
         language="en",
         raw="<co>Budget approved</co: 0:[0]>",
+    ),
+    TranslatedNotes(
+        sections=NotesSections(
+            summary=[Claim(text="Bajeti imeidhinishwa", citations=[Citation(kind="seg", id=0)])],
+            key_points=[],
+            decisions=[],
+            action_items=[],
+            open_questions=[],
+        ),
+        language="sw",
+        source_language="en",
+        untranslated=0,
+        raw=["<1> Bajeti imeidhinishwa"],
     ),
 ]
 

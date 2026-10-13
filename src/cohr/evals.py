@@ -37,16 +37,17 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from cohr import ask, atomic, judge, pipeline, schemas, storage
+from cohr import ask, atomic, judge, pipeline, render, schemas, storage
 from cohr.config import Config, prompt_hash
 from cohr.fuse import slide_text, tokens
 from cohr.judge import CachedJudge, Generate, Label, Supported
 from cohr.mapper import clock
-from cohr.numbers import digits, numbers_in
+from cohr.numbers import digits, notes_numbers, numbers_in, written_values
 from cohr.reduce import SECTIONS, slide_label, slide_snippet
 from cohr.schemas import (
     ActionItem,
     ChunksFile,
+    Citation,
     Claim,
     Manifest,
     MapFile,
@@ -57,6 +58,7 @@ from cohr.schemas import (
     SlidesFile,
     Span,
     Transcript,
+    TranslatedNotes,
 )
 
 CITATION_TOLERANCE_S = 15.0  # D19
@@ -275,7 +277,9 @@ def _stated_due(claim: Claim) -> str | None:
     return claim.due if isinstance(claim, ActionItem) and claim.due else None
 
 
-def action_fit(claim: Claim, fact: TruthFact, cross_language: bool = False) -> str:
+def action_fit(
+    claim: Claim, fact: TruthFact, cross_language: bool = False, language: str | None = None
+) -> str:
     """One of: "match"; "wrong" (right task, someone else's owner or due date); "partial"
     (right task, no owner stated: not found, but not made up either, e.g. an action item
     repeated under Decisions); "none"."""
@@ -286,7 +290,7 @@ def action_fit(claim: Claim, fact: TruthFact, cross_language: bool = False) -> s
         if owner is not True:
             return "none"
         want = numbers_in(fact.due or "")
-        got = numbers_in(stated_due or claim.text)
+        got = notes_numbers(stated_due or claim.text, language)
         return "wrong" if want and stated_due and not want <= got else "match"
     if coverage(fact.text, claim.text) < TEXT_MATCH_MIN:
         return "none"
@@ -295,11 +299,14 @@ def action_fit(claim: Claim, fact: TruthFact, cross_language: bool = False) -> s
     return "match" if owner else "partial"
 
 
-def fact_fit(claim: Claim, fact: TruthFact, cross_language: bool = False) -> str:
+def fact_fit(
+    claim: Claim, fact: TruthFact, cross_language: bool = False, language: str | None = None
+) -> str:
+    """`language`: the notes language, for reading their numbers (None = English)."""
     if fact.kind == "number":
-        return "match" if fact.value in numbers_in(claim.text) else "none"
+        return "match" if fact.value in notes_numbers(claim.text, language) else "none"
     if fact.kind == "action":
-        return action_fit(claim, fact, cross_language)
+        return action_fit(claim, fact, cross_language, language)
     if cross_language:
         return "none"  # pure-text decision: judge only (4b-2)
     return "match" if coverage(fact.text, claim.text) >= TEXT_MATCH_MIN else "none"
@@ -318,7 +325,15 @@ RECALL_KINDS = ("decision", "action", "number")
 TEXT_KINDS = ("decision", "open_question")  # matched by text only: judge-only cross-language
 
 
-def claims_by_section(doc: NotesDoc) -> dict[Section, list[Claim]]:
+Notes = NotesDoc | TranslatedNotes
+
+
+def citation_lists(doc: Notes) -> list[list[list[Citation]]]:
+    """Each section's claims' citations, in order: identical before and after translation."""
+    return [[c.citations for c in getattr(doc.sections, name)] for name in SECTIONS]
+
+
+def claims_by_section(doc: Notes) -> dict[Section, list[Claim]]:
     return {name: list(getattr(doc.sections, name)) for name in SECTIONS}
 
 
@@ -350,9 +365,10 @@ def citation_check(
 
 def score_facts(
     facts: Sequence[TruthFact],
-    doc: NotesDoc,
+    doc: Notes,
     slide_ids: Mapping[int, int],
     cross_language: bool = False,
+    language: str | None = None,
 ) -> list[FactResult]:
     sections = claims_by_section(doc)
     out = []
@@ -363,7 +379,11 @@ def score_facts(
         )
         for name in HOME[fact.kind]:
             claim = next(
-                (c for c in sections[name] if fact_fit(c, fact, cross_language) == "match"),
+                (
+                    c
+                    for c in sections[name]
+                    if fact_fit(c, fact, cross_language, language) == "match"
+                ),
                 None,
             )
             if claim is not None:
@@ -384,7 +404,10 @@ def score_facts(
 
 
 def made_up(
-    facts: Sequence[TruthFact], doc: NotesDoc, cross_language: bool = False
+    facts: Sequence[TruthFact],
+    doc: Notes,
+    cross_language: bool = False,
+    language: str | None = None,
 ) -> tuple[list[str], list[str]]:
     """(made-up decisions/action items, the subset that is a real task with a wrong owner or
     due date). Cross-language: only claims with an exact field can be checked (numbers,
@@ -393,19 +416,23 @@ def made_up(
     made, wrong = [], []
     for name in ("decisions", "action_items"):
         for claim in sections[name]:
-            fits = [fact_fit(claim, f, cross_language) for f in facts]
+            fits = [fact_fit(claim, f, cross_language, language) for f in facts]
             if "match" in fits or "partial" in fits:
                 continue
             if "wrong" in fits:
                 wrong.append(claim.text)
-            elif cross_language and not numbers_in(claim.text) and _owner_unknown(claim, facts):
+            elif (
+                cross_language
+                and not notes_numbers(claim.text, language)
+                and _owner_unknown(claim, facts)
+            ):
                 continue
             made.append(claim.text)
     return made, wrong
 
 
 def made_up_questions(
-    facts: Sequence[TruthFact], doc: NotesDoc, cross_language: bool = False
+    facts: Sequence[TruthFact], doc: Notes, cross_language: bool = False
 ) -> list[str]:
     """Open-questions claims that match no planted open question (token overlap). Filler talk
     turned into a question lands here (4b-2). Cross-language: not checkable without the judge."""
@@ -544,7 +571,7 @@ def alignment_accuracy(
     return ok / len(truth) if truth else 0.0
 
 
-def notes_language(doc: NotesDoc, candidates: Iterable[str]) -> str | None:
+def notes_language(doc: Notes, candidates: Iterable[str]) -> str | None:
     from lingua import IsoCode639_1, LanguageDetectorBuilder
 
     text = " ".join(c.text for name in SECTIONS for c in getattr(doc.sections, name))
@@ -614,17 +641,28 @@ EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 def unsupported_numbers(
-    claims: Sequence[Claim], transcript: Transcript, slides: Sequence[Slide]
+    claims: Sequence[Claim],
+    transcript: Transcript,
+    slides: Sequence[Slide],
+    language: str | None = None,
 ) -> list[str]:
     """Numbers in the notes found in no transcript or slide text: did Reduce (or Map, with the
-    guard off) change digits? Values as digits, in first-seen order."""
+    guard off) change digits? Values as digits, in first-seen order. Notes in another
+    `language`: a written number counts if any of its readings is in the sources (the guard's
+    keep rule), so Arabic "42,500" (also 42.5 there) isn't listed."""
     sources = numbers_in(" ".join(i.text for i in transcript.items)).union(
         *(numbers_in(slide_text(s)) for s in slides)
     )
     out: dict[float, None] = {}
     for c in claims:
         fields = [c.text, *((c.owner or "", c.due or "") if isinstance(c, ActionItem) else ())]
-        for v in sorted(numbers_in(" ".join(fields))):
+        text = " ".join(fields)
+        if language not in (None, "en"):
+            for values in written_values(text, language):
+                if not values & sources:
+                    out.setdefault(min(values))
+            continue
+        for v in sorted(numbers_in(text)):
             if v not in sources:
                 out.setdefault(v)
     return [str(int(v)) if v.is_integer() else str(v) for v in out]
@@ -637,13 +675,15 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
     chunks = schemas.load(run_dir, ChunksFile)
     transcript = schemas.load(run_dir, Transcript)
     slides = schemas.load(run_dir, SlidesFile).slides
-    doc = schemas.load(run_dir, NotesDoc)
+    english = schemas.load(run_dir, NotesDoc)
+    doc = render.shown_notes(run_dir)  # notes_translated.json for an "Other (beta)" target
+    translated = isinstance(doc, TranslatedNotes)
     map_notes = schemas.load(run_dir, MapFile).notes
     cross = spec.language != spec.target
 
     ids = match_slides(truth.slides, slides)
-    facts = score_facts(truth.facts, doc, ids, cross)
-    made, wrong = made_up(truth.facts, doc, cross)
+    facts = score_facts(truth.facts, doc, ids, cross, spec.target)
+    made, wrong = made_up(truth.facts, doc, cross, spec.target)
     made_q = made_up_questions(truth.facts, doc, cross)
     words, texts = gap_text(transcript, truth.gap_spans)
     gap_min = sum(g.t1 - g.t0 for g in truth.gap_spans) / 60
@@ -654,7 +694,7 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
     lang = notes_language(doc, {spec.language, spec.target, "en"})
     repairs = [f"{r.original} → {r.repaired}" for n in map_notes for r in n.number_repairs]
     unverified = [u for n in map_notes for u in n.unverified_numbers]
-    unsupported = unsupported_numbers(all_claims, transcript, slides)
+    unsupported = unsupported_numbers(all_claims, transcript, slides, spec.target)
 
     metrics: dict[str, float | int | None] = {
         "facts": len(scored),
@@ -679,9 +719,17 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
         "map_numbers_repaired": len(repairs),
         "map_numbers_unverified": len(unverified),
         "unsupported_numbers": len(unsupported),
-        "reduce_groups": len(doc.two_pass.groups) if doc.two_pass else 0,
+        "reduce_groups": len(english.two_pass.groups) if english.two_pass else 0,
         # two-pass (§4, D26): how pass-2 citations of a group resolved
-        **{f"pass2_{k}": (doc.two_pass.resolved.get(k, 0) if doc.two_pass else 0) for k in PASS2},
+        **{
+            f"pass2_{k}": (english.two_pass.resolved.get(k, 0) if english.two_pass else 0)
+            for k in PASS2
+        },
+        # "Other (beta)" (6d-1): every claim keeps the English notes' citations, in order
+        "translation_citations_same": (
+            int(citation_lists(doc) == citation_lists(english)) if translated else None
+        ),
+        "untranslated_claims": doc.untranslated if isinstance(doc, TranslatedNotes) else None,
     }
     if spec.slides == "pdf":
         metrics["slide_alignment"] = alignment_accuracy(truth.slides, slides, ids, chunks.chunks)
@@ -697,7 +745,7 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
             conflict = {
                 "slide_value_used": result.found,
                 "misspoken_value_used": any(
-                    fact.misspoken in numbers_in(c.text) for c in all_claims
+                    fact.misspoken in notes_numbers(c.text, spec.target) for c in all_claims
                 ),
             }
 
@@ -774,7 +822,7 @@ def judge_item(report: ItemReport, run_dir: Path, judge_: CachedJudge) -> ItemRe
     every judge_only fact. Uncited claims aren't judged (they're counted as uncited)."""
     segments = {s.seg_id: s for s in schemas.load(run_dir, SegmentsFile).segments}
     slides = {s.slide_id: s for s in schemas.load(run_dir, SlidesFile).slides}
-    sections = claims_by_section(schemas.load(run_dir, NotesDoc))
+    sections = claims_by_section(render.shown_notes(run_dir))
     support = []
     for name, claims in sections.items():
         for claim in claims:
@@ -1373,6 +1421,13 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
         "slide_number_recall": mean("slide_number_recall"),
         "slide_alignment": mean("slide_alignment"),
         "output_language_ok": mean("output_language_ok"),
+        # "Other (beta)" items only (6d-1); None when the set has none
+        "translation_citations_same": mean("translation_citations_same"),
+        "untranslated_claims": (
+            total("untranslated_claims")
+            if any(it.metrics.get("untranslated_claims") is not None for it in items)
+            else None
+        ),
         **{f"recall_{kind}": recall(kind) for kind in (*RECALL_KINDS, "open_question")},
         "map_numbers_repaired": total("map_numbers_repaired"),
         "map_numbers_unverified": total("map_numbers_unverified"),

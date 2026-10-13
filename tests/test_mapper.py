@@ -386,6 +386,27 @@ def test_mark_keeps_the_spoken_value_and_adds_the_slides() -> None:
     assert mapper.mark_conflicts(text, [_BUDGET]) == (text, [])
 
 
+def test_mark_in_the_notes_language() -> None:
+    # 6d-1: German Map strings write "80.000 $" and don't name the English label; the note is
+    # in German and the slide value in the spoken value's style ("18,000" read in German is 18).
+    de = "Quartalsbudget: 80.000 $ im Vergleich zu 77.500 $."
+    text, used = mapper.mark_conflicts(de, [_BUDGET], "de", cross_language=True)
+    assert text == "Quartalsbudget: 80.000 $ (Folie: $18.000) im Vergleich zu 77.500 $."
+    assert used == [_BUDGET]
+    assert mapper.mark_conflicts(text, [_BUDGET], "de", True) == (text, [])  # marked already
+    # Same-language notes still need the label: the value alone must not mark them.
+    assert mapper.mark_conflicts("Hired 80,000 users", [_BUDGET], "en") == (
+        "Hired 80,000 users",
+        [],
+    )
+    assert mapper.mark_conflicts(de, [_BUDGET], "de") == (de, [])  # label not named
+    # Read the German way, "80,000" is 80: not the spoken value.
+    assert mapper.mark_conflicts("Budget 80,000 $", [_BUDGET], "de", True)[1] == []
+    # A language without a word in the table gets the English one.
+    sw, _ = mapper.mark_conflicts("Bajeti $80,000", [_BUDGET], "sw", True)
+    assert sw == "Bajeti $80,000 (slide: $18,000)"
+
+
 def test_mark_slide_conflicts_walks_the_notes() -> None:
     notes = SegmentNotes(
         seg_id=0,
