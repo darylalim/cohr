@@ -1480,8 +1480,33 @@ mean 85.3).
   " (slide: …)" is English inside notes in any target language (like the `[slide N]`
   citation marker; check in 6d).
 
+### 5. long-en (run 1 of 2 used; one Reduce-only rerun, reverted)
+- **Run 1** (seed 1, full, gate pass vs 6c): recall 67.5 → **70.0%** (decisions 50 → 75,
+  actions 40 → 40, numbers 90 → 82.5, open questions 75 → 75), citation 98.1 → 96.4%, uncited
+  0, made-up 9 → 8, wrong owner/due 2, Ask 83.3 → **94.4%**, Ask citation 93.8 → 100%,
+  near-miss 4/4, support 80.5% (report-only). Committed as `evals/baseline-long.json`.
+- **Pass 2 no longer drops a third of the decisions.** Traced by text with the eval's match
+  rule: decisions Map 18/20 → pass 1 18 → pass 2 15 (6c: 19 → 15 → 10); pass 2 drops 3
+  (podcast series, quarterly planning, referral bonus).
+- **Actions are misfiled, not lost:** pass 2 holds the text of 15 planted tasks, the eval
+  credits 8. Map writes long-en tasks as decisions ("Tom will update the pricing page by the
+  2nd of November."): 3 only under decisions (pricing page, moving quotes, contract to legal),
+  3 under both (release notes, staging database, customer survey). Pass 1 copies the decision
+  form; the 3 in both lose the action item (and its owner) by pass 2. Step 1's map.md rule
+  holds on quick, not on long-en's segments.
+- Reduce prompts' action example "[owner: ?] [due: ?] Update the release notes" overlaps the
+  generator's "write the release notes"; pass 2 wrote exactly that line (owner lost) once.
+- **Reduce-only rerun (reverted):** `reduce_part.md` and `reduce_pass2.md` got "A task someone
+  will do (such as "Ana will print the event badges by Friday") is an action item with its
+  owner and due, never a decision. When a task is listed both as a decision and as an action
+  item, write it once, under ACTION_ITEMS." and the example "Translate the app store listing".
+  R7B ignored it: pass 1 kept all 6 under DECISIONS word for word; recall 68.8%, made-up 8 →
+  12, actions 40% (=); pass 2 moved `[owner] [due]` after the task. The example didn't leak.
+  Not tried: `reduce_pass2.md` for the 3 dropped decisions (the misfiling is the larger loss).
+
 ### Next
-- Step 5 (long-en: tell the user before each run, at most two). Step 0's tools are
-  in `scripts/` (throwaway, like Phase 0's): `trace_facts.py <report.json>` (per-fact path and
-  facts per key point, no models; run it right after the eval, before the next run replaces
-  evals/data/runs) and `map_tokens.py [seed]` (Map reply tokens, loads Tiny Aya).
+- Carry-overs for the PR / 6e: Map files tasks as decisions on long segments (a pure-Python
+  Map step could move or dedupe them; it would change quick: needs a re-baseline); the
+  release-notes example in `reduce.md` (changing it re-runs quick's Reduce); Ask doesn't see
+  slide conflicts; " (slide: …)" in non-English notes (6d). Step 0's tools are in `scripts/`
+  (throwaway): `trace_facts.py <report.json>` and `map_tokens.py [seed]`.
