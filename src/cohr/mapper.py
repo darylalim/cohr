@@ -275,33 +275,100 @@ def slide_conflicts(transcript: str, tables_md: list[str]) -> list[SlideConflict
     return out
 
 
-def mark_conflicts(text: str, conflicts: list[SlideConflict]) -> tuple[str, list[SlideConflict]]:
+# The word in the slide-conflict note, by target language (6d-1; English when missing). Like
+# render's LABELS: a static table, so the note reads in the notes language.
+SLIDE_WORD = {
+    "ar": "الشريحة",
+    "cs": "snímek",
+    "de": "Folie",
+    "el": "διαφάνεια",
+    "en": "slide",
+    "es": "diapositiva",
+    "fa": "اسلاید",
+    "fr": "diapositive",
+    "he": "שקופית",
+    "hi": "स्लाइड",
+    "id": "slide",
+    "it": "diapositiva",
+    "ja": "スライド",
+    "ko": "슬라이드",
+    "nl": "dia",
+    "pl": "slajd",
+    "pt": "slide",
+    "ro": "diapozitiv",
+    "ru": "слайд",
+    "tr": "slayt",
+    "uk": "слайд",
+    "vi": "trang chiếu",
+    "zh": "幻灯片",
+}
+
+
+# A written number plus a currency or percent sign after it ("80.000 $", "37 %"), so the note
+# goes after the sign, as it does after "$80,000".
+_WRITTEN_UNIT = re.compile(WRITTEN.pattern + r"(?:\s?[$€£¥₹%])?")
+
+
+def _written_like(cell: str, reading: Reading) -> str:
+    """The slide cell's number in the separator style of the spoken value as Map wrote it:
+    "$18,000" next to German "80.000 $" → "$18.000" (read in German, "18,000" is 18.0)."""
+
+    def restyle(m: re.Match[str]) -> str:
+        [value] = numbers_in(m.group("body")) or [None]
+        if value is None:
+            return m.group(0)
+        return write_like(value, reading) + m.group(0)[len(m.group("body")) :]
+
+    return WRITTEN.sub(restyle, cell, count=1)
+
+
+def mark_conflicts(
+    text: str,
+    conflicts: list[SlideConflict],
+    language: str | None = None,
+    cross_language: bool = False,
+) -> tuple[str, list[SlideConflict]]:
     """After each spoken value of a conflict in a string that names its label, add the slide's
-    value: "$80,000" → "$80,000 (slide: $18,000)". The spoken value is never replaced."""
+    value: "$80,000" → "$80,000 (slide: $18,000)". The spoken value is never replaced. The note
+    is in the target `language` (SLIDE_WORD), and the spoken value is read the way it writes
+    numbers. Notes in another language than the meeting's can't name the slide's label
+    ("Quartalsbudget" for "Approved budget"), so there the spoken value alone finds the string
+    (6d-1)."""
     used: list[SlideConflict] = []
+    word = SLIDE_WORD.get(language or "en", SLIDE_WORD["en"])
     for c in conflicts:
-        note = f" (slide: {c.slide})"
-        if note in text or not label_words(c.label) & label_words(text):
+        if not cross_language and not label_words(c.label) & label_words(text):
             continue
 
-        def add(m: re.Match[str], c: SlideConflict = c, note: str = note) -> str:
-            return m.group(0) + note if c.spoken in numbers_in(m.group(0)) else m.group(0)
+        def add(m: re.Match[str], c: SlideConflict = c) -> str:
+            if m.string[m.end() :].startswith(f" ({word}: "):
+                return m.group(0)  # marked already
+            scale = SCALE.get(m.group("scale") or "", 1.0)
+            for r in native_readings(readings(m.group("body")), language):
+                if r.value * scale == c.spoken:
+                    return f"{m.group(0)} ({word}: {_written_like(c.slide, r)})"
+            return m.group(0)
 
-        marked = WRITTEN.sub(add, text)
+        marked = _WRITTEN_UNIT.sub(add, text)
         if marked != text:
             text = marked
             used.append(c)
     return text, used
 
 
-def mark_slide_conflicts(notes: SegmentNotes, conflicts: list[SlideConflict]) -> SegmentNotes:
+def mark_slide_conflicts(
+    notes: SegmentNotes,
+    conflicts: list[SlideConflict],
+    language: str | None = None,
+    cross_language: bool = False,
+) -> SegmentNotes:
     """`mark_conflicts` on every Map string but `terms`; raw segments are left alone."""
     if notes.raw or not conflicts:
         return notes
     used: list[SlideConflict] = []
 
     def mark(text: str) -> str:
-        marked, u = mark_conflicts(text, conflicts)
+        marked, u = mark_conflicts(text, conflicts, language, cross_language)
         used.extend(c for c in u if c not in used)
         return marked
 
@@ -406,7 +473,12 @@ def run_stage(ctx: StageContext) -> None:
                         )
                     tables = [t for i in seg.slide_ids for t in slides[i].tables_md]
                     conflicts = slide_conflicts(seg.transcript_text, tables)
-                    seg_notes = mark_slide_conflicts(seg_notes, conflicts)
+                    seg_notes = mark_slide_conflicts(
+                        seg_notes,
+                        conflicts,
+                        ctx.config.target_language,
+                        ctx.config.target_language != ctx.config.source_language,
+                    )
                     for c in seg_notes.slide_conflicts:
                         ctx.log.info(
                             "map: segment %d %s: said %s, slide %s", k, c.label, c.spoken, c.slide

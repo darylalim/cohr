@@ -1614,3 +1614,21 @@ text, so its Map column is blank for de/ar text facts):
   number miss is now the slide conflict ($18,000, step 2). unsupported 2 / 0 / 1 (seed 3:
   750000, a real one). clean-ar's 4,650 (seeds 1, 3) is a real Reduce drop (Map seg 1 has it).
 - `quick` seed 1 re-scored: gate pass, recall 86.8% (=), unsupported 2 (=).
+
+### 2. Slide-conflict note in the notes language (kept)
+- `mapper.SLIDE_WORD`: the note's word for R7B's 23 languages (English when missing), a static
+  table like render's LABELS. Three changes were needed, not only the word (step 0):
+  the spoken value is read with `native_readings` for the target language ("80.000" = 80000
+  in de); in notes in another language than the meeting's the spoken value alone finds the
+  string (a German string can't name "Approved budget"); and the slide value is written in
+  the spoken value's style ("$18.000": German-read "$18,000" is 18, the eval would miss it).
+  The note goes after a trailing currency or percent sign ("80.000 $ (Folie: $18.000)").
+  Tests: the value alone doesn't mark same-language notes; "80,000" read as German isn't the
+  spoken value; a language without a word gets "slide".
+- Code-only Map change: Map's config hash doesn't move, so existing runs keep the old note
+  until re-run (`--fresh` in the eval).
+- `lang` `--fresh`, seeds 1 / 2 / 3: **slide_value_used true on every seed** (was false);
+  R7B kept it in German style: "Quartalsbudget: 80.000 $ (Folie: 18.000 $) [1:55]". Recall
+  80.8 / 73.1 / 73.1%, numbers 93.8% each; conflict-de 76.9 / 76.9 / 84.6%.
+- `quick` seed 1 `--fresh`, Ask + judge: gate pass, recall 86.8% (=), slide_value_used true
+  (=), Ask 96.2%, near-miss 7/12, support 92.7% (all =).
