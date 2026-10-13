@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-13T06:45:00.710961-10:00",
+  "created_at": "2026-10-13T07:08:30.080700-10:00",
   "set": "quick",
-  "git_sha": "b3d6c69",
+  "git_sha": "700528e",
   "overrides": {
     "seed": 1
   },
@@ -28,7 +28,7 @@
   "items": [
     {
       "id": "clean-en",
-      "run_id": "20261013-063546-clean-en",
+      "run_id": "20261013-065857-clean-en",
       "seed": 1,
       "duration_s": 357.88,
       "metrics": {
@@ -841,26 +841,26 @@
       ],
       "stages": {
         "ingest": {
-          "seconds": 1.52,
-          "s_per_audio_hour": 15.3,
+          "seconds": 1.5,
+          "s_per_audio_hour": 15.1,
           "peak_mem_gb": null,
           "reused": true
         },
         "vad": {
-          "seconds": 2.6,
-          "s_per_audio_hour": 26.1,
+          "seconds": 2.56,
+          "s_per_audio_hour": 25.7,
           "peak_mem_gb": 0.05,
           "reused": true
         },
         "transcribe": {
-          "seconds": 11.36,
-          "s_per_audio_hour": 114.3,
+          "seconds": 11.49,
+          "s_per_audio_hour": 115.6,
           "peak_mem_gb": 5.63,
           "reused": true
         },
         "vision": {
-          "seconds": 39.65,
-          "s_per_audio_hour": 398.9,
+          "seconds": 33.87,
+          "s_per_audio_hour": 340.8,
           "peak_mem_gb": 8.59,
           "reused": true
         },
@@ -871,14 +871,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 14.04,
-          "s_per_audio_hour": 141.3,
+          "seconds": 14.06,
+          "s_per_audio_hour": 141.4,
           "peak_mem_gb": 11.68,
           "reused": true
         },
         "reduce": {
-          "seconds": 26.87,
-          "s_per_audio_hour": 270.3,
+          "seconds": 26.6,
+          "s_per_audio_hour": 267.6,
           "peak_mem_gb": 16.76,
           "reused": true
         },
@@ -892,7 +892,7 @@
     },
     {
       "id": "noisy-en",
-      "run_id": "20261013-063722-noisy-en",
+      "run_id": "20261013-070028-noisy-en",
       "seed": 2,
       "duration_s": 360.68,
       "metrics": {
@@ -1695,26 +1695,26 @@
       ],
       "stages": {
         "ingest": {
-          "seconds": 1.59,
-          "s_per_audio_hour": 15.9,
+          "seconds": 1.53,
+          "s_per_audio_hour": 15.2,
           "peak_mem_gb": 0.0,
           "reused": true
         },
         "vad": {
-          "seconds": 3.71,
-          "s_per_audio_hour": 37.1,
+          "seconds": 2.68,
+          "s_per_audio_hour": 26.7,
           "peak_mem_gb": 15.41,
           "reused": true
         },
         "transcribe": {
-          "seconds": 11.05,
-          "s_per_audio_hour": 110.3,
+          "seconds": 10.8,
+          "s_per_audio_hour": 107.8,
           "peak_mem_gb": 16.82,
           "reused": true
         },
         "vision": {
-          "seconds": 35.76,
-          "s_per_audio_hour": 356.9,
+          "seconds": 36.21,
+          "s_per_audio_hour": 361.4,
           "peak_mem_gb": 16.66,
           "reused": true
         },
@@ -1725,14 +1725,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 12.16,
+          "seconds": 12.17,
           "s_per_audio_hour": 121.4,
           "peak_mem_gb": 16.19,
           "reused": true
         },
         "reduce": {
-          "seconds": 24.21,
-          "s_per_audio_hour": 241.6,
+          "seconds": 24.2,
+          "s_per_audio_hour": 241.5,
           "peak_mem_gb": 16.76,
           "reused": true
         },
@@ -1746,19 +1746,19 @@
     },
     {
       "id": "pdf-slides-en",
-      "run_id": "20261013-063850-pdf-slides-en",
+      "run_id": "20261013-070155-pdf-slides-en",
       "seed": 3,
       "duration_s": 357.21,
       "metrics": {
         "facts": 17,
-        "facts_found": 14,
-        "fact_recall": 0.8235,
+        "facts_found": 15,
+        "fact_recall": 0.8824,
         "citation_accuracy": 1.0,
         "claims": 19,
         "uncited_claims": 0,
-        "made_up_items": 1,
+        "made_up_items": 0,
         "made_up_open_questions": 0,
-        "wrong_owner_or_due": 1,
+        "wrong_owner_or_due": 0,
         "judge_only_facts": 0,
         "vad_speech_f1": 0.9329,
         "gap_words": 0,
@@ -1770,8 +1770,8 @@
         "slide_cell_accuracy": 1.0,
         "slide_number_recall": 1.0,
         "output_language_ok": 1,
-        "map_numbers_repaired": 3,
-        "map_numbers_unverified": 2,
+        "map_numbers_repaired": 5,
+        "map_numbers_unverified": 1,
         "unsupported_numbers": 1,
         "reduce_groups": 0,
         "pass2_marker": 0,
@@ -1780,7 +1780,7 @@
         "pass2_uncited": 0,
         "slide_alignment": 1.0,
         "recall_decision": 1.0,
-        "recall_action": 0.8,
+        "recall_action": 1.0,
         "recall_number": 0.75,
         "recall_open_question": 1.0,
         "ask_questions": 19,
@@ -1792,9 +1792,9 @@
         "ask_xlang_history": 1.0,
         "ask_near_miss": 0.0,
         "cited_claims": 19,
-        "support_rate": 0.8947,
+        "support_rate": 0.9474,
         "support_partial": 0,
-        "support_no": 2,
+        "support_no": 1,
         "support_unjudged": 0,
         "judge_covered": 0,
         "judge_recall": null
@@ -1808,7 +1808,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "key_points",
-          "claim": "3,100 new trial signups this month vs. 1,350 last month.",
+          "claim": "3,100 new trial signups this month (vs. 1,350 last month)",
           "citation_ok": true,
           "t_error": 0.18,
           "slide_cited": true
@@ -1821,7 +1821,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "action_items",
-          "claim": "Record the onboarding video by Monday.",
+          "claim": "Record the onboarding video",
           "citation_ok": true,
           "t_error": 0.65,
           "slide_cited": false
@@ -1834,7 +1834,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "action_items",
-          "claim": "Write the release notes by the 15th of November.",
+          "claim": "Write the release notes",
           "citation_ok": true,
           "t_error": 0.35,
           "slide_cited": false
@@ -1847,7 +1847,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "key_points",
-          "claim": "Page load time improved to 350 ms vs. 670 ms last release.",
+          "claim": "Page load time improved to 350 ms (vs. 670 ms last release)",
           "citation_ok": true,
           "t_error": -0.46,
           "slide_cited": true
@@ -1860,7 +1860,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "action_items",
-          "claim": "Fix the login timeout bug by Wednesday.",
+          "claim": "Fix the login timeout bug",
           "citation_ok": true,
           "t_error": 1.09,
           "slide_cited": false
@@ -1886,7 +1886,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "decisions",
-          "claim": "Move weekly sync to Thursdays.",
+          "claim": "Move weekly sync to Thursdays",
           "citation_ok": true,
           "t_error": 0.96,
           "slide_cited": false
@@ -1899,7 +1899,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "key_points",
-          "claim": "Week-2 return rate for trial users is 46% vs. 60% last month.",
+          "claim": "Week-2 return rate for trial users is 46% (vs. 60% last month)",
           "citation_ok": true,
           "t_error": 0.35,
           "slide_cited": true
@@ -1912,7 +1912,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "decisions",
-          "claim": "Publish the roadmap to customers.",
+          "claim": "Publish the roadmap to customers",
           "citation_ok": true,
           "t_error": -0.02,
           "slide_cited": false
@@ -1938,7 +1938,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "decisions",
-          "claim": "Drop the legacy export feature.",
+          "claim": "Drop the legacy export feature",
           "citation_ok": true,
           "t_error": 1.06,
           "slide_cited": false
@@ -1951,7 +1951,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "key_points",
-          "claim": "Monthly cloud bill increased to $8,900 vs. $8,200 last month.",
+          "claim": "Monthly cloud bill increased to $8,900 (vs. $8,200 last month)",
           "citation_ok": true,
           "t_error": 0.36,
           "slide_cited": true
@@ -1964,7 +1964,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "open_questions",
-          "claim": "Whether to partner with a reseller in Japan.",
+          "claim": "Whether to partner with a reseller in Japan",
           "citation_ok": true,
           "t_error": -0.2,
           "slide_cited": false
@@ -1977,7 +1977,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "action_items",
-          "claim": "Review the security audit by the end of the month.",
+          "claim": "Review the security audit",
           "citation_ok": true,
           "t_error": 0.35,
           "slide_cited": false
@@ -1990,7 +1990,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "key_points",
-          "claim": "Monthly recurring revenue decreased from $313,000 to $273,000, with seasonality noted.",
+          "claim": "Monthly recurring revenue decreased from $313,000 to $273,000 (seasonality noted)",
           "citation_ok": true,
           "t_error": -0.03,
           "slide_cited": true
@@ -1999,13 +1999,13 @@
           "id": "f16",
           "kind": "action",
           "text": "prepare the customer survey",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "Prepare the customer survey",
+          "citation_ok": true,
+          "t_error": -0.02,
           "slide_cited": false
         },
         {
@@ -2016,7 +2016,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "decisions",
-          "claim": "Freeze new features until beta ships.",
+          "claim": "Freeze new features until beta ships",
           "citation_ok": true,
           "t_error": 0.1,
           "slide_cited": false
@@ -2029,30 +2029,27 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "key_points",
-          "claim": "Quarterly budget increased from $54,000 to $57,000, showing stability compared to expectations.",
+          "claim": "Quarterly budget increased from $54,000 to $57,000 (showing stability compared to expectations)",
           "citation_ok": true,
-          "t_error": 4.15,
+          "t_error": -2.5,
           "slide_cited": true
         }
       ],
-      "made_up": [
-        "Prepare the customer survey by November 2nd."
-      ],
+      "made_up": [],
       "made_up_questions": [],
-      "wrong_fields": [
-        "Prepare the customer survey by November 2nd."
-      ],
+      "wrong_fields": [],
       "uncited": [],
       "gap_texts": [],
       "conflict": {},
       "number_repairs": [
         "570,000 → 57,000",
         "540,000 → 54,000",
-        "570,000 → 57,000"
+        "570,000 → 57,000",
+        "2 → 22",
+        "2 → 22"
       ],
       "unverified_numbers": [
-        "6,900",
-        "2nd"
+        "6,900"
       ],
       "unsupported_numbers": [
         "6900"
@@ -2060,7 +2057,7 @@
       "support": [
         {
           "section": "summary",
-          "claim": "Summary: This weekly project sync covers trial signups, site speed, hiring, retention, support queue, and cloud costs.",
+          "claim": "Summary: The weekly project sync covers trial signups, site speed, hiring, retention, support queue, and cloud costs.",
           "citations": [
             "seg 0",
             "slide 0",
@@ -2071,21 +2068,21 @@
             "slide 5"
           ],
           "supported": "yes",
-          "reason": "The meeting covers all listed topics with specific metrics and discussions."
+          "reason": "The meeting transcript and slides explicitly list and discuss each of the topics: trial signups, site speed, hiring, retention, support queue, and cloud costs."
         },
         {
           "section": "key_points",
-          "claim": "Key point: 3,100 new trial signups this month vs. 1,350 last month.",
+          "claim": "Key point: 3,100 new trial signups this month (vs. 1,350 last month)",
           "citations": [
             "seg 0",
             "slide 0"
           ],
           "supported": "yes",
-          "reason": "The cited text states the number of new trial signups this month is 3,100 compared with 1,350 last month."
+          "reason": "The cited text states the number of new trial signups this month is 3,100, compared with 1,350 last month."
         },
         {
           "section": "key_points",
-          "claim": "Key point: Page load time improved to 350 ms vs. 670 ms last release.",
+          "claim": "Key point: Page load time improved to 350 ms (vs. 670 ms last release)",
           "citations": [
             "seg 0",
             "slide 1"
@@ -2095,7 +2092,7 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: 6,900 candidates in pipeline vs. 86 last month.",
+          "claim": "Key point: 6,900 candidates in pipeline (vs. 86 last month)",
           "citations": [
             "seg 0",
             "slide 2"
@@ -2105,7 +2102,7 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Week-2 return rate for trial users is 46% vs. 60% last month.",
+          "claim": "Key point: Week-2 return rate for trial users is 46% (vs. 60% last month)",
           "citations": [
             "seg 0",
             "slide 3"
@@ -2115,7 +2112,7 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Support queue has been more stable than expected.",
+          "claim": "Key point: Support queue has been more stable than expected",
           "citations": [
             "seg 0"
           ],
@@ -2124,7 +2121,7 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Monthly cloud bill increased to $8,900 vs. $8,200 last month.",
+          "claim": "Key point: Monthly cloud bill increased to $8,900 (vs. $8,200 last month)",
           "citations": [
             "seg 0",
             "slide 5"
@@ -2134,7 +2131,7 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Monthly recurring revenue decreased from $313,000 to $273,000, with seasonality noted.",
+          "claim": "Key point: Monthly recurring revenue decreased from $313,000 to $273,000 (seasonality noted)",
           "citations": [
             "seg 1",
             "slide 6"
@@ -2144,26 +2141,26 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Quarterly budget increased from $54,000 to $57,000, showing stability compared to expectations.",
+          "claim": "Key point: Quarterly budget increased from $54,000 to $57,000 (showing stability compared to expectations)",
           "citations": [
             "seg 1",
             "slide 7"
           ],
           "supported": "yes",
-          "reason": "The cited text states the approved budget for next quarter is $57,000 compared with $54,000 last quarter, and that quarterly budget has been more stable than expected."
+          "reason": "The cited text states the approved budget for next quarter is $57,000 compared with $54,000 last quarter, and acknowledges stability in budget as expected."
         },
         {
           "section": "decisions",
-          "claim": "Decision: Publish the roadmap to customers.",
+          "claim": "Decision: Publish the roadmap to customers",
           "citations": [
             "seg 0"
           ],
           "supported": "yes",
-          "reason": "The meeting explicitly states that 'the decision is to publish the roadmap to customers.'"
+          "reason": "The meeting explicitly states 'the decision is to publish the roadmap to customers'"
         },
         {
           "section": "decisions",
-          "claim": "Decision: Move weekly sync to Thursdays.",
+          "claim": "Decision: Move weekly sync to Thursdays",
           "citations": [
             "seg 0"
           ],
@@ -2172,16 +2169,16 @@
         },
         {
           "section": "decisions",
-          "claim": "Decision: Drop the legacy export feature.",
+          "claim": "Decision: Drop the legacy export feature",
           "citations": [
             "seg 0"
           ],
           "supported": "yes",
-          "reason": "The meeting explicitly states 'We decided to drop the legacy export feature.'"
+          "reason": "The meeting explicitly states 'We decided to drop the legacy export feature'"
         },
         {
           "section": "decisions",
-          "claim": "Decision: Freeze new features until beta ships.",
+          "claim": "Decision: Freeze new features until beta ships",
           "citations": [
             "seg 1"
           ],
@@ -2190,7 +2187,7 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Record the onboarding video by Monday. (owner: Kenji; due: Monday)",
+          "claim": "Action item: Record the onboarding video (owner: Kenji; due: Monday)",
           "citations": [
             "seg 0"
           ],
@@ -2199,43 +2196,43 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Write the release notes by the 15th of November. (owner: Laura; due: 15th of November)",
+          "claim": "Action item: Write the release notes (owner: Laura; due: 15 November)",
           "citations": [
             "seg 0"
           ],
           "supported": "yes",
-          "reason": "The cited text states Laura will write the release notes by the 15th of November."
+          "reason": "Laura is assigned to write the release notes by the 15th of November."
         },
         {
           "section": "action_items",
-          "claim": "Action item: Fix the login timeout bug by Wednesday. (owner: Victor; due: Wednesday)",
+          "claim": "Action item: Fix the login timeout bug (owner: Victor; due: Wednesday)",
           "citations": [
             "seg 0"
           ],
           "supported": "yes",
-          "reason": "The transcript states Victor is assigned to fix the login timeout bug by Wednesday."
+          "reason": "The transcript states Victor will fix the login timeout bug by Wednesday."
         },
         {
           "section": "action_items",
-          "claim": "Action item: Review the security audit by the end of the month. (owner: Maria; due: End of the month)",
+          "claim": "Action item: Review the security audit (owner: Maria; due: End of the month)",
           "citations": [
             "seg 0"
           ],
           "supported": "yes",
-          "reason": "The cited text states 'Maria will review the security audit by the end of the month.'"
+          "reason": "The cited text states 'Maria will review the security audit by the end of the month'"
         },
         {
           "section": "action_items",
-          "claim": "Action item: Prepare the customer survey by November 2nd. (owner: Nadia; due: November 2nd)",
+          "claim": "Action item: Prepare the customer survey (owner: Nadia; due: 22 November)",
           "citations": [
             "seg 1"
           ],
-          "supported": "no",
-          "reason": "The action item mentions a due date of November 2nd, but the cited text states the survey is to be prepared by the 22nd of November."
+          "supported": "yes",
+          "reason": "Nadia is assigned to prepare the customer survey and the due date is specified as the 22nd of November."
         },
         {
           "section": "open_questions",
-          "claim": "Open question: Whether to partner with a reseller in Japan.",
+          "claim": "Open question: Whether to partner with a reseller in Japan",
           "citations": [
             "seg 0"
           ],
@@ -2437,7 +2434,7 @@
           "kind": "action",
           "question": "What does Nadia need to do?",
           "fact": "f16",
-          "answer": "Nadia needs to prepare the customer survey by 2nd November.",
+          "answer": "Nadia needs to prepare the customer survey by the 22nd of November.",
           "citations": [
             "seg 1 @301.57"
           ],
@@ -2555,26 +2552,26 @@
       ],
       "stages": {
         "ingest": {
-          "seconds": 0.41,
-          "s_per_audio_hour": 4.2,
+          "seconds": 0.38,
+          "s_per_audio_hour": 3.8,
           "peak_mem_gb": 0.0,
           "reused": true
         },
         "vad": {
-          "seconds": 2.11,
-          "s_per_audio_hour": 21.2,
+          "seconds": 2.15,
+          "s_per_audio_hour": 21.6,
           "peak_mem_gb": 15.43,
           "reused": true
         },
         "transcribe": {
-          "seconds": 10.47,
-          "s_per_audio_hour": 105.6,
+          "seconds": 10.84,
+          "s_per_audio_hour": 109.2,
           "peak_mem_gb": 16.83,
           "reused": true
         },
         "vision": {
-          "seconds": 36.55,
-          "s_per_audio_hour": 368.3,
+          "seconds": 38.27,
+          "s_per_audio_hour": 385.7,
           "peak_mem_gb": 16.66,
           "reused": true
         },
@@ -2585,14 +2582,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.14,
+          "seconds": 11.13,
           "s_per_audio_hour": 112.2,
           "peak_mem_gb": 16.19,
           "reused": true
         },
         "reduce": {
-          "seconds": 22.56,
-          "s_per_audio_hour": 227.4,
+          "seconds": 23.8,
+          "s_per_audio_hour": 239.8,
           "peak_mem_gb": 16.76,
           "reused": true
         },
@@ -2606,7 +2603,7 @@
     },
     {
       "id": "slide-conflict-en",
-      "run_id": "20261013-064014-slide-conflict-en",
+      "run_id": "20261013-070616-slide-conflict-en",
       "seed": 4,
       "duration_s": 350.12,
       "metrics": {
@@ -3406,26 +3403,26 @@
       ],
       "stages": {
         "ingest": {
-          "seconds": 1.44,
-          "s_per_audio_hour": 14.8,
+          "seconds": 1.43,
+          "s_per_audio_hour": 14.7,
           "peak_mem_gb": 0.0,
           "reused": true
         },
         "vad": {
-          "seconds": 2.13,
-          "s_per_audio_hour": 21.9,
+          "seconds": 2.06,
+          "s_per_audio_hour": 21.2,
           "peak_mem_gb": 15.41,
           "reused": true
         },
         "transcribe": {
-          "seconds": 9.98,
-          "s_per_audio_hour": 102.6,
+          "seconds": 10.6,
+          "s_per_audio_hour": 108.9,
           "peak_mem_gb": 16.83,
           "reused": true
         },
         "vision": {
-          "seconds": 32.12,
-          "s_per_audio_hour": 330.3,
+          "seconds": 35.42,
+          "s_per_audio_hour": 364.2,
           "peak_mem_gb": 16.66,
           "reused": true
         },
@@ -3436,14 +3433,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 10.89,
-          "s_per_audio_hour": 112.0,
+          "seconds": 10.9,
+          "s_per_audio_hour": 112.1,
           "peak_mem_gb": 16.19,
           "reused": true
         },
         "reduce": {
-          "seconds": 22.84,
-          "s_per_audio_hour": 234.9,
+          "seconds": 22.8,
+          "s_per_audio_hour": 234.5,
           "peak_mem_gb": 16.76,
           "reused": true
         },
@@ -3459,12 +3456,12 @@
   "summary": {
     "items": 4,
     "facts": 68,
-    "fact_recall": 0.8382,
+    "fact_recall": 0.8529,
     "citation_accuracy": 1.0,
     "uncited_claims": 0,
-    "made_up_items": 1,
+    "made_up_items": 0,
     "made_up_open_questions": 0,
-    "wrong_owner_or_due": 1,
+    "wrong_owner_or_due": 0,
     "gap_words": 0,
     "gap_words_per_min": 0.0,
     "vad_speech_f1": 0.9325,
@@ -3475,20 +3472,20 @@
     "slide_alignment": 1.0,
     "output_language_ok": 1.0,
     "recall_decision": 0.8125,
-    "recall_action": 0.75,
+    "recall_action": 0.8,
     "recall_number": 0.9062,
     "recall_open_question": 0.8,
-    "map_numbers_repaired": 8,
-    "map_numbers_unverified": 3,
+    "map_numbers_repaired": 10,
+    "map_numbers_unverified": 2,
     "unsupported_numbers": 1,
     "reduce_groups": 0,
     "pass2_marker": 0,
     "pass2_claim": 0,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.9268,
+    "support_rate": 0.939,
     "support_partial": 1,
-    "support_no": 5,
+    "support_no": 4,
     "support_unjudged": 0,
     "judge_recall": null,
     "ask_questions": 76,
@@ -3503,19 +3500,19 @@
   },
   "stages": {
     "ingest": {
-      "s_per_audio_hour": 12.5,
+      "s_per_audio_hour": 12.2,
       "peak_mem_gb": 0.0
     },
     "vad": {
-      "s_per_audio_hour": 26.6,
+      "s_per_audio_hour": 23.9,
       "peak_mem_gb": 15.43
     },
     "transcribe": {
-      "s_per_audio_hour": 108.2,
+      "s_per_audio_hour": 110.4,
       "peak_mem_gb": 16.83
     },
     "vision": {
-      "s_per_audio_hour": 363.8,
+      "s_per_audio_hour": 363.0,
       "peak_mem_gb": 16.66
     },
     "fuse": {
@@ -3527,7 +3524,7 @@
       "peak_mem_gb": 16.19
     },
     "reduce": {
-      "s_per_audio_hour": 243.6,
+      "s_per_audio_hour": 245.9,
       "peak_mem_gb": 16.76
     },
     "render": {
@@ -3535,11 +3532,12 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 876.5,
+      "s_per_audio_hour": 877.2,
       "peak_mem_gb": 16.83
     }
   },
   "citation_errors": [
+    -2.5,
     -0.87,
     -0.68,
     -0.54,
@@ -3555,6 +3553,7 @@
     -0.14,
     -0.03,
     -0.03,
+    -0.02,
     -0.02,
     -0.02,
     -0.02,
@@ -3599,8 +3598,7 @@
     1.5,
     1.55,
     1.95,
-    1.99,
-    4.15
+    1.99
   ],
   "judge": {
     "loaded": false,
