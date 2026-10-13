@@ -37,12 +37,18 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
 - Small local models: prompts set the output's shape; fix values (digits, days, slide conflicts)
   in pure-Python checks against the transcript/slides. Prompt edits to Map reshuffle which facts
   it keeps (temp 0.3): judge them on the mean of seeds 1–3, never one seed.
-- quick results don't carry over to long-en (denser segments, two-pass Reduce); check both.
+- quick results don't carry over to long-en (denser segments, two-pass Reduce) or to lang
+  (non-English notes); check the sets a change can reach.
+- When a model ignores a format rule, start its reply instead of rewording the prompt: R7B
+  translated the section markers in de/ar until Reduce prefilled `## SUMMARY` (6d-1).
+- Tiny Aya translates example lines in a translation prompt along with the real ones: keep
+  translate.md example-free. It also changes digits when translating: check values in Python.
 - Example lines in prompts must not overlap evals/gen/script.py's task or topic wording.
 - A fallback needs a test where it must not fire (a too-strict filter hid behind one in 6b-2).
 - Changing any Reduce prompt moves REDUCE_HASH in tests/test_ask.py; update it only on purpose.
 - The guard hook blocks Bash commands containing the full-eval or models-marker text (heredocs
-  too): write such text with the Edit/Write tools.
+  too): write such text with the Edit/Write tools. It also blocks `rm -rf`: copy scratch
+  output to new folder names instead of deleting.
 
 ## Where things are (PLAN.md)
 Architecture §3 · Memory §4 · Stages §5 · Layout & tooling §6 · UI, layout, theme §7 ·
