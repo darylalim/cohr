@@ -1386,3 +1386,35 @@ short-segment number drop (noisy f16) says it's coverage, not only length. Step 
 guard's decimal-comma mis-repair: in "$770,000" a 3-digit group after a comma is a thousands
 group, so the 770.0 reading shouldn't make a repair candidate (to confirm with the user: it
 changes which numbers the guard repairs).
+
+### 1. Bundled key points (map.md, kept)
+- `map.md` gets a `key_points` rule (it had none): "one fact per item, in one short sentence: a
+  figure with what it measures, or one other point that was made. Never join two facts in one
+  item. Decisions and tasks go only in "decisions" and "action_items", never in a key point",
+  and under decisions: "A task someone will do goes only in "action_items", not here."
+- Seeds 1–3 (no Ask, no judge): recall 83.8 / 85.3 / 86.8% (was 89.7 / 85.3 / 83.8, mean
+  86.3 → 85.3, inside the 5.9 noise); **citation 100 / 100 / 100%** (was 96.7 / 96.6 / 100).
+  No key point holds more than one fact (seeds 1 and 3 traced).
+- Seed 1 is a reshuffle, not a pure loss: Map now has Omar's hiring plan (clean) and Maria's
+  audit under action items (pdf), but lost the owner of Maria's survey (clean), wrote "6,900"
+  for 69 candidates (pdf, flagged), replaced 340 tickets with "Support queue has been more
+  stable…" (pdf), dropped "keep the onboarding checklist" (noisy), and Reduce no longer
+  recovers two slide-conflict actions. Coverage of seg 0 is step 2's job.
+- Re-baselined (seed 1, Ask + judge, gate pass): recall 83.8%, citation 100%, made-up 1 / 0,
+  uncited 0, support 95.5 → 91.5% (report-only; check in step 2), Ask 98.1 → 96.2%, Ask
+  citation 100%, near-miss 7/12.
+
+### Decision for step 3 (user)
+- Number-guard mis-repair ("$770,000" → 740 via the decimal-comma reading): **option 3**. When
+  looking for a repair candidate, read separators the way the target language writes numbers
+  (en: "," groups thousands, "." decimal; decimal-comma languages the reverse; languages not in
+  the table keep both readings). Keeping a number is unchanged (any reading in the sources).
+  Unit test: "$770,000" with sources {77500, 740} → flagged. No MapFile change. Rejected:
+  never repairing two-reading numbers (loses "$425,000" → $42,500, the D20 case); "comma + 3
+  digits = thousands" (one-sided: German "770.000" keeps the bug).
+
+### Next (new session)
+- Continue 6b-2 at step 2 (dense segments, prompt route: replies are not truncated), then
+  3 (due misread + option 3), 4 (slide conflict), 5 (long-en). Scratch tools used for step 0
+  (fact trace, Map token count) were not committed; re-create from the description above if
+  needed.
