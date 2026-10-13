@@ -1650,3 +1650,53 @@ text, so its Map column is blank for de/ar text facts):
   Laura), so the eval's owner match misses them (clean-ar actions 40%); the name is right,
   only transliterated. Map keeps Latin owners. Not fixed (a Reduce rule "keep names as
   written" exists already); carry-over.
+
+### 4. "Other (beta)" target languages (kept: own translate stage, D30)
+- User's choices: own stage (not inside reduce); the New run page lists R7B's 23, then the 44
+  beta languages labelled "(beta)" (one selectbox: the page is an `st.form`, so a second box
+  shown on "Other" wouldn't appear before submit). Beta list = Tiny Aya card's 67 `language:`
+  codes minus R7B's 23 (`config.BETA_LANGUAGES`, source and revision in the comment).
+- `Config.notes_language` ("en" for a beta target) feeds Map and Reduce, and Ask's fallback
+  language (R7B doesn't write Swahili). Equal to the target for R7B's 23: no existing hash moves.
+- `translate` stage (Tiny Aya, `TranslateConfig`, temperature 0), `TranslatedNotes` v1 (new
+  snapshot; NotesDoc unchanged). Nothing written for R7B's languages (a stale file is deleted,
+  no model loaded). `render.shown_notes` picks it for render, the Notes page and the eval. New
+  metrics: `translation_citations_same`, `untranslated_claims`. `lang` gets `clean-sw`.
+- **Try 1 (prompt with an example, section line sent):** 18–24 of ~24 claims kept English per
+  run, notes detected as English. Tiny Aya translated the example lines (printer, warehouse)
+  along with ours and the "## …" line, so markers came back extra or missing; when lines did
+  parse, money lost a digit ("$42,500" → "$4,500", "$11,800" → "$1,800", every seed).
+  Translate 770–914 s per audio hour (retries).
+- **Try 2:** no example, no section line, rules then the lines, target language last. Plus a
+  number check: the line must keep the digits. 3–4 claims kept English, Swahili detected, 145
+  s/h. But "34%" → "3.4%" passed the digit check (seed 2 lost the return-rate fact),
+  `<|END_RESPONSE|>` stayed in the last line's text, and the labels came back translated
+  ("[mmiliki: Laura] [tarehe: Ijumaa]"), so they were left inside the task text.
+- **Kept (try 3):** `same_numbers` compares values (each source number, read the English way,
+  matches one translated number under some reading: "42.500 $" passes, "3.4%" and "$4,500"
+  don't); special tokens stripped; any two leading bracket labels read back (owner always
+  the original name, due translated). `clean-sw` `--fresh`, seeds 1 / 2 / 3: **output language
+  sw 3/3, citations identical 3/3, exact recall 92.3% each = the English notes' 92.3%** (same
+  run, scored by the same rules), 4 claims kept English per run
+  (the money key points), made-up 0, translate ~145 s per audio hour.
+- **Limits (beta):** support rate 22–33% (report-only): the Qwen-4B judge reads Swahili claims
+  against an English transcript; and on seed 1 the one-sentence summary came back invented
+  ("Mr. Mkuki alishangaa…", no number for the check to catch). Headings stay English. A
+  back-translation or length check could catch the invented sentence; not tried.
+
+### Final gate (seed 1, `--fresh`)
+- `quick` with Ask + judge: **pass**, recall 86.8%, citation 100%, made-up 0, uncited 0, Ask
+  96.2%, Ask citation 100%, near-miss 7/12, support 92.7%, slide_value_used true (all = baseline).
+- `lang` (no Ask): recall **84.6%** (conflict-de 76.9, clean-ar 84.6, clean-sw 92.3), numbers
+  95.8%, actions 66.7%, citation 100%, made-up 0, language 3/3, clean-sw citations identical,
+  4 untranslated, judge recall 56.2%, support 63.5% (clean-sw 21.7%). Written as
+  `evals/baseline-lang.json` (report-only, like long).
+
+### Next
+- Carry-overs: R7B writes Arabic owner names in Arabic script on some seeds (eval owner match
+  misses them); "Other (beta)" leaves ~4 money claims English per run and once invented the
+  one-sentence summary (a back-translation or length check, not tried); beta headings English.
+  From 6b-2 still open: long-en tasks filed as decisions; reduce.md's release-notes example;
+  Ask doesn't see slide conflicts.
+- Phase 6d-2 (other source languages, regional Map models, D18) in a new session; kickoff
+  prompt to write from these findings.
