@@ -337,7 +337,12 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
     words in the source are not normalized (English only, like the eval), so a target language
     whose transcript spells numbers out may flag more; the eval's cross-language items show it.
   - The guard does not resolve a speech/slide conflict (§18 `slide-conflict-en`): both values
-    are in the sources, so both pass. That stays a prompt problem.
+    are in the sources, so both pass. Map ignores `map.md`'s slide rule, so (6b-2, user's
+    choice) a pure-Python step **marks** the conflict instead of picking a side: a slide table
+    row whose one value was never said, while the sentences naming its label hold exactly one
+    number on no slide, gets the slide's value added after the spoken one in every Map string
+    naming the label ("$80,000 (slide: $18,000)"). Recorded in `slide_conflicts` (MapFile v4).
+    A speaker may be correcting an outdated slide, so neither value is replaced.
 - **Invalid JSON:** same rule as §5.3. Retry once with "Return only valid JSON". If it still fails,
   store the raw text as `summary`, leave the lists empty, set `raw: true` on that segment's entry,
   and log a warning. The retry prompt (`prompts/map_retry.md`) also ends with the target language.
@@ -1680,7 +1685,7 @@ exact checks with no human labels and no LLM judge.
 | `clean-en` | Baseline |
 | `noisy-en` | VAD and transcription with background noise and music gaps |
 | `pdf-slides-en` | Audio + a PDF deck (no video): slide **text alignment** (§5.4); metric = share of slides placed in the window where they're discussed |
-| `slide-conflict-en` | A number is *misspoken* in speech but correct on the slide (e.g. "forty" vs `14`). Correct output uses the slide value (§5.5 rule). |
+| `slide-conflict-en` | A number is *misspoken* in speech but correct on the slide (e.g. "forty" vs `14`). Correct output uses the slide value (§5.5 rule); since 6b-2 the notes show both ("$80,000 (slide: $18,000)"), which counts as the slide value used. |
 | `xling-{es,ja}` → target `en` | Source language ≠ target language |
 | `en` → target `{de,ar}` | Output in a non-English target, including right-to-left text |
 | `long-en` (~2.5 h, audio + PDF deck, own `long` set; 6c) | Two-pass reduce (§4) and Ask ranking (§5.7). Realistic density (user, 6c): the topic loop once per region (5 regions × 8 topics, 40 slides), 36 discussion lines per topic, 88 facts (40 numbers, 20 decisions, 20 actions, 8 open questions). The region is in the spoken metric, the fact label and the slide title. Ask asks a fixed sample: 12 number, 6 action, the follow-up, 2 German, 3 near-miss |

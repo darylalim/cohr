@@ -1459,8 +1459,29 @@ mean 85.3).
   Baseline e59ff20. Only ordinals with a suffix are narrowed: "13 October" (no suffix) still
   uses every source number.
 
+### 4. Speech/slide conflict (kept: marked, not replaced; MapFile v4)
+- No prompt try: `map.md` already says to use the slide's value on a conflict, and Map has
+  written the misspoken $80,000 on every seed since 6b.
+- **User's choice: mark both values instead of replacing.** A speaker can be correcting an
+  outdated slide, so a guard that always trusts the slide would write wrong notes there.
+  `mapper.slide_conflicts`: a slide table row (Markdown or vision's "label\nvalue" rows) whose
+  one value was never said, while the sentences naming every label word hold exactly one
+  number on no slide. `mark_slide_conflicts` adds " (slide: $18,000)" after the spoken value
+  in Map strings that name the label; `slide_conflicts` records it (MapFile v3 → v4).
+- Dry run on the current runs (4 quick items + long-en, 36 segments): only the planted
+  conflict.
+- Seed 1, Ask + judge, gate pass: **slide_value_used false → true** (notes: "Quarterly budget
+  approved at $80,000 (slide: $18,000) … [1:55] [slide 3]"; R7B kept the note), recall
+  85.3 → 86.8%, citation 100% (=), made-up 0 (=), Ask 96.2% (=), near-miss 7/12 (=).
+  Report-only: support 93.9 → 92.7% (the judge reads the marked claim as "contradicted by the
+  slide"), unsupported numbers 1 → 2 (Map's flagged 6,900, kept by Reduce on the changed
+  input). Baseline 63abd32.
+- Carry-overs: Ask still answers "$80,000" (it reads transcript and slides, not Map notes);
+  " (slide: …)" is English inside notes in any target language (like the `[slide N]`
+  citation marker; check in 6d).
+
 ### Next
-- Step 4 (slide conflict), then 5 (long-en). Step 0's tools are
+- Step 5 (long-en: tell the user before each run, at most two). Step 0's tools are
   in `scripts/` (throwaway, like Phase 0's): `trace_facts.py <report.json>` (per-fact path and
   facts per key point, no models; run it right after the eval, before the next run replaces
   evals/data/runs) and `map_tokens.py [seed]` (Map reply tokens, loads Tiny Aya).
