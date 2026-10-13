@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-13T07:08:30.080700-10:00",
+  "created_at": "2026-10-13T07:42:36.011721-10:00",
   "set": "quick",
-  "git_sha": "700528e",
+  "git_sha": "b9072e2",
   "overrides": {
     "seed": 1
   },
@@ -871,15 +871,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 14.06,
-          "s_per_audio_hour": 141.4,
-          "peak_mem_gb": 11.68,
+          "seconds": 14.42,
+          "s_per_audio_hour": 145.0,
+          "peak_mem_gb": 4.4,
           "reused": true
         },
         "reduce": {
-          "seconds": 26.6,
-          "s_per_audio_hour": 267.6,
-          "peak_mem_gb": 16.76,
+          "seconds": 26.21,
+          "s_per_audio_hour": 263.7,
+          "peak_mem_gb": 9.48,
           "reused": true
         },
         "render": {
@@ -1725,15 +1725,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 12.17,
-          "s_per_audio_hour": 121.4,
-          "peak_mem_gb": 16.19,
+          "seconds": 12.03,
+          "s_per_audio_hour": 120.1,
+          "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 24.2,
-          "s_per_audio_hour": 241.5,
-          "peak_mem_gb": 16.76,
+          "seconds": 24.01,
+          "s_per_audio_hour": 239.6,
+          "peak_mem_gb": 9.48,
           "reused": true
         },
         "render": {
@@ -2582,15 +2582,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.13,
-          "s_per_audio_hour": 112.2,
-          "peak_mem_gb": 16.19,
+          "seconds": 11.01,
+          "s_per_audio_hour": 110.9,
+          "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 23.8,
-          "s_per_audio_hour": 239.8,
-          "peak_mem_gb": 16.76,
+          "seconds": 23.51,
+          "s_per_audio_hour": 236.9,
+          "peak_mem_gb": 9.48,
           "reused": true
         },
         "render": {
@@ -2608,8 +2608,8 @@
       "duration_s": 350.12,
       "metrics": {
         "facts": 17,
-        "facts_found": 13,
-        "fact_recall": 0.7647,
+        "facts_found": 14,
+        "fact_recall": 0.8235,
         "citation_accuracy": 1.0,
         "claims": 18,
         "uncited_claims": 0,
@@ -2629,7 +2629,7 @@
         "output_language_ok": 1,
         "map_numbers_repaired": 2,
         "map_numbers_unverified": 1,
-        "unsupported_numbers": 0,
+        "unsupported_numbers": 1,
         "reduce_groups": 0,
         "pass2_marker": 0,
         "pass2_claim": 0,
@@ -2637,7 +2637,7 @@
         "pass2_uncited": 0,
         "recall_decision": 0.75,
         "recall_action": 0.6,
-        "recall_number": 0.875,
+        "recall_number": 1.0,
         "recall_open_question": 0.5,
         "ask_questions": 19,
         "ask_accuracy": 0.9231,
@@ -2648,9 +2648,9 @@
         "ask_xlang_history": 1.0,
         "ask_near_miss": 0.6667,
         "cited_claims": 18,
-        "support_rate": 0.9444,
+        "support_rate": 0.8889,
         "support_partial": 0,
-        "support_no": 1,
+        "support_no": 2,
         "support_unjudged": 0,
         "judge_covered": 0,
         "judge_recall": null
@@ -2738,14 +2738,14 @@
           "id": "f7",
           "kind": "number",
           "text": "Approved budget: $18,000",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
-          "slide_cited": false
+          "section": "key_points",
+          "claim": "Quarterly budget approved at $80,000 (slide: $18,000), up from $770,000 last quarter.",
+          "citation_ok": true,
+          "t_error": 0.22,
+          "slide_cited": true
         },
         {
           "id": "f8",
@@ -2910,7 +2910,7 @@
       "uncited": [],
       "gap_texts": [],
       "conflict": {
-        "slide_value_used": false,
+        "slide_value_used": true,
         "misspoken_value_used": true
       },
       "number_repairs": [
@@ -2920,7 +2920,9 @@
       "unverified_numbers": [
         "770,000"
       ],
-      "unsupported_numbers": [],
+      "unsupported_numbers": [
+        "770000"
+      ],
       "support": [
         {
           "section": "summary",
@@ -2960,13 +2962,13 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Quarterly budget approved at $80,000, up from $77,500 last quarter.",
+          "claim": "Key point: Quarterly budget approved at $80,000 (slide: $18,000), up from $770,000 last quarter.",
           "citations": [
             "seg 0",
             "slide 2"
           ],
-          "supported": "yes",
-          "reason": "The cited text states the approved budget for next quarter is $80,000 compared with $77,500 last quarter."
+          "supported": "no",
+          "reason": "The slide shows a different approved budget value of $18,000, contradicting the claim's figure of $80,000."
         },
         {
           "section": "key_points",
@@ -3140,7 +3142,8 @@
           "fact": "f7",
           "answer": "The approved budget for next quarter is $80,000.",
           "citations": [
-            "seg 0 @115.15"
+            "seg 0 @115.15",
+            "slide 2"
           ],
           "language": "en",
           "stated": false,
@@ -3356,9 +3359,9 @@
           "kind": "near_miss",
           "question": "What was the week-2 return rate two years ago?",
           "fact": "f17",
-          "answer": "The meeting doesn't give the week-2 return rate for two years ago. It says the week-2 return rate for last month was 54%.",
+          "answer": "The meeting doesn't give the week-2 return rate for two years ago. It says the rate last month was 54%.",
           "citations": [
-            "seg 1 @303.32",
+            "seg 1 @306.73",
             "slide 7"
           ],
           "language": "en",
@@ -3433,15 +3436,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 10.9,
-          "s_per_audio_hour": 112.1,
-          "peak_mem_gb": 16.19,
+          "seconds": 10.86,
+          "s_per_audio_hour": 111.7,
+          "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 22.8,
-          "s_per_audio_hour": 234.5,
-          "peak_mem_gb": 16.76,
+          "seconds": 23.07,
+          "s_per_audio_hour": 237.2,
+          "peak_mem_gb": 9.48,
           "reused": true
         },
         "render": {
@@ -3456,7 +3459,7 @@
   "summary": {
     "items": 4,
     "facts": 68,
-    "fact_recall": 0.8529,
+    "fact_recall": 0.8676,
     "citation_accuracy": 1.0,
     "uncited_claims": 0,
     "made_up_items": 0,
@@ -3473,19 +3476,19 @@
     "output_language_ok": 1.0,
     "recall_decision": 0.8125,
     "recall_action": 0.8,
-    "recall_number": 0.9062,
+    "recall_number": 0.9375,
     "recall_open_question": 0.8,
     "map_numbers_repaired": 10,
     "map_numbers_unverified": 2,
-    "unsupported_numbers": 1,
+    "unsupported_numbers": 2,
     "reduce_groups": 0,
     "pass2_marker": 0,
     "pass2_claim": 0,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.939,
+    "support_rate": 0.9268,
     "support_partial": 1,
-    "support_no": 4,
+    "support_no": 5,
     "support_unjudged": 0,
     "judge_recall": null,
     "ask_questions": 76,
@@ -3520,19 +3523,19 @@
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 121.8,
-      "peak_mem_gb": 16.19
+      "s_per_audio_hour": 122.0,
+      "peak_mem_gb": 8.91
     },
     "reduce": {
-      "s_per_audio_hour": 245.9,
-      "peak_mem_gb": 16.76
+      "s_per_audio_hour": 244.4,
+      "peak_mem_gb": 9.48
     },
     "render": {
       "s_per_audio_hour": 0.0,
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 877.2,
+      "s_per_audio_hour": 875.9,
       "peak_mem_gb": 16.83
     }
   },
@@ -3566,6 +3569,7 @@
     0.18,
     0.2,
     0.21,
+    0.22,
     0.22,
     0.24,
     0.24,
