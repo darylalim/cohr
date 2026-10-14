@@ -1152,6 +1152,15 @@ compared with a committed baseline:
     README brought up to date (status, app, `cohr models download`, model cache size and
     `hf cache rm`, not `prune`). The first `full` run is a measurement: no fixes,
     `baseline-full.json` written. Kickoff prompt in §21.
+    Done 2026-10-14 (NOTES.md). Results: `full` = quick + lang (`include`, `gate: [quick]`,
+    D31) + FLEURS (streamed, 205 MB kept) + 5 AMI meetings (browser download: the mirror
+    returned 403 to scripted requests). Gate items meet every v1 target (recall 89.7%,
+    citations 98.4%, 14.7 min/audio h with Vision; AMI 5.5 min/h, peak 17.3 GB). FLEURS WER
+    6.6%, CER 7.9% (ar 16.1, zh 12.5). AMI coverage 44.9% (decisions 34.8, actions 18.2),
+    support 80.2%. Found: Reduce's 2048-token cap cuts 4 of 5 AMI notes silently (4096:
+    52.8%); interrupted model downloads passed as cached (fixed); Ask eval failed on es/ja
+    meetings (now skipped). `sequential` = `resident` byte for byte, peak 5.9 vs 16.8 GB.
+    Carry-overs ranked in NOTES.md (6e-1 "Carry-overs ranked").
   - **6e-2: carry-over fixes + v1.** The carry-overs from 6b-2, 6c, 6d-1 and 6d-2 that the
     `full` run ranks highest, then the `full` release gate and the bump to `1.0.0` (§16, only
     when asked). Kickoff prompt written after 6e-1, from its findings.

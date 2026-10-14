@@ -2006,3 +2006,52 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
   Both runs "fail" reduce +41–43% s/audio h against baseline.json: one item pays R7B's load
   that 4 items share; not a policy cost (a single-item run isn't comparable to the 4-item
   baseline).
+
+### 6. First full run (report 20261014-085703-full; baseline-full.json written)
+- First attempt stopped at xling-es: `KeyError: 'Tickets abiertos'`. Ask's question templates
+  are keyed by the English script's labels, and lang had only ever run with `--no-ask`. Fix
+  (7d63600): Ask is skipped on meetings not in English (logged). The rerun reused every stage
+  and the 171 cached Ask answers; only xling-ja's pipeline, Reduce on AMI (back to 2048) and
+  197 judge questions ran.
+- **Gate (quick items, D31): pass, no regressions against baseline.json.** Fact recall 89.7%
+  (decisions 75, actions 95, numbers 93.8), citation accuracy 98.4%, made-up 0, uncited 0,
+  gap words 0, language 100%, slide alignment 100%, open questions 100%, support 95.2%, Ask
+  98.1% (citations 100%, near-miss 58.3% = 7/12). **Every v1 target met** (§18), speed
+  included: 14.7 min per audio hour with Vision (quick), 5.5 on AMI (audio only).
+- lang items (report-only), seed 0: baseline-lang is seed 1 (`-c seed=1`), so the two aren't
+  comparable item by item (Map samples at 0.3; D16: means of seeds 1–3). Recall 82.4%,
+  citations 90.7%, made-up 6 (clean-hi 5: owners in Devanagari, the 6d-2 carry-over),
+  language 7/7, judge recall 75%. clean-sw support 21.7%, as in its baseline: the judge reads
+  Swahili claims against the English transcript and answers "no" ("the claim is in
+  Swahili…"); recall there is 92%. xling-ja recall 69.2%, citations 77.8%.
+- FLEURS: identical to step 1 (WER 6.6%, CER 7.9%; Transcribe deterministic). AMI: identical
+  to step 2's first run (coverage 44.9%, support 80.2%, 2 uncited), so the 2048 cap shows the
+  same way. AMI peak 17.3 GB (14.1 alone): Vision stays resident from the synthetic items.
+- Judge: 608 questions (197 new, 337 s). The run took ~35 min with the caches; from empty
+  caches, ~1 h (step 0's estimate held: FLEURS 2 min, AMI 18 min, judge 10 min, synthetic
+  with Ask 30 min).
+
+### Carry-overs ranked by the full run (input for the 6e-2 kickoff)
+1. **Reduce's output cap cuts real meetings, silently** (AMI 4 of 5 at exactly 2048 tokens;
+   TS3003c has no Decisions, Action items or Open questions). 4096 measured: coverage
+   44.9 → 52.8%, no cuts, Reduce +16% time; TS3003c used 85% of 4096, so 60 min meetings need
+   either more or a check. Needs: a finish check (warn, or retry larger) + a new default.
+   Hits every real meeting over ~30 min; nothing synthetic reaches it.
+2. **Tasks and considerations filed as decisions** (AMI ES2004b: 15 "decisions" of the form
+   "The project will explore/consider…"; long-en since 6c; quick decision recall 75%).
+3. **Owners**: R7B writes owners in Devanagari/Arabic script (clean-hi recall 53.8%, made-up
+   5: partly the eval's owner match); AMI actions name roles, ours mostly have no owner.
+4. **Numbers in the transcript and notes**: Transcribe errors (FLEURS ar "06:30 و 07:30" →
+   "36 و37", nl "5" → "$5.000"), Map's 万 misreads, numbers in no source on AMI ("34%" for
+   "a quarter"; `unsupported_numbers` to run on AMI too).
+5. **Japanese**: xling-ja recall 69.2% (chunk-start drops, dense-segment Map drops) and no
+   slide-conflict check for Japanese.
+6. Eval gaps (no product change): judge on "Other (beta)" notes (judge the English notes
+   before translation: clean-sw 21.7%); Ask questions for es/ja meetings; FLEURS number words
+   per language; D31's memory row (no threshold exists).
+7. Ask near-miss 58% (7/12, unchanged since 6b) and Ask with slide conflicts; the
+   "Other (beta)" limits.
+
+### Next
+6e-2 (separate session, kickoff written from the ranking above): carry-over fixes, then the
+full release gate and the 1.0.0 bump only when asked. D31 awaits the user's confirmation.
