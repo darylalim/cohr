@@ -1930,3 +1930,40 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
     against the transcript, so a value wrong there passes it.
 - Carry-overs (6e-2 ranking): Transcribe number errors in ar/nl (feeds the guard); number
   words → digits in the FLEURS scoring for every language (eval fairness; report-only now).
+
+### 2. AMI (5 meetings, 3.06 h; report 20261014-071244-full, 7c389d4, `--no-ask`)
+- `src/cohr/ami.py`: the mirror's `Mix-Headset.wav` + `abstractive/<id>.abssumm.xml` from the
+  annotations zip (sentence counts 43/23/11/12, as in step 0). `evals.run_ami` runs the
+  pipeline (audio only, English); `judge_ami` asks coverage per reference sentence in its home
+  sections (`AMI_HOME`) and support per cited claim, in the synthetic items' judge session.
+  The abstract is looked for in Summary **and** Key points (§18 said Summary): our Summary is
+  one claim, AMI abstracts are 5–11 sentences. AMI rows stay out of `items` and the gated
+  totals; their stage costs are a separate table.
+- Download: the mirror cut the scripted download at 21 of 75 MB (~185 KB/s; the length check
+  kept nothing), then answered 403 to every request from this machine, ranges included. The
+  user fetched the 5 WAVs in a browser; all complete (sizes = header + data; ES2004b = the
+  Content-Length the mirror had announced). IS1009b/c carry recorder chunks after `data`
+  (cue, LIST, muma, chrp, bext) and are 5–10× louder (RMS 0.09 vs 0.01–0.02; 4% near-silent
+  samples vs 37–50%): another room setup.
+- **Speed (§9 definition of done): 326 s per audio hour = 5.4 min/h** (target ≤ 20),
+  `resident`, no Vision. Per stage: transcribe 98, reduce 120, map 82, vad 25. Each meeting
+  167–229 s. Peak 14.1 GB (limit 26.8). Judge: 334 calls, 632 s, 3.9 GB.
+- Coverage (judge, report-only): all 44.9%; abstract 60.5, decisions 34.8, actions 18.2,
+  problems 33.3%. Per meeting 22–63%. Support rate 80.2% (199 yes, 38 partial, 11 no of 248
+  cited claims); 2 uncited claims.
+- **Main finding: Reduce's reply is cut at `reduce.max_tokens` = 2048 on 4 of 5 meetings**
+  (`notes.json` `raw`: 2053 tokens with the prefilled start; ES2004d ended at 1853 with
+  `<|END_RESPONSE|>`). R7B wraps nearly every phrase in `<co>…</co: 0:[n]>`, so 34–63 claims
+  fill the budget. Effects: TS3003c has no Decisions, Action items or Open questions at all
+  (36 key points, then the cap: its 0% on those parts); ES2004b, IS1009c end mid-citation
+  (`…compatibility</co: 0:[`: the 2 uncited claims); IS1009b ends on a bare `##` (the
+  "unknown section markers ['#']" warning). The section order puts Decisions, Action items
+  and Open questions last, so they lose first. quick (5 min) and long-en (two-pass,
+  `TWO_PASS_MAX_TOKENS` 4096) never reach it.
+- Other patterns: Decisions hold tasks and considerations ("The project will explore /
+  consider / investigate …": ES2004b 15 decisions), the long-en carry-over in real meetings;
+  the judge then misses decided items stated as "consider". AMI actions name roles ("The
+  Marketing Expert will …"); our action items mostly have no owner (8 of 11 in ES2004b).
+  Partial support is mostly numbers: ES2004b "34% take too much time to learn" where the
+  transcript says "slightly more than a quarter" (a number in no source; `unsupported_numbers`
+  isn't run on AMI).

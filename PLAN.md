@@ -1835,7 +1835,8 @@ committed or redistributed.
   coverage by 4–9 points.
 - Each `abssumm.xml` has `<abstract>`, `<decisions>`, `<actions>` and `<problems>`, each a list of
   `<sentence>` elements. Map them to our sections: `decisions` → Decisions, `actions` → Action
-  items, `problems` → Open questions; `abstract` → Summary (judged for coverage only).
+  items, `problems` → Open questions; `abstract` → Summary **and Key points** (6e-1: our Summary
+  is one claim, AMI abstracts are 5–11 sentences; `evals.AMI_HOME`).
 - Metric: per section, the share of reference sentences the judge says are covered by our notes.
 - Parse with stdlib `xml.etree` (files are ISO-8859-1 encoded). Use the official zip, **not**
   third-party Hub re-uploads of AMI summaries or QMSum mirrors: their licensing and processing are
