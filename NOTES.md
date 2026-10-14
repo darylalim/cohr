@@ -1967,3 +1967,19 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
   Partial support is mostly numbers: ES2004b "34% take too much time to learn" where the
   transcript says "slightly more than a quarter" (a number in no source; `unsupported_numbers`
   isn't run on AMI).
+- **Diagnostic (no code change): `-c reduce.max_tokens=4096`** (report 20261014-072637-full;
+  only Reduce and the judge re-ran). Every reply ends with `<|END_RESPONSE|>`: 1853 (ES2004d,
+  unchanged: temperature 0, never capped), 2103, 2259, 2665, 3470 tokens (TS3003c, 42.8 min:
+  85% of 4096, so a 60 min single-pass meeting may reach it). Coverage 44.9 → **52.8%**:
+  decisions 34.8 → 52.2, actions 18.2 → 36.4, abstract 60.5 → 62.8, problems 33.3 (same).
+  TS3003c 22.2 → 55.6% (15 decisions, 10 actions, 6 open questions now). Uncited 2 → 0.
+  Support rate 80.2 → 75.2%: 62 more cited claims, of which 34 yes (233 yes, 57 partial,
+  20 no of 310): the added decisions and open questions are weaker. Reduce 120 → 139 s per
+  audio hour; total 5.75 min/h; peak 13.8 GB. The runs in evals/data/runs/ami-* now hold the
+  4096 notes; a default run re-runs Reduce (config hash).
+- Carry-overs from AMI (6e-2 ranking input): (1) Reduce's cap cuts real 30–43 min meetings
+  and nothing reports it (no finish-reason check: the notes look complete); raising it to
+  4096 is measured above, and a check that warns or retries when the reply hits the cap is
+  needed for longer meetings. (2) Tasks and considerations filed as decisions. (3) Action
+  owners: roles are named in AMI, ours mostly have none. (4) Numbers in no source on real
+  meetings (`unsupported_numbers` to run on AMI too).
