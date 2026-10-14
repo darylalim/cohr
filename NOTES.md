@@ -1983,3 +1983,26 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
   needed for longer meetings. (2) Tasks and considerations filed as decisions. (3) Action
   owners: roles are named in AMI, ours mostly have none. (4) Numbers in no source on real
   meetings (`unsupported_numbers` to run on AMI too).
+
+### 4. Robustness (7566579, then the policy check)
+- Paths checked: ffmpeg/ffprobe missing (CLI run, CLI eval, UI New Run), models missing,
+  partly downloaded, deleted after a run, damaged, and the Hub unreachable during
+  `cohr models download`. Already clear before 6e-1: a deleted model (`ModelsMissing` before
+  any stage, so resume stops with the ingest still done), ffmpeg in `cohr run` (probe).
+- Fixed: an **interrupted download passed as cached** (the snapshot folder exists with the
+  files that finished), so `cohr models download` said "all cached" and the run failed in the
+  loader. `models.check_complete` (offline): config.json + every shard the index names, or a
+  `*.safetensors`; incomplete = missing, so the download resumes. All 6 cached models pass.
+  No network: `DownloadError`, one line ("run it again to resume"), not a traceback. Damaged
+  files: the load error says `hf cache rm model/<repo>` + `cohr models download`. UI: a page
+  warning when ffmpeg/ffprobe are missing, and the install hint instead of "Could not read
+  the recording". `cohr eval` checks ffmpeg before generating.
+- **sequential vs resident** (clean-en, `--fresh` each, `--no-ask --no-judge`, same seed):
+  transcript, map.json and Reduce's raw reply are **identical** byte for byte. Peak memory
+  per stage (GB, resident → sequential): transcribe 5.63 → 5.63, vision 8.59 → 4.46, map
+  11.68 → 4.40, reduce 16.76 → 5.92 (vad 0.05): resident adds each model to the last;
+  sequential peaks at the largest single model. Stage times equal (reduce 34.7 vs 34.3 s):
+  each model loads once per item either way; sequential costs reloads only across items.
+  Both runs "fail" reduce +41–43% s/audio h against baseline.json: one item pays R7B's load
+  that 4 items share; not a policy cost (a single-item run isn't comparable to the 4-item
+  baseline).
