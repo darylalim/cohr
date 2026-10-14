@@ -62,6 +62,14 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
 - A set always run with a flag (lang with `--no-ask`) never tests what the flag skips: run a
   new item once with Ask and the judge on (6e-1: the first full run crashed on xling-es Ask).
 - Changing any Reduce prompt moves REDUCE_HASH in tests/test_ask.py; update it only on purpose.
+- Any evals/gen/*.py edit regenerates each item's media on its set's next run; long runs only at
+  the release gate, so its baseline can be phases older (6e-2: new long-en audio vs a 6b-2
+  baseline). To split code from input, replay the stage with main's code (git worktree) on a
+  copy of the run and score both.
+- Pass 2 reads pass 1's parsed notes, so Python on pass-1 claims (6e-2's decision → action
+  move) changes what pass 2 writes: check long-en, not only quick.
+- A PLAN section isn't the code: the §16 release job was planned but never in ci.yml, so 1.0.0
+  merged without a release (6e-2). Check the workflow before saying a merge releases.
 - The guard hook blocks Bash commands containing the full-eval or models-marker text (heredocs
   too): write such text with the Edit/Write tools. It also blocks `rm -rf`: copy scratch
   output to new folder names instead of deleting.
