@@ -2221,4 +2221,5 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
    are actions answered from the wrong part. Not caused by 6e-2; check with Ask ranking.
 8. Carry-overs 5–7 from 6e-1: Japanese chunk-start and dense-segment drops, eval-only gaps,
    Ask near-miss (55.6% on full).
-9. The 1.0.0 bump (§16): asked separately.
+9. ~~The 1.0.0 bump~~: done on request (`uv version --bump major`, pyproject + uv.lock;
+   README status). Merging PR #42 to main releases v1.0.0 once CI passes (§16).
