@@ -28,11 +28,22 @@ class IngestError(RuntimeError):
     pass
 
 
+class ToolMissing(IngestError):
+    """ffmpeg or ffprobe isn't installed: not a problem with the recording."""
+
+
+TOOLS = ("ffmpeg", "ffprobe")  # both come with `brew install ffmpeg`
+
+
 def require(tool: str = "ffmpeg") -> str:
     path = shutil.which(tool)
     if path is None:
-        raise IngestError(f"{tool} not found on PATH. Install it with `brew install ffmpeg`.")
+        raise ToolMissing(f"{tool} not found on PATH. Install it with `brew install ffmpeg`.")
     return path
+
+
+def missing_tools() -> list[str]:
+    return [t for t in TOOLS if shutil.which(t) is None]
 
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:

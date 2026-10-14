@@ -180,7 +180,7 @@ def test_judge_items_rescoring_loads_no_model(tmp_path: Path) -> None:
     loads: list[str] = []
     fake = FakeJudge()
     logs: list[str] = []
-    first, cost = evals.judge_items(
+    first, cost, _ = evals.judge_items(
         [(item_report(), run_dir)], root=tmp_path, models=manager(fake, loads), log=logs.append
     )
     assert loads == ["/x"] and cost.loaded and cost.calls == 5 and cost.cached == 0
@@ -189,7 +189,7 @@ def test_judge_items_rescoring_loads_no_model(tmp_path: Path) -> None:
     assert any("releasing the pipeline models" in m for m in logs)
 
     calls = len(fake.prompts)
-    again, cost2 = evals.judge_items(
+    again, cost2, _ = evals.judge_items(
         [(item_report(), run_dir)], root=tmp_path, models=manager(fake, loads), log=logs.append
     )
     assert loads == ["/x"] and len(fake.prompts) == calls  # nothing stale: no load, no call

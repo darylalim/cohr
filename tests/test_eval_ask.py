@@ -363,3 +363,10 @@ def test_report_shows_ask(tmp_path: Path) -> None:
     assert "| ask_accuracy | 66.7% |" in md
     assert "- ask number cited off" in md and "- ask de_history missed" in md
     assert evals.load_report(evals.write_report(report, tmp_path)) == report
+
+
+def test_ask_runs_only_on_english_meetings() -> None:
+    root = Path(__file__).resolve().parents[1]
+    specs = {it.id: it for it in evals.load_set("full", root).items}
+    assert evals.asks(specs["clean-en"]) and evals.asks(specs["conflict-de"])  # en meeting
+    assert not evals.asks(specs["xling-es"]) and not evals.asks(specs["xling-ja"])

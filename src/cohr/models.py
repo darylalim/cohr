@@ -9,6 +9,7 @@ MLX and the model packages are imported inside functions only; unit tests run wi
 
 import contextlib
 import gc
+import json
 import logging
 import os
 import shutil
@@ -42,9 +43,13 @@ class ModelsMissing(ModelLoadError):
         listed = ", ".join(f"{n} ({s.repo}@{s.revision[:7]})" for n, s in missing.items())
         super().__init__(
             next(iter(missing)),
-            f"Models not downloaded: {listed}. Run `uv run cohr models download`.",
+            f"Models not downloaded or incomplete: {listed}. Run `uv run cohr models download`.",
         )
         self.missing = dict(missing)
+
+
+class DownloadError(RuntimeError):
+    """`cohr models download` couldn't reach the Hub or fetch a file (offline, HTTP error)."""
 
 
 # --- cache ---------------------------------------------------------------------------------
@@ -76,8 +81,25 @@ def local_path(spec: ModelSpec, cache: Path | None = None) -> Path:
         path = converted_path(spec, cache)
         if not (path / "config.json").is_file():
             raise FileNotFoundError(f"{spec.repo}@{spec.revision} is not converted ({path})")
+        check_complete(path)
         return path
-    return _snapshot_path(spec, cache)
+    return check_complete(_snapshot_path(spec, cache))
+
+
+def check_complete(path: Path) -> Path:
+    """Raise FileNotFoundError unless the model folder holds its config and every weight file.
+    An interrupted download leaves the snapshot folder with only the files that finished; the
+    shard index (model.safetensors.index.json) names every weight file, offline."""
+    missing = [] if (path / "config.json").is_file() else ["config.json"]
+    index = path / "model.safetensors.index.json"
+    if index.is_file():
+        shards = sorted(set(json.loads(index.read_text(encoding="utf-8"))["weight_map"].values()))
+        missing += [s for s in shards if not (path / s).is_file()]
+    elif not any(path.glob("*.safetensors")):
+        missing.append("*.safetensors")
+    if missing:
+        raise FileNotFoundError(f"{path} is incomplete: no {', '.join(missing)}")
+    return path
 
 
 def _snapshot_path(spec: ModelSpec, cache: Path | None = None) -> Path:
@@ -132,14 +154,22 @@ def download(
             missing[name] = spec
     if not missing:
         return []
-    needed = sum(size_of(s) for s in missing.values())
+    try:
+        needed = sum(size_of(s) for s in missing.values())
+    except Exception as e:
+        raise DownloadError(f"can't reach the Hugging Face Hub to size the download: {e}") from e
     target = cache if cache is not None else _effective_cache_dir()
     storage.check_free_space(target, needed, margin=DOWNLOAD_MARGIN_BYTES)
     fetch = fetch or _snapshot_download
     convert = convert or _convert
     for name, spec in missing.items():
         log.info("downloading %s (%s@%s)", name, spec.repo, spec.revision)
-        fetch(spec, cache)
+        try:
+            fetch(spec, cache)
+        except Exception as e:
+            raise DownloadError(
+                f"downloading {name} ({spec.repo}) failed: {e}. Run the command again to resume it."
+            ) from e
         if spec.quantize_bits:
             log.info("converting %s to %d-bit", name, spec.quantize_bits)
             convert(spec, cache)
@@ -291,7 +321,11 @@ class ModelManager:
         try:
             model = loaders[name](path)
         except Exception as e:
-            raise ModelLoadError(name, f"could not load {name} ({spec.repo}): {e}") from e
+            raise ModelLoadError(
+                name,
+                f"could not load {name} ({spec.repo}): {e}. If its files are damaged, delete it "
+                f"with `hf cache rm model/{spec.repo}`, then run `uv run cohr models download`.",
+            ) from e
         self._loaded[name] = model
         return model
 

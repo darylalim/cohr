@@ -1907,3 +1907,152 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
   licence page and `LICENCE.txt` in `ami_public_manual_1.6.2.zip` (downloaded, 22.9 MB, 143
   `abstractive/*.abssumm.xml`): "released under the Creative Commons Attribution 4.0
   International Public License agreement (CC BY 4.0)".
+
+### 1. FLEURS (Transcribe only; report 20261014-060444-full, d1d5bbc)
+- `evals/sets/full.yaml`: `include: [quick, lang]` + a `fleurs:` block (pinned revision, seed 1,
+  20 clips from the first 100 tar members, Transcribe's 14 languages → FLEURS configs).
+  `src/cohr/fleurs.py` streams the tar start through `HfFileSystem`; `evals.run_fleurs`
+  transcribes each clip whole (no VAD); error is over a language's 20 clips together
+  (`asr_corpus_error`). `--item fleurs` / `--item fleurs-ja` run FLEURS alone.
+- Kept: 205 MB, not ~10 MB (step 0's estimate): the clips are 32-bit float WAVs, ~15 MB per
+  language. Streaming a language took ~10 s; the whole FLEURS run ~4 min.
+- Error (WER; CER for ja/ko/zh): pl 3.8, it 3.9, ja 4.0, fr 4.2, pt 4.2, en 5.3, es 6.0,
+  nl 6.5, ko 7.1, vi 7.1, de 7.6, el 8.1, zh 12.5, ar 16.1%. Means: WER 6.6%, CER 7.9%.
+  Transcribe alone: 149 s per audio hour (116–189 by language).
+- Worst clips, two kinds:
+  - Scoring form, not errors: de "10.000" → "zehntausend", fr "22 h 00" → "vingt-deux
+    heures", pl "p.n.e." spelled out, ko a parenthetical "(Rossby number)" not spoken. The
+    reverse of the expected direction: FLEURS writes digits, Transcribe writes words. Only
+    English number words are read as digits (`wer_text`).
+  - Real errors, numbers among them: ar "06:30 و 07:30" → "36 و37" (clock times lost), nl
+    "5 en 100 dollar" → "$5.000 en $100", zh "World Wargate" made up twice, pt names
+    (Goethe, Fichte, Schlegel → "Goth, Fish e Skeleton"). The Map number guard checks
+    against the transcript, so a value wrong there passes it.
+- Carry-overs (6e-2 ranking): Transcribe number errors in ar/nl (feeds the guard); number
+  words → digits in the FLEURS scoring for every language (eval fairness; report-only now).
+
+### 2. AMI (5 meetings, 3.06 h; report 20261014-071244-full, 7c389d4, `--no-ask`)
+- `src/cohr/ami.py`: the mirror's `Mix-Headset.wav` + `abstractive/<id>.abssumm.xml` from the
+  annotations zip (sentence counts 43/23/11/12, as in step 0). `evals.run_ami` runs the
+  pipeline (audio only, English); `judge_ami` asks coverage per reference sentence in its home
+  sections (`AMI_HOME`) and support per cited claim, in the synthetic items' judge session.
+  The abstract is looked for in Summary **and** Key points (§18 said Summary): our Summary is
+  one claim, AMI abstracts are 5–11 sentences. AMI rows stay out of `items` and the gated
+  totals; their stage costs are a separate table.
+- Download: the mirror cut the scripted download at 21 of 75 MB (~185 KB/s; the length check
+  kept nothing), then answered 403 to every request from this machine, ranges included. The
+  user fetched the 5 WAVs in a browser; all complete (sizes = header + data; ES2004b = the
+  Content-Length the mirror had announced). IS1009b/c carry recorder chunks after `data`
+  (cue, LIST, muma, chrp, bext) and are 5–10× louder (RMS 0.09 vs 0.01–0.02; 4% near-silent
+  samples vs 37–50%): another room setup.
+- **Speed (§9 definition of done): 326 s per audio hour = 5.4 min/h** (target ≤ 20),
+  `resident`, no Vision. Per stage: transcribe 98, reduce 120, map 82, vad 25. Each meeting
+  167–229 s. Peak 14.1 GB (limit 26.8). Judge: 334 calls, 632 s, 3.9 GB.
+- Coverage (judge, report-only): all 44.9%; abstract 60.5, decisions 34.8, actions 18.2,
+  problems 33.3%. Per meeting 22–63%. Support rate 80.2% (199 yes, 38 partial, 11 no of 248
+  cited claims); 2 uncited claims.
+- **Main finding: Reduce's reply is cut at `reduce.max_tokens` = 2048 on 4 of 5 meetings**
+  (`notes.json` `raw`: 2053 tokens with the prefilled start; ES2004d ended at 1853 with
+  `<|END_RESPONSE|>`). R7B wraps nearly every phrase in `<co>…</co: 0:[n]>`, so 34–63 claims
+  fill the budget. Effects: TS3003c has no Decisions, Action items or Open questions at all
+  (36 key points, then the cap: its 0% on those parts); ES2004b, IS1009c end mid-citation
+  (`…compatibility</co: 0:[`: the 2 uncited claims); IS1009b ends on a bare `##` (the
+  "unknown section markers ['#']" warning). The section order puts Decisions, Action items
+  and Open questions last, so they lose first. quick (5 min) and long-en (two-pass,
+  `TWO_PASS_MAX_TOKENS` 4096) never reach it.
+- Other patterns: Decisions hold tasks and considerations ("The project will explore /
+  consider / investigate …": ES2004b 15 decisions), the long-en carry-over in real meetings;
+  the judge then misses decided items stated as "consider". AMI actions name roles ("The
+  Marketing Expert will …"); our action items mostly have no owner (8 of 11 in ES2004b).
+  Partial support is mostly numbers: ES2004b "34% take too much time to learn" where the
+  transcript says "slightly more than a quarter" (a number in no source; `unsupported_numbers`
+  isn't run on AMI).
+- **Diagnostic (no code change): `-c reduce.max_tokens=4096`** (report 20261014-072637-full;
+  only Reduce and the judge re-ran). Every reply ends with `<|END_RESPONSE|>`: 1853 (ES2004d,
+  unchanged: temperature 0, never capped), 2103, 2259, 2665, 3470 tokens (TS3003c, 42.8 min:
+  85% of 4096, so a 60 min single-pass meeting may reach it). Coverage 44.9 → **52.8%**:
+  decisions 34.8 → 52.2, actions 18.2 → 36.4, abstract 60.5 → 62.8, problems 33.3 (same).
+  TS3003c 22.2 → 55.6% (15 decisions, 10 actions, 6 open questions now). Uncited 2 → 0.
+  Support rate 80.2 → 75.2%: 62 more cited claims, of which 34 yes (233 yes, 57 partial,
+  20 no of 310): the added decisions and open questions are weaker. Reduce 120 → 139 s per
+  audio hour; total 5.75 min/h; peak 13.8 GB. The runs in evals/data/runs/ami-* now hold the
+  4096 notes; a default run re-runs Reduce (config hash).
+- Carry-overs from AMI (6e-2 ranking input): (1) Reduce's cap cuts real 30–43 min meetings
+  and nothing reports it (no finish-reason check: the notes look complete); raising it to
+  4096 is measured above, and a check that warns or retries when the reply hits the cap is
+  needed for longer meetings. (2) Tasks and considerations filed as decisions. (3) Action
+  owners: roles are named in AMI, ours mostly have none. (4) Numbers in no source on real
+  meetings (`unsupported_numbers` to run on AMI too).
+
+### 4. Robustness (7566579, then the policy check)
+- Paths checked: ffmpeg/ffprobe missing (CLI run, CLI eval, UI New Run), models missing,
+  partly downloaded, deleted after a run, damaged, and the Hub unreachable during
+  `cohr models download`. Already clear before 6e-1: a deleted model (`ModelsMissing` before
+  any stage, so resume stops with the ingest still done), ffmpeg in `cohr run` (probe).
+- Fixed: an **interrupted download passed as cached** (the snapshot folder exists with the
+  files that finished), so `cohr models download` said "all cached" and the run failed in the
+  loader. `models.check_complete` (offline): config.json + every shard the index names, or a
+  `*.safetensors`; incomplete = missing, so the download resumes. All 6 cached models pass.
+  No network: `DownloadError`, one line ("run it again to resume"), not a traceback. Damaged
+  files: the load error says `hf cache rm model/<repo>` + `cohr models download`. UI: a page
+  warning when ffmpeg/ffprobe are missing, and the install hint instead of "Could not read
+  the recording". `cohr eval` checks ffmpeg before generating.
+- **sequential vs resident** (clean-en, `--fresh` each, `--no-ask --no-judge`, same seed):
+  transcript, map.json and Reduce's raw reply are **identical** byte for byte. Peak memory
+  per stage (GB, resident → sequential): transcribe 5.63 → 5.63, vision 8.59 → 4.46, map
+  11.68 → 4.40, reduce 16.76 → 5.92 (vad 0.05): resident adds each model to the last;
+  sequential peaks at the largest single model. Stage times equal (reduce 34.7 vs 34.3 s):
+  each model loads once per item either way; sequential costs reloads only across items.
+  Both runs "fail" reduce +41–43% s/audio h against baseline.json: one item pays R7B's load
+  that 4 items share; not a policy cost (a single-item run isn't comparable to the 4-item
+  baseline).
+
+### 6. First full run (report 20261014-085703-full; baseline-full.json written)
+- First attempt stopped at xling-es: `KeyError: 'Tickets abiertos'`. Ask's question templates
+  are keyed by the English script's labels, and lang had only ever run with `--no-ask`. Fix
+  (7d63600): Ask is skipped on meetings not in English (logged). The rerun reused every stage
+  and the 171 cached Ask answers; only xling-ja's pipeline, Reduce on AMI (back to 2048) and
+  197 judge questions ran.
+- **Gate (quick items, D31): pass, no regressions against baseline.json.** Fact recall 89.7%
+  (decisions 75, actions 95, numbers 93.8), citation accuracy 98.4%, made-up 0, uncited 0,
+  gap words 0, language 100%, slide alignment 100%, open questions 100%, support 95.2%, Ask
+  98.1% (citations 100%, near-miss 58.3% = 7/12). **Every v1 target met** (§18), speed
+  included: 14.7 min per audio hour with Vision (quick), 5.5 on AMI (audio only).
+- lang items (report-only), seed 0: baseline-lang is seed 1 (`-c seed=1`), so the two aren't
+  comparable item by item (Map samples at 0.3; D16: means of seeds 1–3). Recall 82.4%,
+  citations 90.7%, made-up 6 (clean-hi 5: owners in Devanagari, the 6d-2 carry-over),
+  language 7/7, judge recall 75%. clean-sw support 21.7%, as in its baseline: the judge reads
+  Swahili claims against the English transcript and answers "no" ("the claim is in
+  Swahili…"); recall there is 92%. xling-ja recall 69.2%, citations 77.8%.
+- FLEURS: identical to step 1 (WER 6.6%, CER 7.9%; Transcribe deterministic). AMI: identical
+  to step 2's first run (coverage 44.9%, support 80.2%, 2 uncited), so the 2048 cap shows the
+  same way. AMI peak 17.3 GB (14.1 alone): Vision stays resident from the synthetic items.
+- Judge: 608 questions (197 new, 337 s). The run took ~35 min with the caches; from empty
+  caches, ~1 h (step 0's estimate held: FLEURS 2 min, AMI 18 min, judge 10 min, synthetic
+  with Ask 30 min).
+
+### Carry-overs ranked by the full run (input for the 6e-2 kickoff)
+1. **Reduce's output cap cuts real meetings, silently** (AMI 4 of 5 at exactly 2048 tokens;
+   TS3003c has no Decisions, Action items or Open questions). 4096 measured: coverage
+   44.9 → 52.8%, no cuts, Reduce +16% time; TS3003c used 85% of 4096, so 60 min meetings need
+   either more or a check. Needs: a finish check (warn, or retry larger) + a new default.
+   Hits every real meeting over ~30 min; nothing synthetic reaches it.
+2. **Tasks and considerations filed as decisions** (AMI ES2004b: 15 "decisions" of the form
+   "The project will explore/consider…"; long-en since 6c; quick decision recall 75%).
+3. **Owners**: R7B writes owners in Devanagari/Arabic script (clean-hi recall 53.8%, made-up
+   5: partly the eval's owner match); AMI actions name roles, ours mostly have no owner.
+4. **Numbers in the transcript and notes**: Transcribe errors (FLEURS ar "06:30 و 07:30" →
+   "36 و37", nl "5" → "$5.000"), Map's 万 misreads, numbers in no source on AMI ("34%" for
+   "a quarter"; `unsupported_numbers` to run on AMI too).
+5. **Japanese**: xling-ja recall 69.2% (chunk-start drops, dense-segment Map drops) and no
+   slide-conflict check for Japanese.
+6. Eval gaps (no product change): judge on "Other (beta)" notes (judge the English notes
+   before translation: clean-sw 21.7%); Ask questions for es/ja meetings; FLEURS number words
+   per language; D31's memory row (no threshold exists).
+7. Ask near-miss 58% (7/12, unchanged since 6b) and Ask with slide conflicts; the
+   "Other (beta)" limits.
+
+### Next
+6e-2 (separate session, kickoff written from the ranking above): carry-over fixes, then the
+full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user (2026-10-14):
+`full` gates on its quick items' metrics and stage speeds; memory stays ungated.

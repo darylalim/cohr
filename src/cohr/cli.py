@@ -9,7 +9,7 @@ from cohr import models, pipeline, schemas, storage
 from cohr.asr import LANGUAGES
 from cohr.config import Config, runs_dir
 from cohr.ingest import IngestError, probe
-from cohr.models import ModelManager, ModelsMissing
+from cohr.models import DownloadError, ModelManager, ModelsMissing
 from cohr.pipeline import Cancelled, ProgressEvent, StageFailed
 from cohr.schemas import Manifest
 from cohr.storage import DiskSpaceError, Source
@@ -113,7 +113,7 @@ def cmd_models(args: argparse.Namespace) -> int:
         specs = {n: config.models[n] for n in names}
         try:
             fetched = models.download(specs)
-        except DiskSpaceError as e:
+        except (DiskSpaceError, DownloadError) as e:
             raise SystemExit(f"error: {e}") from e
         print(f"downloaded: {', '.join(fetched)}" if fetched else "all cached", file=sys.stderr)
     for name, spec, size in models.cached_report(config, names):
@@ -143,7 +143,7 @@ def cmd_eval(args: argparse.Namespace) -> int:
             log=lambda msg: print(msg, file=sys.stderr),
             progress=_print_progress,
         )
-    except (FileNotFoundError, KeyError, ValueError) as e:
+    except (FileNotFoundError, KeyError, ValueError, IngestError) as e:
         raise SystemExit(f"error: {e}") from e
     except ModelsMissing as e:
         print(f"error: {e}", file=sys.stderr)

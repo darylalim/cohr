@@ -1152,6 +1152,15 @@ compared with a committed baseline:
     README brought up to date (status, app, `cohr models download`, model cache size and
     `hf cache rm`, not `prune`). The first `full` run is a measurement: no fixes,
     `baseline-full.json` written. Kickoff prompt in §21.
+    Done 2026-10-14 (NOTES.md). Results: `full` = quick + lang (`include`, `gate: [quick]`,
+    D31) + FLEURS (streamed, 205 MB kept) + 5 AMI meetings (browser download: the mirror
+    returned 403 to scripted requests). Gate items meet every v1 target (recall 89.7%,
+    citations 98.4%, 14.7 min/audio h with Vision; AMI 5.5 min/h, peak 17.3 GB). FLEURS WER
+    6.6%, CER 7.9% (ar 16.1, zh 12.5). AMI coverage 44.9% (decisions 34.8, actions 18.2),
+    support 80.2%. Found: Reduce's 2048-token cap cuts 4 of 5 AMI notes silently (4096:
+    52.8%); interrupted model downloads passed as cached (fixed); Ask eval failed on es/ja
+    meetings (now skipped). `sequential` = `resident` byte for byte, peak 5.9 vs 16.8 GB.
+    Carry-overs ranked in NOTES.md (6e-1 "Carry-overs ranked").
   - **6e-2: carry-over fixes + v1.** The carry-overs from 6b-2, 6c, 6d-1 and 6d-2 that the
     `full` run ranks highest, then the `full` release gate and the bump to `1.0.0` (§16, only
     when asked). Kickoff prompt written after 6e-1, from its findings.
@@ -1835,7 +1844,8 @@ committed or redistributed.
   coverage by 4–9 points.
 - Each `abssumm.xml` has `<abstract>`, `<decisions>`, `<actions>` and `<problems>`, each a list of
   `<sentence>` elements. Map them to our sections: `decisions` → Decisions, `actions` → Action
-  items, `problems` → Open questions; `abstract` → Summary (judged for coverage only).
+  items, `problems` → Open questions; `abstract` → Summary **and Key points** (6e-1: our Summary
+  is one claim, AMI abstracts are 5–11 sentences; `evals.AMI_HOME`).
 - Metric: per section, the share of reference sentences the judge says are covered by our notes.
 - Parse with stdlib `xml.etree` (files are ISO-8859-1 encoded). Use the official zip, **not**
   third-party Hub re-uploads of AMI summaries or QMSum mirrors: their licensing and processing are
@@ -1969,7 +1979,7 @@ section.
 | D28 | Speech/slide conflict (§5.5, §18 `slide-conflict-en`) | Prompt: use the slide's value | Map ignores the prompt rule on every seed; a guard that swaps in the slide value would be wrong when a speaker corrects an outdated slide | Phase 6b-2 | **Show both** (user): a slide table row whose one value was never said, while the sentences naming its label hold exactly one number on no slide, gets "(slide: $18,000)" after the spoken value in Map's strings; `slide_conflicts` in MapFile v4. `quick` seed 1: slide_value_used false → true, recall 85.3 → 86.8%; dry run on 36 real segments found only the planted conflict |
 | D29 | Right-to-left notes on the Notes page and in `notes.md` (§5.6, §7) | Plain Markdown, no direction marks | Browser check of `clean-ar` (6d-1, Claude in Chrome) within the no-CSS rule | Phase 6d-1 | **Unicode isolates per line**: Arabic-only lines read right (one RTL run, citation at the end), but a line with Latin names or dates ("(المسؤول: Tom; الموعد: Monday)") was reordered, citation on the far side. `render.isolate` wraps each claim line, the summary paragraph and Ask answers in RLI … PDI for ar/fa/he/ur (`notes.md` format v2): reading order right, citation links still jump to Sources. Bullets and alignment stay on the left (that needs `dir`/CSS, not allowed) |
 | D30 | Where "Other (beta)" translation runs (§5.6) | — | Proposal before coding (6d-1 kickoff) | Phase 6d-1 | **Own `translate` stage** (user): between reduce and render, new `notes_translated.json` (TranslatedNotes v1), NotesDoc unchanged; a translate-prompt change re-runs only translate + render, and the English notes stay for the eval's citations-identical check. Rejected: inside reduce (two models in one stage, a prompt change re-runs R7B). `clean-sw` seeds 1–3: Swahili 3/3, citations identical 3/3, exact recall 92.3% = the English notes' on each seed, 4 claims kept English per run |
-| D31 | What `full` gates on (§18) | — | Proposal before code (6e-1 kickoff) | Phase 6e-1 | **Proposed, user to confirm after the first run**: the `quick` items' metrics at the D16/D24/D25 thresholds and the speed/memory rows gate; FLEURS WER/CER, AMI coverage and the `lang` items are report-only until their run-to-run noise is measured (D16's rule) |
+| D31 | What `full` gates on (§18) | — | Proposal before code (6e-1 kickoff) | Phase 6e-1 | **Decided 2026-10-14 (user, after the first full run)**: the `quick` items' metrics at the D16/D24/D25 thresholds and the speed/memory rows gate; FLEURS WER/CER, AMI coverage and the `lang` items are report-only until their run-to-run noise is measured (D16's rule). Built in 6e-1 step 3: `gate: [quick]` in full.yaml, the report's `gate_summary`/`gate_stages`. The gate never compared memory (quick neither: no threshold exists), so only the speed rows gate |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

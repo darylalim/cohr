@@ -38,8 +38,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from cohr import ask, atomic, judge, pipeline, render, schemas, storage
+from cohr import ami, ask, asr, atomic, fleurs, ingest, judge, pipeline, render, schemas, storage
+from cohr.ami import AmiSpec
 from cohr.config import Config, prompt_hash
+from cohr.fleurs import FleursSpec
 from cohr.fuse import slide_text, tokens
 from cohr.judge import CachedJudge, Generate, Label, Supported
 from cohr.mapper import clock, source_numbers
@@ -101,6 +103,11 @@ GATED_SETS = ("quick", "full")
 JUDGE_CACHE_DIR = DATA_DIR / "judge"  # judge answers per item (gitignored with evals/data)
 CALIBRATION = GEN_DIR / "judge_calibration.json"
 AGREEMENT_MIN = 0.8  # D15: judge metrics may enter the gate only above this (Phase 6)
+# CC BY attribution (§18): the last line of every report with FLEURS or AMI in it.
+EXTERNAL_DATA_FOOTER = (
+    "Evaluation data: AMI Meeting Corpus (University of Edinburgh et al., CC BY 4.0); "
+    "FLEURS (Google, CC BY 4.0). Data was not modified or redistributed."
+)
 
 
 class _Model(BaseModel):
@@ -133,7 +140,11 @@ class ItemSpec(_Model):
 
 class EvalSet(_Model):
     name: str
-    items: list[ItemSpec]
+    include: list[str] = []  # other sets whose items come first (full: quick, lang)
+    gate: list[str] = []  # included sets whose items gate (D31; full: quick); empty = all items
+    items: list[ItemSpec] = []
+    fleurs: FleursSpec | None = None  # Transcribe-only clips (full, 6e-1)
+    ami: AmiSpec | None = None  # real meetings, audio only (full, 6e-1)
 
 
 def load_set(name: str, root: Path = Path()) -> EvalSet:
@@ -143,7 +154,17 @@ def load_set(name: str, root: Path = Path()) -> EvalSet:
     if not path.is_file():
         raise FileNotFoundError(f"no eval set {name!r} ({path})")
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    return EvalSet.model_validate({"name": name, **data})
+    eval_set = EvalSet.model_validate({"name": name, **data})
+    if unknown := set(eval_set.gate) - set(eval_set.include):
+        raise ValueError(f"set {name!r} gates on sets it doesn't include: {sorted(unknown)}")
+    included = {other: load_set(other, root).items for other in eval_set.include}
+    items = [it for its in included.values() for it in its]
+    return eval_set.model_copy(
+        update={
+            "items": [*items, *eval_set.items],
+            "gate": [it.id for other in eval_set.gate for it in included[other]],
+        }
+    )
 
 
 # --- truth.json (written by evals/gen) -----------------------------------------------------
@@ -493,12 +514,6 @@ def gap_text(transcript: Transcript, gaps: Sequence[Span]) -> tuple[int, list[st
     return words, texts
 
 
-def wer(reference: str, hypothesis: str) -> float:
-    import jiwer  # eval dependency group
-
-    return float(jiwer.wer(wer_text(reference), wer_text(hypothesis)))
-
-
 CER_LANGUAGES = ("ja", "ko", "zh")  # no spaces between words: scored by character (§18)
 _GROUPED = re.compile(r"(?<=\d)[.,\u00a0\u202f ](?=\d{3}(?!\d))")
 _UNIT_WORDS = {
@@ -523,11 +538,17 @@ def asr_text(text: str, language: str) -> str:
 
 def asr_error(reference: str, hypothesis: str, language: str) -> tuple[str, float]:
     """("wer", WER) in English (unchanged) and other spaced languages, ("cer", CER) in ja/ko/zh."""
+    return asr_corpus_error([reference], [hypothesis], language)
+
+
+def asr_corpus_error(
+    references: Sequence[str], hypotheses: Sequence[str], language: str
+) -> tuple[str, float]:
+    """asr_error over many utterances: total edits / total reference words (or characters)."""
     import jiwer  # eval dependency group
 
-    if language == "en":
-        return "wer", wer(reference, hypothesis)
-    ref, hyp = asr_text(reference, language), asr_text(hypothesis, language)
+    norm = wer_text if language == "en" else lambda t: asr_text(t, language)
+    ref, hyp = [norm(t) for t in references], [norm(t) for t in hypotheses]
     if language in CER_LANGUAGES:
         return "cer", float(jiwer.cer(ref, hyp))
     return "wer", float(jiwer.wer(ref, hyp))
@@ -865,12 +886,12 @@ def claim_text(claim: Claim, section: str | None = None) -> str:
     return f"{SECTION_LABEL[section]}: {text}" if section else text
 
 
-def judge_item(report: ItemReport, run_dir: Path, judge_: CachedJudge) -> ItemReport:
-    """Add the judge's answers to a scored item: support for every cited claim, coverage for
-    every judge_only fact. Uncited claims aren't judged (they're counted as uncited)."""
+def judge_support(
+    run_dir: Path, sections: Mapping[Section, list[Claim]], judge_: CachedJudge
+) -> list[ClaimSupport]:
+    """The judge's support answer for every cited claim, against the text it cites."""
     segments = {s.seg_id: s for s in schemas.load(run_dir, SegmentsFile).segments}
     slides = {s.slide_id: s for s in schemas.load(run_dir, SlidesFile).slides}
-    sections = claims_by_section(render.shown_notes(run_dir))
     support = []
     for name, claims in sections.items():
         for claim in claims:
@@ -887,6 +908,14 @@ def judge_item(report: ItemReport, run_dir: Path, judge_: CachedJudge) -> ItemRe
                     reason=answer.reason,
                 )
             )
+    return support
+
+
+def judge_item(report: ItemReport, run_dir: Path, judge_: CachedJudge) -> ItemReport:
+    """Add the judge's answers to a scored item: support for every cited claim, coverage for
+    every judge_only fact. Uncited claims aren't judged (they're counted as uncited)."""
+    sections = claims_by_section(render.shown_notes(run_dir))
+    support = judge_support(run_dir, sections, judge_)
     facts = []
     for f in report.facts:
         if f.judge_only:
@@ -958,18 +987,24 @@ def judge_items(
     root: Path,
     models: Any,
     log: Callable[[str], None] = print,
-) -> tuple[list[ItemReport], JudgeCost]:
-    hours = sum(rep.duration_s for rep, _ in items) / 3600
+    meetings: Sequence[tuple["AmiReport", Path]] = (),
+) -> tuple[list[ItemReport], JudgeCost, list["AmiReport"]]:
+    """Judge the synthetic items and the AMI meetings in one session (one judge load)."""
+    hours = sum(rep.duration_s for rep, _ in [*items, *meetings]) / 3600
     t0 = time.perf_counter()
     with judge_session(models, log) as cj:
         out = []
         for rep, run_dir in items:
             cj.open(judge_cache(root, rep.id))
             out.append(judge_item(rep, run_dir, cj))
+        judged = []
+        for meeting, run_dir in meetings:
+            cj.open(judge_cache(root, meeting.id))
+            judged.append(judge_ami(meeting, run_dir, cj))
         peak = models.peak_memory() if models is not None and cj.loaded else None
     secs = time.perf_counter() - t0
     log(f"judge: {cj.calls} calls, {cj.hits} cached, {secs:.1f} s")
-    return out, JudgeCost(
+    cost = JudgeCost(
         loaded=cj.loaded,
         calls=cj.calls,
         cached=cj.hits,
@@ -977,6 +1012,7 @@ def judge_items(
         s_per_audio_hour=round(secs / hours, 1) if hours else None,
         peak_mem_gb=None if peak is None else round(peak / 1e9, 2),
     )
+    return out, cost, judged
 
 
 # --- Ask eval (§18 Ask row, Phase 6a) ------------------------------------------------------
@@ -1071,6 +1107,12 @@ def sample(facts: list[TruthFact], n: int) -> list[TruthFact]:
     if len(facts) <= n:
         return facts
     return [facts[i * len(facts) // n] for i in range(n)]
+
+
+def asks(spec: ItemSpec) -> bool:
+    """Whether the Ask eval has questions for the item: its templates are keyed by the English
+    script's fact labels (NUMBER_LABELS), so meetings in other languages (xling-*) get none."""
+    return spec.language == "en"
 
 
 def ask_questions(truth: Truth) -> list[AskQuestion]:
@@ -1410,6 +1452,278 @@ def ask_cache(root: Path, name: str) -> Path:
 # --- set report, baseline comparison -------------------------------------------------------
 
 
+# --- FLEURS (§18, 6e-1): Transcribe alone on read sentences ----------------------------------
+#
+# Each clip is one sentence, so it goes to Transcribe whole (no VAD, no chunking). Error per
+# language is over the 20 clips together (edits / reference words or characters). The refs
+# are FLEURS's raw transcriptions; English number words are read as digits (wer_text), other
+# languages' aren't (asr_text), so a number Transcribe writes in digits counts as an error
+# there. Report-only (D31): kept out of `summary`'s gated keys and `stages`.
+
+
+class ClipResult(_Model):
+    file: str
+    reference: str
+    hypothesis: str
+    error: float
+
+
+class FleursRow(_Model):
+    language: str
+    metric: Literal["wer", "cer"]
+    error: float
+    clips: int
+    audio_s: float
+    seconds: float  # Transcribe time on these clips (no download)
+    s_per_audio_hour: float | None
+    results: list[ClipResult]
+
+
+def read_clip(path: Path) -> Any:
+    import soundfile as sf
+
+    audio, sr = sf.read(path, dtype="float32")
+    if sr != asr.SR:
+        raise ValueError(f"{path}: {sr} Hz, Transcribe needs {asr.SR}")
+    return audio if audio.ndim == 1 else audio.mean(axis=1)
+
+
+def fleurs_languages(spec: FleursSpec | None, items: Sequence[str]) -> list[str]:
+    """Languages to run: all with no --item filter or `fleurs`; `fleurs-<lang>` picks one."""
+    if spec is None:
+        return []
+    if not items or "fleurs" in items:
+        return list(spec.languages)
+    return [lang for lang in spec.languages if f"fleurs-{lang}" in items]
+
+
+def score_fleurs(language: str, sample: fleurs.Sample, hypotheses: Sequence[str]) -> FleursRow:
+    refs = [c.text for c in sample.items]
+    metric, error = asr_corpus_error(refs, hypotheses, language)
+    results = [
+        ClipResult(
+            file=c.file,
+            reference=c.text,
+            hypothesis=h,
+            error=round(asr_error(c.text, h, language)[1], 4),
+        )
+        for c, h in zip(sample.items, hypotheses, strict=True)
+    ]
+    return FleursRow(
+        language=language,
+        metric="cer" if metric == "cer" else "wer",
+        error=round(error, 4),
+        clips=len(results),
+        audio_s=0.0,
+        seconds=0.0,
+        s_per_audio_hour=None,
+        results=results,
+    )
+
+
+def run_fleurs(
+    spec: FleursSpec,
+    languages: Sequence[str],
+    *,
+    root: Path,
+    models: Any,
+    overrides: Mapping[str, Any],
+    fs: fleurs.FileSystem | None = None,
+    log: Callable[[str], None] = print,
+) -> list[FleursRow]:
+    if models is None:
+        raise RuntimeError("FLEURS needs a ModelManager")
+    rows = []
+    for lang in languages:
+        sample, folder = fleurs.load_sample(spec, lang, root, fs=fs, log=log)
+        audio = [read_clip(folder / c.file) for c in sample.items]
+        models.set_config(apply_overrides(Config(source_language=lang), overrides))
+        t0 = time.perf_counter()
+        with models.use("transcribe") as model:
+            hyps = [model.transcribe(a, lang).strip() for a in audio]
+        secs = time.perf_counter() - t0
+        audio_s = sum(len(a) for a in audio) / asr.SR
+        row = score_fleurs(lang, sample, hyps).model_copy(
+            update={
+                "audio_s": round(audio_s, 1),
+                "seconds": round(secs, 2),
+                "s_per_audio_hour": round(secs / audio_s * 3600, 1) if audio_s else None,
+            }
+        )
+        log(f"fleurs-{lang}: {row.metric} {row.error:.1%}, {secs:.1f} s")
+        rows.append(row)
+    return rows
+
+
+def fleurs_summary(rows: Sequence[FleursRow]) -> dict[str, float | None]:
+    """Mean WER over the spaced languages, mean CER over ja/ko/zh, and Transcribe's speed."""
+
+    def mean(metric: str) -> float | None:
+        vals = [r.error for r in rows if r.metric == metric]
+        return round(sum(vals) / len(vals), 4) if vals else None
+
+    audio_s = sum(r.audio_s for r in rows)
+    secs = sum(r.seconds for r in rows)
+    return {
+        "fleurs_wer": mean("wer"),
+        "fleurs_cer": mean("cer"),
+        "fleurs_s_per_audio_hour": round(secs / audio_s * 3600, 1) if audio_s else None,
+    }
+
+
+# --- AMI (§18, 6e-1): real meetings, audio only, English notes ------------------------------
+#
+# No planted facts: the judge asks, for each reference sentence of the meeting's official
+# summary, whether a claim in its sections states it (AMI_HOME: abstract → Summary + Key
+# points, decisions → Decisions, actions → Action items, problems → Open questions), and
+# whether each cited claim is supported by what it cites. Seconds per audio hour per stage on
+# these meetings is the definition of done's speed check (§9). Report-only (D31): AMI rows
+# stay out of `items`, so their uncited claims don't reach the gated totals.
+
+
+# AMI summary parts → the sections their sentences are looked for in (§18). The abstract is a
+# 3–13 sentence account of the meeting; our Summary is one claim and the Key points carry the
+# rest, so both are searched (6e-1).
+AMI_HOME: dict[str, tuple[Section, ...]] = {
+    "abstract": ("summary", "key_points"),
+    "decisions": ("decisions",),
+    "actions": ("action_items",),
+    "problems": ("open_questions",),
+}
+
+
+class SentenceResult(_Model):
+    part: str  # abstract, decisions, actions, problems
+    text: str
+    covered: bool | None = None  # None: not judged
+
+
+class AmiReport(_Model):
+    id: str
+    run_id: str
+    duration_s: float
+    metrics: dict[str, float | int | None]
+    sentences: list[SentenceResult]
+    uncited: list[str]
+    support: list[ClaimSupport] = []
+    stages: dict[str, StageCost]
+
+
+def ami_meetings(spec: AmiSpec | None, items: Sequence[str]) -> list[str]:
+    """Meetings to run: all with no --item filter or `ami`; `ami-<id>` picks one."""
+    if spec is None:
+        return []
+    if not items or "ami" in items:
+        return list(spec.meetings)
+    return [m for m in spec.meetings if f"ami-{m}" in items]
+
+
+def score_ami(
+    meeting: str, refs: Mapping[str, list[str]], run_dir: Path, duration_s: float, since: datetime
+) -> AmiReport:
+    """The judge-free part: claims, uncited claims, stage costs; sentences not yet judged."""
+    doc = render.shown_notes(run_dir)
+    claims = [c for name in SECTIONS for c in getattr(doc.sections, name)]
+    uncited = [c.text for c in claims if not c.citations]
+    return AmiReport(
+        id=f"ami-{meeting}",
+        run_id=run_dir.name,
+        duration_s=duration_s,
+        metrics={
+            "claims": len(claims),
+            "uncited_claims": len(uncited),
+            **{f"claims_{name}": len(getattr(doc.sections, name)) for name in SECTIONS},
+            "output_language_ok": int(notes_language(doc, {"en"}) == "en"),
+        },
+        sentences=[SentenceResult(part=part, text=t) for part, ts in refs.items() for t in ts],
+        uncited=uncited,
+        stages=stage_costs(schemas.load(run_dir, Manifest), duration_s, since),
+    )
+
+
+def ami_coverage(sentences: Sequence[SentenceResult], part: str | None = None) -> float | None:
+    """Share of reference sentences the judge found (unjudged ones count as not found)."""
+    of_part = [s for s in sentences if part is None or s.part == part]
+    if all(s.covered is None for s in of_part):  # none, or not judged
+        return None
+    return round(sum(bool(s.covered) for s in of_part) / len(of_part), 4)
+
+
+def judge_ami(report: AmiReport, run_dir: Path, judge_: CachedJudge) -> AmiReport:
+    sections = claims_by_section(render.shown_notes(run_dir))
+    support = judge_support(run_dir, sections, judge_)
+    sentences = []
+    for s in report.sentences:
+        claims = [claim_text(c) for name in AMI_HOME[s.part] for c in sections[name]]
+        sentences.append(s.model_copy(update={"covered": judge_.coverage(s.text, claims).covered}))
+    yes = sum(c.supported == "yes" for c in support)
+    metrics = {
+        **report.metrics,
+        "coverage": ami_coverage(sentences),
+        **{f"coverage_{part}": ami_coverage(sentences, part) for part in ami.PARTS},
+        "cited_claims": len(support),
+        "support_rate": round(yes / len(support), 4) if support else None,
+        "support_partial": sum(c.supported == "partial" for c in support),
+        "support_no": sum(c.supported == "no" for c in support),
+        "support_unjudged": sum(c.supported == "unjudged" for c in support),
+    }
+    return report.model_copy(
+        update={"sentences": sentences, "support": support, "metrics": metrics}
+    )
+
+
+def run_ami(
+    spec: AmiSpec,
+    meetings: Sequence[str],
+    *,
+    root: Path,
+    models: Any,
+    overrides: Mapping[str, Any],
+    fresh: bool = False,
+    log: Callable[[str], None] = print,
+    progress: pipeline.ProgressFn | None = None,
+) -> list[tuple[AmiReport, Path]]:
+    import soundfile as sf
+
+    out = []
+    for meeting in meetings:
+        wav, refs = ami.ensure(meeting, root, log)
+        duration = float(sf.info(wav).duration)
+        config = apply_overrides(Config(source_language="en", target_language="en"), overrides)
+        name = f"ami-{meeting}"
+        if fresh:
+            shutil.rmtree(root / DATA_DIR / "runs" / name, ignore_errors=True)
+        run_dir = reuse_run(name, [storage.Source(wav, "audio")], root, config, duration)
+        since = datetime.now(UTC)
+        log(f"{name}: running {run_dir.name} ({duration / 60:.1f} min of audio)")
+        t0 = time.perf_counter()
+        pipeline.run(run_dir, config=config, models=models, progress=progress)
+        secs = time.perf_counter() - t0
+        log(f"{name}: pipeline {secs:.1f} s ({secs / duration * 3600 / 60:.1f} min per audio hour)")
+        out.append((score_ami(meeting, refs, run_dir, duration, since), run_dir))
+    return out
+
+
+def ami_summary(reports: Sequence[AmiReport]) -> dict[str, float | int | None]:
+    """Coverage over all meetings' sentences (per part and in all), support rate over all
+    cited claims, and the pipeline's seconds per audio hour (the §9 speed check)."""
+    sentences = [s for r in reports for s in r.sentences]
+    support = [c for r in reports for c in r.support]
+    stages = stage_summary(reports)
+    return {
+        "ami_meetings": len(reports),
+        "ami_audio_s": round(sum(r.duration_s for r in reports), 1),
+        "ami_coverage": ami_coverage(sentences),
+        **{f"ami_coverage_{part}": ami_coverage(sentences, part) for part in ami.PARTS},
+        "ami_support_rate": (
+            round(sum(c.supported == "yes" for c in support) / len(support), 4) if support else None
+        ),
+        "ami_uncited_claims": sum(int(r.metrics.get("uncited_claims") or 0) for r in reports),
+        "ami_s_per_audio_hour": stages["total"]["s_per_audio_hour"],
+        "ami_peak_mem_gb": stages["total"]["peak_mem_gb"],
+    }
+
+
 class Report(_Model):
     created_at: datetime
     set: str
@@ -1423,6 +1737,14 @@ class Report(_Model):
     citation_errors: list[float] = Field(default_factory=list)  # every t_error, for D19
     judge: JudgeCost | None = None  # eval-only cost, kept out of `stages` and the gate
     ask: JudgeCost | None = None  # Ask eval cost (same shape; R7B already resident)
+    # D31: the metrics and stages the gate compares, over the gated items only (full: the
+    # quick items); None = the whole summary and stages (quick, and reports before 6e-1)
+    gate_items: list[str] | None = None
+    gate_summary: dict[str, float | int | None] | None = None
+    gate_stages: dict[str, dict[str, float | None]] | None = None
+    fleurs: list[FleursRow] = []  # full only: per language, report-only (D31)
+    ami: list[AmiReport] = []  # full only: per meeting, report-only (D31)
+    ami_stages: dict[str, dict[str, float | None]] = {}  # stage → s/h, peak GB on AMI
     baseline: str | None = None
     regressions: list[str] = []
 
@@ -1496,7 +1818,9 @@ def summarize(items: Sequence[ItemReport]) -> dict[str, float | int | None]:
     }
 
 
-def stage_summary(items: Sequence[ItemReport]) -> dict[str, dict[str, float | None]]:
+def stage_summary(
+    items: Sequence[ItemReport] | Sequence["AmiReport"],
+) -> dict[str, dict[str, float | None]]:
     """Seconds per audio hour per stage over all items, and the highest peak memory."""
     hours = sum(it.duration_s for it in items) / 3600
     names = dict.fromkeys(n for it in items for n in it.stages)
@@ -1517,9 +1841,18 @@ def stage_summary(items: Sequence[ItemReport]) -> dict[str, dict[str, float | No
     return out
 
 
+def gated_summary(report: Report) -> dict[str, float | int | None]:
+    return report.summary if report.gate_summary is None else report.gate_summary
+
+
+def gated_stages(report: Report) -> dict[str, dict[str, float | None]]:
+    return report.stages if report.gate_stages is None else report.gate_stages
+
+
 def compare(report: Report, baseline: Report) -> list[str]:
-    """Release-gate regressions (§18): empty means the report passes."""
-    s, b = report.summary, baseline.summary
+    """Release-gate regressions (§18): empty means the report passes. A set with a `gate`
+    list (full, D31) compares only its gated items' summary and stages."""
+    s, b = gated_summary(report), gated_summary(baseline)
     out = []
 
     def drop(key: str, limit: float) -> None:
@@ -1536,9 +1869,10 @@ def compare(report: Report, baseline: Report) -> list[str]:
         drop(key, limit)
     for key, limit in MAX_RISE.items():
         rise(key, limit)
-    for stage, cost in report.stages.items():
+    base_stages = gated_stages(baseline)
+    for stage, cost in gated_stages(report).items():
         new = cost.get("s_per_audio_hour")
-        old = baseline.stages.get(stage, {}).get("s_per_audio_hour")
+        old = base_stages.get(stage, {}).get("s_per_audio_hour")
         if new and old and new > old * (1 + MAX_STAGE_SLOWDOWN):
             out.append(f"stage {stage} {new / old - 1:.0%} slower ({old} → {new} s/audio h)")
     return out
@@ -1576,6 +1910,14 @@ PCT_KEYS = {
     "vad_speech_f1",
     "wer",
     "cer",
+    "fleurs_wer",
+    "fleurs_cer",
+    "ami_coverage",
+    "ami_coverage_abstract",
+    "ami_coverage_decisions",
+    "ami_coverage_actions",
+    "ami_coverage_problems",
+    "ami_support_rate",
     "slides_found",
     "slide_title_exact",
     "slide_cell_accuracy",
@@ -1617,6 +1959,9 @@ def render_markdown(report: Report) -> str:
     ]
     if report.overrides:
         lines += [f"Overrides: `{json.dumps(report.overrides)}`", ""]
+    if report.gate_items is not None:
+        gate = ", ".join(report.gate_items) or "none run"
+        lines += [f"Gate (D31): {gate}; everything else is report-only.", ""]
     if report.baseline:
         verdict = "**FAIL**" if report.regressions else "pass"
         lines += [f"Baseline `{report.baseline}`: {verdict}", ""]
@@ -1657,6 +2002,50 @@ def render_markdown(report: Report) -> str:
         lines += ["", f"Judge: {j.calls} calls, {j.cached} cached, {j.seconds:g} s."]
     if a := report.ask:
         lines += ["", f"Ask: {a.calls} calls, {a.cached} cached, {a.seconds:g} s."]
+
+    if report.fleurs:
+        lines += [
+            "",
+            "## FLEURS (Transcribe only, report-only)",
+            "",
+            "| Language | Metric | Error | Clips | Audio s | s/h |",
+            "|---|---|---|---|---|---|",
+        ]
+        lines += [
+            f"| {r.language} | {r.metric} | {_pct(r.error)} | {r.clips} | {_num(r.audio_s)} "
+            f"| {_num(r.s_per_audio_hour)} |"
+            for r in report.fleurs
+        ]
+        lines += ["", "Worst clip per language:", ""]
+        for r in report.fleurs:
+            if worst := max(r.results, key=lambda c: c.error, default=None):
+                lines.append(
+                    f"- {r.language} {_pct(worst.error)}: {worst.reference} → "
+                    f"{worst.hypothesis or '(empty)'}"
+                )
+
+    if report.ami:
+        parts = list(ami.PARTS)
+        lines += [
+            "",
+            "## AMI (real meetings, report-only)",
+            "",
+            "| Meeting | min | coverage | " + " | ".join(parts) + " | support | uncited | s/h |",
+            "|---" * (len(parts) + 6) + "|",
+        ]
+        for m in report.ami:
+            cov = [_pct(m.metrics.get(f"coverage_{p}")) for p in parts]
+            total = sum(c.seconds or 0.0 for c in m.stages.values())
+            lines.append(
+                f"| {m.id} | {m.duration_s / 60:.1f} | {_pct(m.metrics.get('coverage'))} | "
+                + " | ".join(cov)
+                + f" | {_pct(m.metrics.get('support_rate'))} | "
+                f"{_num(m.metrics.get('uncited_claims'))} | {total / m.duration_s * 3600:.0f} |"
+            )
+        lines += ["", "AMI cost (s per audio hour, peak GB):", "", "| Stage | s/h | GB |"]
+        lines.append("|---|---|---|")
+        for name, c in report.ami_stages.items():
+            lines.append(f"| {name} | {_num(c['s_per_audio_hour'])} | {_num(c['peak_mem_gb'])} |")
 
     errs = report.citation_errors
     if errs:
@@ -1710,6 +2099,20 @@ def render_markdown(report: Report) -> str:
             + (f" [{', '.join(r.citations)}]" if r.citations else "")
             for r in asked_wrong
         ]
+    for m in report.ami:
+        missed = [s for s in m.sentences if s.covered is False and s.part != "abstract"]
+        weak = [c for c in m.support if c.supported != "yes"]
+        if not (missed or weak or m.uncited):
+            continue
+        lines += ["", f"## {m.id} ({m.run_id})", ""]
+        lines += [f"- missed {s.part}: {s.text}" for s in missed]
+        lines += [f"- uncited: {t}" for t in m.uncited]
+        lines += [
+            f"- support {c.supported} ({', '.join(c.citations)}): {c.claim} · {c.reason}"
+            for c in weak
+        ]
+    if report.fleurs or report.ami:
+        lines += ["", "---", "", EXTERNAL_DATA_FOOTER]
     return "\n".join(lines) + "\n"
 
 
@@ -1785,20 +2188,24 @@ def ensure_item(spec: ItemSpec, root: Path, log: Callable[[str], None]) -> tuple
 def prepare_run(truth: Truth, item_dir: Path, root: Path, config: Config) -> Path:
     """Reuse the item's run when its inputs are the files just generated (the pipeline's skip
     logic then re-runs only what a config or prompt change affects); otherwise start fresh."""
-    runs = root / DATA_DIR / "runs" / truth.item.id
-    media = item_dir / truth.media
-    sources = [storage.Source(media, truth.item.media)]
+    sources = [storage.Source(item_dir / truth.media, truth.item.media)]
     if truth.deck:
         sources.append(storage.Source(item_dir / truth.deck, "slides"))
+    return reuse_run(truth.item.id, sources, root, config, truth.duration_s)
+
+
+def reuse_run(
+    name: str, sources: list[storage.Source], root: Path, config: Config, duration_s: float
+) -> Path:
+    """The item's run in evals/data/runs/<name>/ if its inputs are these files, else a new one."""
+    runs = root / DATA_DIR / "runs" / name
     want = sorted(storage.sha256_file(s.path) for s in sources)
     for run_dir in storage.list_runs(runs):
         manifest = schemas.load(run_dir, Manifest)
         if sorted(i.sha256 for i in manifest.inputs) == want:
             return run_dir
         storage.delete_run(run_dir, runs)
-    return storage.create_run(
-        runs, sources, config, name=truth.item.id, duration_s=truth.duration_s
-    )
+    return storage.create_run(runs, sources, config, name=name, duration_s=duration_s)
 
 
 def run_set(
@@ -1820,8 +2227,12 @@ def run_set(
     (shared, so resident models stay loaded across items)."""
     eval_set = load_set(name, root)
     specs = [s for s in eval_set.items if not items or s.id in items]
-    if not specs:
+    fleurs_langs = fleurs_languages(eval_set.fleurs, items)
+    meetings = ami_meetings(eval_set.ami, items)
+    if not specs and not fleurs_langs and not meetings:
         raise ValueError(f"no items {list(items)} in set {name!r}")
+    if specs or meetings:  # the generator and ingest need it; FLEURS doesn't
+        ingest.require()
     overrides = dict(overrides or {})
     reports: list[ItemReport] = []
     run_dirs: list[Path] = []
@@ -1844,7 +2255,9 @@ def run_set(
         pipeline.run(run_dir, config=config, models=models, progress=progress)
         log(f"{spec.id}: pipeline {time.perf_counter() - t0:.1f} s")
         report = score_item(truth, run_dir, since)
-        if ask_:
+        if ask_ and not asks(spec):
+            log(f"{spec.id}: ask skipped ({spec.language} meeting: questions are English-only)")
+        elif ask_:
             t0 = time.perf_counter()
             asker.open(ask_cache(root, spec.id))
             try:
@@ -1856,13 +2269,38 @@ def run_set(
         reports.append(report)
         run_dirs.append(run_dir)
 
+    fleurs_rows = []
+    if eval_set.fleurs and fleurs_langs:
+        fleurs_rows = run_fleurs(
+            eval_set.fleurs, fleurs_langs, root=root, models=models, overrides=overrides, log=log
+        )
+
+    ami_runs = []
+    if eval_set.ami and meetings:
+        ami_runs = run_ami(
+            eval_set.ami,
+            meetings,
+            root=root,
+            models=models,
+            overrides=overrides,
+            fresh=fresh,
+            log=log,
+            progress=progress,
+        )
+    ami_reports = [r for r, _ in ami_runs]
+
     judge_cost = None
     if judge_:
-        reports, judge_cost = judge_items(
-            list(zip(reports, run_dirs, strict=True)), root=root, models=models, log=log
+        reports, judge_cost, ami_reports = judge_items(
+            list(zip(reports, run_dirs, strict=True)),
+            root=root,
+            models=models,
+            log=log,
+            meetings=ami_runs,
         )
     errors = [f.t_error for it in reports for f in it.facts if f.t_error is not None]
     hours = sum(r.duration_s for r in reports) / 3600
+    gated = [r for r in reports if r.id in eval_set.gate]
     ask_cost = (
         JudgeCost(
             loaded=asker.calls > 0,
@@ -1885,11 +2323,19 @@ def run_set(
         | ({p: prompt_hash(p)[:12] for p in judge.PROMPTS} if judge_ else {})
         | ({p: prompt_hash(p)[:12] for p in ASK_PROMPTS} if ask_ else {}),
         items=reports,
-        summary=summarize(reports),
+        summary=summarize(reports)
+        | (fleurs_summary(fleurs_rows) if fleurs_rows else {})
+        | (ami_summary(ami_reports) if ami_reports else {}),
         stages=stage_summary(reports),
         citation_errors=sorted(errors),
         judge=judge_cost,
         ask=ask_cost,
+        fleurs=fleurs_rows,
+        ami=ami_reports,
+        ami_stages=stage_summary(ami_reports) if ami_reports else {},
+        gate_items=[r.id for r in gated] if eval_set.gate else None,
+        gate_summary=summarize(gated) if eval_set.gate else None,
+        gate_stages=stage_summary(gated) if eval_set.gate else None,
     )
 
 

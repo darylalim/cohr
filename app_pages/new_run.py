@@ -14,7 +14,7 @@ from cohr.config import (
     language_name,
     runs_dir,
 )
-from cohr.ingest import IngestError, probe
+from cohr.ingest import IngestError, ToolMissing, missing_tools, probe
 from cohr.jobs import JobBusy
 from cohr.models import PIPELINE_MODELS, ModelsMissing
 from cohr.storage import DiskSpaceError, Source
@@ -91,7 +91,7 @@ def _submit() -> None:
     try:
         run_dir = _create_run()
         ui.get_runner().start(run_dir)
-    except (FormError, ModelsMissing, DiskSpaceError, JobBusy) as e:
+    except (FormError, ModelsMissing, DiskSpaceError, JobBusy, ToolMissing) as e:
         st.session_state[ERROR_KEY] = str(e)
         return
     except IngestError as e:
@@ -108,9 +108,15 @@ if error := st.session_state.get(ERROR_KEY):
     st.error(error, icon=":material/error:")
 if missing := ui.missing_models():
     st.warning(
-        f"Models not downloaded: {', '.join(missing)}. Run `uv run cohr models download` "
-        "in a terminal, then reload this page.",
+        f"Models not downloaded or incomplete: {', '.join(missing)}. Run "
+        "`uv run cohr models download` in a terminal, then reload this page.",
         icon=":material/download:",
+    )
+if tools := missing_tools():
+    st.warning(
+        f"{' and '.join(tools)} not found. Install them with `brew install ffmpeg` in a "
+        "terminal, then reload this page.",
+        icon=":material/build:",
     )
 
 with st.form("new_run", border=False):
@@ -163,8 +169,8 @@ with st.form("new_run", border=False):
             default="resident",
             key="nr_policy",
             required=True,
-            help="Resident keeps the models loaded (~20 GB, fast re-runs). Sequential unloads "
-            "each one after its stage (~8 GB peak).",
+            help="Resident keeps the models loaded (~17 GB peak, fast re-runs). Sequential "
+            "unloads each one after its stage (~6 GB peak, same notes).",
         )
         st.segmented_control(
             "Local files",
