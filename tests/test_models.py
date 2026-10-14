@@ -161,6 +161,32 @@ def test_download_fetches_only_missing(tmp_path: Path, monkeypatch: pytest.Monke
     assert fetched == [specs["vision"].repo, specs["map"].repo]
 
 
+def test_download_converts_a_quantized_spec(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # D18: a regional model with no 8-bit MLX repo is converted once, at download time.
+    monkeypatch.setattr("shutil.disk_usage", lambda _p: Usage(100 * GB, 10 * GB, 90 * GB))
+    spec = ModelSpec(repo="mlx-community/tiny-aya-fire", revision="abc", quantize_bits=8)
+    cache = tmp_path / "c"
+    with pytest.raises(FileNotFoundError, match="not converted"):
+        models.local_path(spec, cache)
+
+    def convert(s: ModelSpec, c: Path | None) -> None:
+        out = models.converted_path(s, c)
+        out.mkdir(parents=True)
+        (out / "config.json").write_text("{}")
+
+    names = models.download(
+        {"map": spec}, cache=cache, size_of=lambda _s: GB, fetch=lambda s, c: None, convert=convert
+    )
+    assert names == ["map"]
+    assert models.local_path(spec, cache) == cache / "cohr-converted" / (
+        "mlx-community--tiny-aya-fire@abc-q8"
+    )
+    # converted already: nothing to fetch
+    assert models.download({"map": spec}, cache=cache, size_of=lambda _s: GB) == []
+
+
 def test_set_config_keeps_models_when_only_language_changes(tmp_path: Path) -> None:
     m, counting, _ = manager(tmp_path)
     with m.use("vision"):

@@ -50,3 +50,26 @@ def test_storage_paths_from_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     assert config.hf_home() is None
     monkeypatch.setenv("COHR_HF_HOME", "~/models")
     assert config.hf_home() == Path.home() / "models"
+
+
+def test_regional_map_model_replaces_map_for_its_target_only() -> None:
+    # D18: map_model_by_lang swaps models["map"] for a matching target; Map's and translate's
+    # "models.map" hash key moves for that language only, and adding the field moved nothing.
+    from cohr import pipeline
+    from cohr.config import ModelSpec
+
+    fire = ModelSpec(repo="mlx-community/tiny-aya-fire", revision="abc", quantize_bits=8)
+    by_lang = {"hi": fire}
+    assert Config(target_language="hi", map_model_by_lang=by_lang).models["map"] == fire
+    de = Config(target_language="de", map_model_by_lang=by_lang)
+    assert de.models["map"] == Config().models["map"]
+    stage = next(s for s in pipeline.default_stages() if s.name == "map")
+    plain = Config(target_language="de")
+    assert pipeline.config_hash(stage, de) == pipeline.config_hash(stage, plain)
+    hi = Config(target_language="hi", map_model_by_lang=by_lang)
+    assert pipeline.config_hash(stage, hi) != pipeline.config_hash(
+        stage, Config(target_language="hi")
+    )
+    # unset quantize_bits isn't dumped (existing hashes); a set one is, and round-trips
+    assert "quantize_bits" not in Config().models["map"].model_dump()
+    assert Config.model_validate(hi.model_dump(mode="json")) == hi

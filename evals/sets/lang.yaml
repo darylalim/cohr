@@ -27,6 +27,20 @@ items:
     slides: video
     gaps: [silence]
 
+  - id: clean-hi  # clean-en, Hindi notes (R7B): D18's Fire comparison (6d-2)
+    seed: 1
+    target: hi
+    media: video
+    slides: video
+    gaps: [silence]
+
+  - id: clean-bn  # clean-en, "Other (beta)" Bengali (Tiny Aya translates): D18's Fire comparison
+    seed: 1
+    target: bn
+    media: video
+    slides: video
+    gaps: [silence]
+
   - id: xling-es  # clean-en's plan spoken in Spanish (es_ES + es_MX voices), English notes
     seed: 1
     language: es

@@ -728,12 +728,15 @@ def test_quick_scripts_are_unchanged_by_the_long_generator() -> None:
 def test_lang_items_reuse_the_quick_scripts() -> None:
     # 6d-1: only the notes language changes, so lang and quick results compare item to item.
     twins = {"conflict-de": "slide-conflict-en", "clean-ar": "clean-en", "clean-sw": "clean-en"}
+    twins |= {"clean-hi": "clean-en", "clean-bn": "clean-en"}  # 6d-2, D18
     lang = evals.load_set("lang", ROOT)
     targets = {i.id: (i.language, i.target) for i in lang.items}
     assert targets == {
         "conflict-de": ("en", "de"),
         "clean-ar": ("en", "ar"),
         "clean-sw": ("en", "sw"),
+        "clean-hi": ("en", "hi"),
+        "clean-bn": ("en", "bn"),
         "xling-es": ("es", "en"),
         "xling-ja": ("ja", "en"),
     }
