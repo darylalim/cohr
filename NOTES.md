@@ -1772,3 +1772,38 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
 - Step 1 targets, in pure Python: read source numbers the way the source language writes
   them (ja 万/kanji numerals, es "mil" and "11.800" as 11800), in the guard and the eval; the
   eval's owner match ignoring accents.
+
+### 1. Numbers read in the meeting's language (kept)
+- `numbers.source_numbers_in(text, language)`: es reads a separator followed by exactly three
+  digits as grouping ("11.800", "42,500", both voices' styles), one or two digits as a decimal
+  ("3,5"), and "N mil/millones"; ja reads 万/億 and kanji numerals ("35万4000", "4万2500",
+  "四万二千五百", "1万1800"). English (or None) is `numbers_in`, unchanged; other languages add
+  their native digit readings (de "42.500" = 42500 too). Spanish number words are not read:
+  Transcribe wrote none (step 0). Used by the guard's sources, the slide-conflict check (and
+  its note's slide value) and the eval's `unsupported_numbers`; all pass the source language.
+- **Keep rule narrowed** (D20): the guard keeps a number only by the notes language's
+  readings (`native_readings`, as 6b-2 already did for repairs). English "$34,000" was kept
+  as 34.0 because "34%" was said. A language not in DECIMAL_MARK (es, ar) keeps either reading.
+  Risk, written into a test: with a lone small source number a factor of 1000 away, D20's
+  factor rule now repairs instead of keeping ("$34,000" with only "34%" → "$34"); not seen on
+  quick or lang (quick repairs 10 = baseline, all to the transcript's value).
+- Eval: owner match folds case and accents (`evals.fold`: "María" = Maria, "OMAR" = Omar).
+- Found on the first run: the slide-conflict check read the Spanish slide "4.650" as 4.65 and
+  added "4,650 (slide: 4.65)" to the notes. It now reads the meeting's language; test with a
+  real Spanish conflict too. Japanese conflicts can't be found (label words need spaces):
+  a limit, no false notes.
+- Results, seed 1 `--fresh`, `--no-ask`, judge on (reports 20261013-141759-lang,
+  20261013-142909-lang for xling-es after the conflict fix):
+
+| item | recall | numbers | citation | made-up | repairs / flagged | unsupported |
+|---|---|---|---|---|---|---|
+| xling-es | 69.2 → **92.3%** | 6/8 → 8/8 | 100% | 1 → 0 | 0/2 → 4/0 (11.80 → 11800, 7.70 → 7700, 465 → 4650, 260 → 2600) | 6 → 0 |
+| xling-ja | 76.9% (=) | 5/8 | 70% | 0 | 2/0 → 3/1 (13,000 → 134,000; 34,000 flagged) | 2 → 1 |
+| conflict-de, clean-ar, clean-sw | 76.9 / 84.6 / 92.3% (= baseline) | | 100% | 0 | | |
+
+  xling-ja's remaining number misses aren't number reading: 42,500 is dropped by Transcribe
+  at a chunk start, 11,800 dropped by Map, 354,000 written "$34,000" by Map (now flagged, not
+  passed). xling-es's last miss is Victor's task filed as a decision (6b-2 carry-over).
+- `quick` seed 1 `--fresh` with Ask + judge (20261013-142754): **gate pass**, recall 86.8%,
+  citation 100%, made-up 0, Ask 96.2%, support 92.7%, repairs 10 / unverified 2 (all =
+  baseline). No Map prompt change, so one seed (CLAUDE.md's seeds 1–3 rule is for prompts).
