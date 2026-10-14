@@ -2226,3 +2226,11 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
    left out in Phase 1 ("Not in Phase 1 (by plan)") and never added, so main's CI ran only
    `check` and the repo had no tags. Added on `ci-release-job` (user's choice over a hand
    release); its merge to main tags v1.0.0 and attaches the wheel and sdist.
+
+## 2026-10-14 · Phase 7 kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 7": cross-meeting search from §13. Step 0 checks the
+  planning sketch against today's code: what's indexed (shown notes, citations), the
+  tokenizer for zh/ja/ko (reuse Ask's D17 trigram windows), who syncs the index, how a hit
+  opens Notes at its moment, and an optional model-free search check on the eval runs. Then
+  index.py, sync + `cohr index rebuild`, the Search page. No models, no eval runs; the 6e-2
+  post-v1 list stays open. The 1.1.0 bump is asked separately.
