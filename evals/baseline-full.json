@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-14T08:57:03.843556-10:00",
+  "created_at": "2026-10-14T11:37:30.259097-10:00",
   "set": "full",
-  "git_sha": "7d63600",
+  "git_sha": "f969efe-dirty",
   "overrides": {},
   "models": {
     "vad": "mlx-community/silero-vad-v6@2ebf4a5",
@@ -34,7 +34,7 @@
         "facts_found": 16,
         "fact_recall": 0.9412,
         "citation_accuracy": 0.9375,
-        "claims": 23,
+        "claims": 19,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": 0,
@@ -73,7 +73,7 @@
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
         "ask_near_miss": 0.6667,
-        "cited_claims": 23,
+        "cited_claims": 19,
         "support_rate": 1.0,
         "support_partial": 0,
         "support_no": 0,
@@ -421,42 +421,6 @@
           ],
           "supported": "yes",
           "reason": "The dashboard for trial signups was updated on Monday is directly stated in the transcript."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: Laura to send contract to legal by Friday.",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "The meeting agreed that Laura should send the contract to legal by Friday."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: Omar to draft hiring plan by end of next week.",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "Omar is assigned to draft the hiring plan by the end of next week."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: Victor to write release notes by end of next week.",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "Victor is assigned to write the release notes by the end of next week."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: Maria to prepare customer survey by end of next week.",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "The transcript states Maria will prepare the customer survey by the end of next week."
         },
         {
           "section": "decisions",
@@ -878,22 +842,22 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 34.3,
-          "s_per_audio_hour": 345.0,
+          "seconds": 35.04,
+          "s_per_audio_hour": 352.5,
           "peak_mem_gb": 5.92,
-          "reused": true
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -907,7 +871,7 @@
         "facts_found": 15,
         "fact_recall": 0.8824,
         "citation_accuracy": 1.0,
-        "claims": 21,
+        "claims": 18,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": 0,
@@ -946,8 +910,8 @@
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
         "ask_near_miss": 1.0,
-        "cited_claims": 21,
-        "support_rate": 0.9048,
+        "cited_claims": 18,
+        "support_rate": 0.8889,
         "support_partial": 1,
         "support_no": 1,
         "support_unjudged": 0,
@@ -1322,33 +1286,6 @@
           ],
           "supported": "yes",
           "reason": "The meeting agreed to hire a contract designer for the redesign."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: Fix the login timeout bug by Monday.",
-          "citations": [
-            "seg 1"
-          ],
-          "supported": "yes",
-          "reason": "The login timeout bug will be fixed by Kenji by Monday."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: Write release notes by Monday.",
-          "citations": [
-            "seg 1"
-          ],
-          "supported": "yes",
-          "reason": "Grace was assigned to write the release notes by Monday."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: Prepare the customer survey by Monday.",
-          "citations": [
-            "seg 1"
-          ],
-          "supported": "yes",
-          "reason": "Omar will prepare the customer survey by Monday."
         },
         {
           "section": "action_items",
@@ -1736,22 +1673,22 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 24.45,
-          "s_per_audio_hour": 244.0,
-          "peak_mem_gb": 12.62,
-          "reused": true
+          "seconds": 23.35,
+          "s_per_audio_hour": 233.1,
+          "peak_mem_gb": 5.92,
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -2588,22 +2525,22 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 29.03,
-          "s_per_audio_hour": 292.5,
-          "peak_mem_gb": 12.62,
-          "reused": true
+          "seconds": 28.95,
+          "s_per_audio_hour": 291.7,
+          "peak_mem_gb": 5.92,
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -3459,22 +3396,22 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 22.88,
-          "s_per_audio_hour": 235.2,
-          "peak_mem_gb": 12.62,
-          "reused": true
+          "seconds": 22.81,
+          "s_per_audio_hour": 234.5,
+          "peak_mem_gb": 5.92,
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -4315,40 +4252,40 @@
           "reused": true
         },
         "vision": {
-          "seconds": 31.78,
-          "s_per_audio_hour": 326.8,
-          "peak_mem_gb": 12.53,
-          "reused": true
+          "seconds": 33.98,
+          "s_per_audio_hour": 349.4,
+          "peak_mem_gb": 8.97,
+          "reused": false
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "map": {
-          "seconds": 13.98,
-          "s_per_audio_hour": 143.7,
+          "seconds": 16.25,
+          "s_per_audio_hour": 167.1,
           "peak_mem_gb": 12.06,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 23.88,
-          "s_per_audio_hour": 245.5,
+          "seconds": 23.85,
+          "s_per_audio_hour": 245.2,
           "peak_mem_gb": 12.62,
-          "reused": true
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -5178,40 +5115,40 @@
           "reused": true
         },
         "vision": {
-          "seconds": 31.73,
-          "s_per_audio_hour": 319.2,
+          "seconds": 31.71,
+          "s_per_audio_hour": 319.0,
           "peak_mem_gb": 12.53,
-          "reused": true
+          "reused": false
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "map": {
-          "seconds": 13.21,
-          "s_per_audio_hour": 132.9,
+          "seconds": 13.18,
+          "s_per_audio_hour": 132.6,
           "peak_mem_gb": 12.06,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 26.51,
-          "s_per_audio_hour": 266.7,
+          "seconds": 26.58,
+          "s_per_audio_hour": 267.4,
           "peak_mem_gb": 12.62,
-          "reused": true
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -5225,7 +5162,7 @@
         "facts_found": 12,
         "fact_recall": 0.9231,
         "citation_accuracy": 0.9167,
-        "claims": 23,
+        "claims": 19,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": null,
@@ -5264,10 +5201,10 @@
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
         "ask_near_miss": 0.6667,
-        "cited_claims": 23,
-        "support_rate": 0.2174,
+        "cited_claims": 19,
+        "support_rate": 0.2632,
         "support_partial": 1,
-        "support_no": 17,
+        "support_no": 13,
         "support_unjudged": 0,
         "judge_covered": 3,
         "judge_recall": 0.6
@@ -5292,7 +5229,7 @@
           "text": "use the new logo on the website",
           "found": false,
           "judge_only": true,
-          "judge_covered": false,
+          "judge_covered": true,
           "section": null,
           "claim": null,
           "citation_ok": null,
@@ -5461,7 +5398,7 @@
           "text": "move the weekly sync to Thursdays",
           "found": false,
           "judge_only": true,
-          "judge_covered": true,
+          "judge_covered": false,
           "section": null,
           "claim": null,
           "citation_ok": null,
@@ -5615,48 +5552,12 @@
         },
         {
           "section": "decisions",
-          "claim": "Decision: Laura atumie mkataba na wakili ifikapo Ijumaa.",
+          "claim": "Decision: Endelea orodha ya kuingiza.",
           "citations": [
             "seg 0"
           ],
           "supported": "no",
-          "reason": "The claim mentions a person and action not present in the cited text."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: Omar atengeneze mpango wa kuajiri ifikapo mwisho wa wiki ijayo.",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "no",
-          "reason": "The claim uses a language and names not present in the cited text."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: Victor andike maelezo ya kutolewa ifikapo mwisho wa wiki ijayo.",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "no",
-          "reason": "The claim mentions Victor and Iike Maelezo ya kutolewa, but the cited text only states Victor will write the release notes by the end of next week, with no mention of Iike or 'maelezo ya kutolewa'."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: Maria atayarishe utafiti wa wateja ifikapo mwisho wa wiki ijayo.",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "no",
-          "reason": "The claim is a translation error and does not match any content in the cited text."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: Endelea na orodha ya kuingiza.",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "no",
-          "reason": "The claim is in Swahili and refers to a decision not present in the cited text."
+          "reason": "The claim uses a Swahili phrase not present in the cited text."
         },
         {
           "section": "decisions",
@@ -6051,40 +5952,40 @@
           "reused": true
         },
         "vision": {
-          "seconds": 31.75,
-          "s_per_audio_hour": 319.3,
+          "seconds": 31.76,
+          "s_per_audio_hour": 319.4,
           "peak_mem_gb": 12.53,
-          "reused": true
+          "reused": false
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "map": {
-          "seconds": 12.79,
-          "s_per_audio_hour": 128.7,
+          "seconds": 12.8,
+          "s_per_audio_hour": 128.8,
           "peak_mem_gb": 12.06,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 32.04,
-          "s_per_audio_hour": 322.3,
+          "seconds": 32.01,
+          "s_per_audio_hour": 322.0,
           "peak_mem_gb": 12.62,
-          "reused": true
+          "reused": false
         },
         "translate": {
-          "seconds": 16.62,
-          "s_per_audio_hour": 167.2,
+          "seconds": 15.63,
+          "s_per_audio_hour": 157.3,
           "peak_mem_gb": 11.88,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -6095,12 +5996,12 @@
       "duration_s": 357.88,
       "metrics": {
         "facts": 13,
-        "facts_found": 7,
-        "fact_recall": 0.5385,
-        "citation_accuracy": 1.0,
+        "facts_found": 12,
+        "fact_recall": 0.9231,
+        "citation_accuracy": 0.5833,
         "claims": 23,
         "uncited_claims": 0,
-        "made_up_items": 5,
+        "made_up_items": 0,
         "made_up_open_questions": null,
         "wrong_owner_or_due": 0,
         "judge_only_facts": 5,
@@ -6126,7 +6027,7 @@
         "translation_citations_same": null,
         "untranslated_claims": null,
         "recall_decision": null,
-        "recall_action": 0.0,
+        "recall_action": 1.0,
         "recall_number": 0.875,
         "recall_open_question": null,
         "ask_questions": 19,
@@ -6138,8 +6039,8 @@
         "ask_xlang_history": 1.0,
         "ask_near_miss": 0.3333,
         "cited_claims": 23,
-        "support_rate": 0.913,
-        "support_partial": 0,
+        "support_rate": 0.8696,
+        "support_partial": 1,
         "support_no": 2,
         "support_unjudged": 0,
         "judge_covered": 4,
@@ -6176,13 +6077,13 @@
           "id": "f3",
           "kind": "action",
           "text": "send the contract to legal",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "अनुबंध को कानूनी टीम को शुक्रवार तक भेजें।",
+          "citation_ok": false,
+          "t_error": -46.04,
           "slide_cited": false
         },
         {
@@ -6202,13 +6103,13 @@
           "id": "f5",
           "kind": "action",
           "text": "draft the hiring plan",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "हायरिंग योजना को अगले सप्ताह के अंत तक तैयार करें।",
+          "citation_ok": false,
+          "t_error": -98.77,
           "slide_cited": false
         },
         {
@@ -6241,13 +6142,13 @@
           "id": "f8",
           "kind": "action",
           "text": "write the release notes",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "रिलीज़ नोट्स को अगले सप्ताह के अंत तक लिखें।",
+          "citation_ok": false,
+          "t_error": -172.93,
           "slide_cited": false
         },
         {
@@ -6280,13 +6181,13 @@
           "id": "f11",
           "kind": "action",
           "text": "prepare the customer survey",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "ग्राहक सर्वेक्षण को अगले सप्ताह के अंत तक तैयार करें।",
+          "citation_ok": false,
+          "t_error": -245.66,
           "slide_cited": false
         },
         {
@@ -6358,13 +6259,13 @@
           "id": "f17",
           "kind": "action",
           "text": "record the onboarding video",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "सोमवार तक ऑनबोर्डिंग वीडियो रिकॉर्ड करें।",
+          "citation_ok": false,
+          "t_error": -48.35,
           "slide_cited": false
         },
         {
@@ -6381,13 +6282,7 @@
           "slide_cited": false
         }
       ],
-      "made_up": [
-        "अनुबंध को कानूनी टीम को शुक्रवार तक भेजें।",
-        "हायरिंग योजना को अगले सप्ताह के अंत तक तैयार करें।",
-        "रिलीज़ नोट्स को अगले सप्ताह के अंत तक लिखें।",
-        "ग्राहक सर्वेक्षण को अगले सप्ताह के अंत तक तैयार करें।",
-        "सोमवार तक ऑनबोर्डिंग वीडियो रिकॉर्ड करें।"
-      ],
+      "made_up": [],
       "made_up_questions": [],
       "wrong_fields": [],
       "uncited": [],
@@ -6560,7 +6455,7 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: अनुबंध को कानूनी टीम को शुक्रवार तक भेजें। (owner: लॉरा; due: शुक्रवार)",
+          "claim": "Action item: अनुबंध को कानूनी टीम को शुक्रवार तक भेजें। (owner: Laura; due: शुक्रवार)",
           "citations": [
             "seg 0"
           ],
@@ -6569,34 +6464,34 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: हायरिंग योजना को अगले सप्ताह के अंत तक तैयार करें। (owner: ओमर; due: अगले सप्ताह का अंत)",
+          "claim": "Action item: हायरिंग योजना को अगले सप्ताह के अंत तक तैयार करें। (owner: Omar; due: अगले सप्ताह का अंत)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "partial",
+          "reason": "The cited text states Omar will draft the hiring plan by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: रिलीज़ नोट्स को अगले सप्ताह के अंत तक लिखें। (owner: Victor; due: अगले सप्ताह का अंत)",
           "citations": [
             "seg 0"
           ],
           "supported": "yes",
-          "reason": "The claim mentions an action item for hiring plan, assigned to Omar with due date at the end of next week, which is directly stated in the transcript."
+          "reason": "The cited text states Victor will write the release notes by the end of next week."
         },
         {
           "section": "action_items",
-          "claim": "Action item: रिलीज़ नोट्स को अगले सप्ताह के अंत तक लिखें। (owner: विक्टर; due: अगले सप्ताह का अंत)",
+          "claim": "Action item: ग्राहक सर्वेक्षण को अगले सप्ताह के अंत तक तैयार करें। (owner: Maria; due: अगले सप्ताह का अंत)",
           "citations": [
             "seg 0"
           ],
           "supported": "yes",
-          "reason": "The transcript states Victor will write the release notes by the end of next week."
+          "reason": "The cited text states Maria will prepare the customer survey by the end of next week."
         },
         {
           "section": "action_items",
-          "claim": "Action item: ग्राहक सर्वेक्षण को अगले सप्ताह के अंत तक तैयार करें। (owner: मारिया; due: अगले सप्ताह का अंत)",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "The action item is explicitly assigned to Maria with a due date at the end of next week."
-        },
-        {
-          "section": "action_items",
-          "claim": "Action item: सोमवार तक ऑनबोर्डिंग वीडियो रिकॉर्ड करें। (owner: टॉम; due: सोमवार)",
+          "claim": "Action item: सोमवार तक ऑनबोर्डिंग वीडियो रिकॉर्ड करें। (owner: Tom; due: सोमवार)",
           "citations": [
             "seg 1"
           ],
@@ -6937,40 +6832,40 @@
           "reused": true
         },
         "vision": {
-          "seconds": 31.73,
-          "s_per_audio_hour": 319.1,
+          "seconds": 31.69,
+          "s_per_audio_hour": 318.8,
           "peak_mem_gb": 12.53,
-          "reused": true
+          "reused": false
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "map": {
           "seconds": 15.76,
-          "s_per_audio_hour": 158.6,
+          "s_per_audio_hour": 158.5,
           "peak_mem_gb": 12.06,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 46.42,
-          "s_per_audio_hour": 466.9,
+          "seconds": 46.4,
+          "s_per_audio_hour": 466.8,
           "peak_mem_gb": 12.74,
-          "reused": true
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -6984,7 +6879,7 @@
         "facts_found": 12,
         "fact_recall": 0.9231,
         "citation_accuracy": 0.9167,
-        "claims": 23,
+        "claims": 19,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": null,
@@ -7023,7 +6918,7 @@
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
         "ask_near_miss": 0.6667,
-        "cited_claims": 23,
+        "cited_claims": 19,
         "support_rate": 1.0,
         "support_partial": 0,
         "support_no": 0,
@@ -7374,43 +7269,7 @@
         },
         {
           "section": "decisions",
-          "claim": "Decision: লورا শুক্রবার পর্যন্ত আইনি বিভাগে চুক্তি পাঠাতে হবে।",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "Laura is assigned to send the contract to legal by Friday."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: ওমার পরবর্তী সপ্তাহের শেষে নিয়োগ পরিকল্পনা তৈরি করতে হবে।",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "Omar will draft the hiring plan by the end of next week."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: ভিক্টর পরবর্তী সপ্তাহের শেষে মুক্তি নোট লিখতে হবে।",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "Victor is assigned to write the release notes by the end of next week."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: মারিয়া পরবর্তী সপ্তাহের শেষে গ্রাহক সার্ভে প্রস্তুত করতে হবে।",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "Maria is assigned to prepare the customer survey by the end of next week."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: অনবোর্ডিং চেকলিস্ট রাখতে হবে।",
+          "claim": "Decision: অনবোর্ডিং চেকলিস্ট রাখুন।",
           "citations": [
             "seg 0"
           ],
@@ -7419,7 +7278,7 @@
         },
         {
           "section": "decisions",
-          "claim": "Decision: সাপ্তাহিক সিঙ্ক ডেলিভারিতে পরিবর্তন করে বৃহস্পতিবার করা হয়েছে।",
+          "claim": "Decision: সাপ্তাহিক সিঙ্ককে বৃহস্পতিবার স্থানান্তর করা হয়েছে।",
           "citations": [
             "seg 1"
           ],
@@ -7428,7 +7287,7 @@
         },
         {
           "section": "decisions",
-          "claim": "Decision: গ্রাহকদের জন্য রোডম্যাপ প্রকাশ করতে হবে।",
+          "claim": "Decision: গ্রাহকদের জন্য রোডম্যাপ প্রকাশ করুন।",
           "citations": [
             "seg 1"
           ],
@@ -7810,40 +7669,40 @@
           "reused": true
         },
         "vision": {
-          "seconds": 31.76,
-          "s_per_audio_hour": 319.5,
+          "seconds": 31.82,
+          "s_per_audio_hour": 320.1,
           "peak_mem_gb": 12.53,
-          "reused": true
+          "reused": false
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "map": {
-          "seconds": 12.8,
-          "s_per_audio_hour": 128.8,
+          "seconds": 12.78,
+          "s_per_audio_hour": 128.6,
           "peak_mem_gb": 12.06,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 32.04,
-          "s_per_audio_hour": 322.3,
+          "seconds": 31.97,
+          "s_per_audio_hour": 321.6,
           "peak_mem_gb": 12.62,
-          "reused": true
+          "reused": false
         },
         "translate": {
-          "seconds": 15.08,
-          "s_per_audio_hour": 151.7,
+          "seconds": 14.16,
+          "s_per_audio_hour": 142.5,
           "peak_mem_gb": 11.88,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -7857,7 +7716,7 @@
         "facts_found": 12,
         "fact_recall": 0.9231,
         "citation_accuracy": 0.8333,
-        "claims": 21,
+        "claims": 20,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": null,
@@ -7888,8 +7747,8 @@
         "recall_action": 0.8,
         "recall_number": 1.0,
         "recall_open_question": null,
-        "cited_claims": 21,
-        "support_rate": 0.9048,
+        "cited_claims": 20,
+        "support_rate": 0.9,
         "support_partial": 0,
         "support_no": 2,
         "support_unjudged": 0,
@@ -8250,15 +8109,6 @@
         },
         {
           "section": "decisions",
-          "claim": "Decision: Laura will send the contract to the legal department by Friday",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "Laura was assigned the task to send the contract to the legal department by Friday"
-        },
-        {
-          "section": "decisions",
           "claim": "Decision: Victor will write the notes for the next version",
           "citations": [
             "seg 0"
@@ -8360,40 +8210,40 @@
           "reused": true
         },
         "vision": {
-          "seconds": 35.69,
-          "s_per_audio_hour": 337.3,
+          "seconds": 35.72,
+          "s_per_audio_hour": 337.6,
           "peak_mem_gb": 12.53,
-          "reused": true
+          "reused": false
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "map": {
-          "seconds": 11.4,
-          "s_per_audio_hour": 107.7,
+          "seconds": 11.41,
+          "s_per_audio_hour": 107.8,
           "peak_mem_gb": 12.06,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 25.06,
-          "s_per_audio_hour": 236.9,
+          "seconds": 25.0,
+          "s_per_audio_hour": 236.3,
           "peak_mem_gb": 12.62,
-          "reused": true
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -8407,7 +8257,7 @@
         "facts_found": 9,
         "fact_recall": 0.6923,
         "citation_accuracy": 0.7778,
-        "claims": 21,
+        "claims": 20,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": null,
@@ -8438,8 +8288,8 @@
         "recall_action": 1.0,
         "recall_number": 0.5,
         "recall_open_question": null,
-        "cited_claims": 21,
-        "support_rate": 0.8095,
+        "cited_claims": 20,
+        "support_rate": 0.8,
         "support_partial": 3,
         "support_no": 1,
         "support_unjudged": 0,
@@ -8800,15 +8650,6 @@
         },
         {
           "section": "decisions",
-          "claim": "Decision: Laura to send contract to the Home department by Friday.",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "The transcript states LAURA has an action item to send the contract to the Home department by Friday."
-        },
-        {
-          "section": "decisions",
           "claim": "Decision: Retention will be discussed further.",
           "citations": [
             "seg 1"
@@ -8910,9 +8751,9 @@
           "reused": true
         },
         "vision": {
-          "seconds": 42.72,
-          "s_per_audio_hour": 331.3,
-          "peak_mem_gb": 4.52,
+          "seconds": 40.5,
+          "s_per_audio_hour": 314.0,
+          "peak_mem_gb": 12.53,
           "reused": false
         },
         "fuse": {
@@ -8922,14 +8763,14 @@
           "reused": false
         },
         "map": {
-          "seconds": 13.9,
-          "s_per_audio_hour": 107.7,
-          "peak_mem_gb": 7.53,
+          "seconds": 11.79,
+          "s_per_audio_hour": 91.4,
+          "peak_mem_gb": 12.05,
           "reused": false
         },
         "reduce": {
-          "seconds": 24.73,
-          "s_per_audio_hour": 191.7,
+          "seconds": 22.43,
+          "s_per_audio_hour": 173.9,
           "peak_mem_gb": 12.62,
           "reused": false
         },
@@ -8951,10 +8792,10 @@
   "summary": {
     "items": 11,
     "facts": 159,
-    "fact_recall": 0.8553,
-    "citation_accuracy": 0.9412,
+    "fact_recall": 0.8868,
+    "citation_accuracy": 0.9078,
     "uncited_claims": 0,
-    "made_up_items": 6,
+    "made_up_items": 1,
     "made_up_open_questions": 0,
     "wrong_owner_or_due": 1,
     "gap_words": 0,
@@ -8970,7 +8811,7 @@
     "translation_citations_same": 1.0,
     "untranslated_claims": 8,
     "recall_decision": 0.75,
-    "recall_action": 0.8545,
+    "recall_action": 0.9455,
     "recall_number": 0.875,
     "recall_open_question": 1.0,
     "map_numbers_repaired": 29,
@@ -8981,9 +8822,9 @@
     "pass2_claim": 0,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.8511,
-    "support_partial": 7,
-    "support_no": 28,
+    "support_rate": 0.8532,
+    "support_partial": 8,
+    "support_no": 24,
     "support_unjudged": 0,
     "judge_recall": 0.75,
     "ask_questions": 171,
@@ -8997,17 +8838,19 @@
     "audio_s": 4052.7,
     "fleurs_wer": 0.0661,
     "fleurs_cer": 0.0788,
-    "fleurs_s_per_audio_hour": 133.7,
+    "fleurs_s_per_audio_hour": 132.3,
     "ami_meetings": 5,
     "ami_audio_s": 11011.0,
-    "ami_coverage": 0.4494,
-    "ami_coverage_abstract": 0.6047,
-    "ami_coverage_decisions": 0.3478,
-    "ami_coverage_actions": 0.1818,
+    "ami_coverage": 0.5281,
+    "ami_coverage_abstract": 0.6279,
+    "ami_coverage_decisions": 0.5217,
+    "ami_coverage_actions": 0.3636,
     "ami_coverage_problems": 0.3333,
-    "ami_support_rate": 0.8024,
-    "ami_uncited_claims": 2,
-    "ami_s_per_audio_hour": 329.4,
+    "ami_support_rate": 0.7657,
+    "ami_uncited_claims": 0,
+    "ami_truncated": 0,
+    "ami_unsupported_numbers": 0,
+    "ami_s_per_audio_hour": 345.6,
     "ami_peak_mem_gb": 17.27
   },
   "stages": {
@@ -9024,7 +8867,7 @@
       "peak_mem_gb": 16.88
     },
     "vision": {
-      "s_per_audio_hour": 326.9,
+      "s_per_audio_hour": 327.0,
       "peak_mem_gb": 12.53
     },
     "fuse": {
@@ -9032,15 +8875,15 @@
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 129.0,
+      "s_per_audio_hour": 129.2,
       "peak_mem_gb": 12.06
     },
     "reduce": {
-      "s_per_audio_hour": 285.4,
+      "s_per_audio_hour": 282.8,
       "peak_mem_gb": 12.74
     },
     "translate": {
-      "s_per_audio_hour": 28.2,
+      "s_per_audio_hour": 26.5,
       "peak_mem_gb": 11.88
     },
     "render": {
@@ -9048,17 +8891,22 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 919.7,
+      "s_per_audio_hour": 915.7,
       "peak_mem_gb": 16.88
     }
   },
   "citation_errors": [
+    -245.66,
     -223.14,
     -197.87,
+    -172.93,
     -163.66,
     -163.66,
     -163.66,
     -143.23,
+    -98.77,
+    -48.35,
+    -46.04,
     -22.96,
     -21.81,
     -3.29,
@@ -9197,18 +9045,18 @@
   ],
   "judge": {
     "loaded": true,
-    "calls": 197,
-    "cached": 411,
-    "seconds": 337.35,
-    "s_per_audio_hour": 80.6,
-    "peak_mem_gb": 3.34
+    "calls": 30,
+    "cached": 616,
+    "seconds": 30.63,
+    "s_per_audio_hour": 7.3,
+    "peak_mem_gb": 3.21
   },
   "ask": {
-    "loaded": false,
-    "calls": 0,
-    "cached": 171,
-    "seconds": 0.06,
-    "s_per_audio_hour": 0.1,
+    "loaded": true,
+    "calls": 95,
+    "cached": 76,
+    "seconds": 942.81,
+    "s_per_audio_hour": 837.5,
     "peak_mem_gb": null
   },
   "gate_items": [
@@ -9250,7 +9098,7 @@
     "pass2_claim": 0,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.9518,
+    "support_rate": 0.9474,
     "support_partial": 1,
     "support_no": 3,
     "support_unjudged": 0,
@@ -9291,8 +9139,8 @@
       "peak_mem_gb": 12.06
     },
     "reduce": {
-      "s_per_audio_hour": 279.4,
-      "peak_mem_gb": 12.62
+      "s_per_audio_hour": 278.1,
+      "peak_mem_gb": 5.92
     },
     "translate": {
       "s_per_audio_hour": 0.0,
@@ -9303,7 +9151,7 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 883.0,
+      "s_per_audio_hour": 881.7,
       "peak_mem_gb": 16.83
     }
   },
@@ -9314,8 +9162,8 @@
       "error": 0.1605,
       "clips": 20,
       "audio_s": 208.4,
-      "seconds": 12.78,
-      "s_per_audio_hour": 220.8,
+      "seconds": 12.75,
+      "s_per_audio_hour": 220.4,
       "results": [
         {
           "file": "10893642191705398473.wav",
@@ -9445,8 +9293,8 @@
       "error": 0.0758,
       "clips": 20,
       "audio_s": 282.7,
-      "seconds": 8.98,
-      "s_per_audio_hour": 114.4,
+      "seconds": 9.06,
+      "s_per_audio_hour": 115.3,
       "results": [
         {
           "file": "10534115037762380445.wav",
@@ -9576,8 +9424,8 @@
       "error": 0.0806,
       "clips": 20,
       "audio_s": 196.4,
-      "seconds": 8.69,
-      "s_per_audio_hour": 159.3,
+      "seconds": 8.79,
+      "s_per_audio_hour": 161.0,
       "results": [
         {
           "file": "11929560283630765271.wav",
@@ -9707,8 +9555,8 @@
       "error": 0.053,
       "clips": 20,
       "audio_s": 181.4,
-      "seconds": 5.97,
-      "s_per_audio_hour": 118.4,
+      "seconds": 6.01,
+      "s_per_audio_hour": 119.2,
       "results": [
         {
           "file": "10614481583312370701.wav",
@@ -9838,8 +9686,8 @@
       "error": 0.0604,
       "clips": 20,
       "audio_s": 233.2,
-      "seconds": 7.74,
-      "s_per_audio_hour": 119.6,
+      "seconds": 7.71,
+      "s_per_audio_hour": 119.1,
       "results": [
         {
           "file": "11366613032038636511.wav",
@@ -9969,8 +9817,8 @@
       "error": 0.0415,
       "clips": 20,
       "audio_s": 207.7,
-      "seconds": 8.17,
-      "s_per_audio_hour": 141.6,
+      "seconds": 8.27,
+      "s_per_audio_hour": 143.4,
       "results": [
         {
           "file": "12405478354284816354.wav",
@@ -10100,8 +9948,8 @@
       "error": 0.0388,
       "clips": 20,
       "audio_s": 300.3,
-      "seconds": 9.18,
-      "s_per_audio_hour": 110.1,
+      "seconds": 9.04,
+      "s_per_audio_hour": 108.4,
       "results": [
         {
           "file": "10173541521390065753.wav",
@@ -10231,8 +10079,8 @@
       "error": 0.0395,
       "clips": 20,
       "audio_s": 244.7,
-      "seconds": 8.45,
-      "s_per_audio_hour": 124.3,
+      "seconds": 8.3,
+      "s_per_audio_hour": 122.0,
       "results": [
         {
           "file": "10728607480570481117.wav",
@@ -10362,8 +10210,8 @@
       "error": 0.0715,
       "clips": 20,
       "audio_s": 237.4,
-      "seconds": 7.68,
-      "s_per_audio_hour": 116.4,
+      "seconds": 7.32,
+      "s_per_audio_hour": 111.0,
       "results": [
         {
           "file": "10115200572671025618.wav",
@@ -10493,8 +10341,8 @@
       "error": 0.0652,
       "clips": 20,
       "audio_s": 220.0,
-      "seconds": 8.38,
-      "s_per_audio_hour": 137.2,
+      "seconds": 8.32,
+      "s_per_audio_hour": 136.1,
       "results": [
         {
           "file": "10496387467912730230.wav",
@@ -10624,8 +10472,8 @@
       "error": 0.0384,
       "clips": 20,
       "audio_s": 187.1,
-      "seconds": 8.15,
-      "s_per_audio_hour": 156.7,
+      "seconds": 8.21,
+      "s_per_audio_hour": 158.0,
       "results": [
         {
           "file": "11419175479434981573.wav",
@@ -10755,8 +10603,8 @@
       "error": 0.0421,
       "clips": 20,
       "audio_s": 329.0,
-      "seconds": 10.49,
-      "s_per_audio_hour": 114.7,
+      "seconds": 10.14,
+      "s_per_audio_hour": 111.0,
       "results": [
         {
           "file": "10103427908302527934.wav",
@@ -10886,8 +10734,8 @@
       "error": 0.0708,
       "clips": 20,
       "audio_s": 290.2,
-      "seconds": 10.72,
-      "s_per_audio_hour": 133.0,
+      "seconds": 10.32,
+      "s_per_audio_hour": 128.0,
       "results": [
         {
           "file": "11601077082806576373.wav",
@@ -11017,8 +10865,8 @@
       "error": 0.1253,
       "clips": 20,
       "audio_s": 227.3,
-      "seconds": 8.87,
-      "s_per_audio_hour": 140.5,
+      "seconds": 8.75,
+      "s_per_audio_hour": 138.7,
       "results": [
         {
           "file": "1061358881165519725.wav",
@@ -11149,22 +10997,24 @@
       "run_id": "20261014-064534-ami-es2004b",
       "duration_s": 2345.493375,
       "metrics": {
-        "claims": 63,
-        "uncited_claims": 1,
+        "claims": 65,
+        "uncited_claims": 0,
         "claims_summary": 1,
         "claims_key_points": 34,
-        "claims_decisions": 15,
+        "claims_decisions": 9,
         "claims_action_items": 11,
-        "claims_open_questions": 2,
+        "claims_open_questions": 10,
         "output_language_ok": 1,
+        "truncated": 0,
+        "unsupported_numbers": 0,
         "coverage": 0.5333,
         "coverage_abstract": 0.7778,
         "coverage_decisions": 0.25,
         "coverage_actions": 0.0,
         "coverage_problems": 0.0,
-        "cited_claims": 62,
-        "support_rate": 0.7742,
-        "support_partial": 13,
+        "cited_claims": 65,
+        "support_rate": 0.7692,
+        "support_partial": 14,
         "support_no": 1,
         "support_unjudged": 0
       },
@@ -11245,9 +11095,8 @@
           "covered": false
         }
       ],
-      "uncited": [
-        "What specific infrared communication protocol will be used for TV compatibility</co: 0:["
-      ],
+      "uncited": [],
+      "unsupported_numbers": [],
       "support": [
         {
           "section": "summary",
@@ -11627,60 +11476,6 @@
         },
         {
           "section": "decisions",
-          "claim": "Decision: The project will explore five to six design options.",
-          "citations": [
-            "seg 7"
-          ],
-          "supported": "yes",
-          "reason": "The transcript mentions considering five to six design options and choosing the most appealing ones."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: The project will consider the need for a shortcut manual.",
-          "citations": [
-            "seg 7"
-          ],
-          "supported": "partial",
-          "reason": "The group discussed shortcut manuals and mentioned they tend to be demonised and not used."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: The project will prepare a questionnaire for the next meeting.",
-          "citations": [
-            "seg 7"
-          ],
-          "supported": "partial",
-          "reason": "The transcript mentions considering a questionnaire for the next meeting."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: The project will investigate whether people want programming features on the remote control.",
-          "citations": [
-            "seg 3"
-          ],
-          "supported": "no",
-          "reason": "The cited text states that the team did not look into whether people want programming features, and that they found it a nightmare, but no decision or investigation was agreed upon."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: The project will investigate offering a similar service to older users, similar to Carphone Warehouse's repair policy.",
-          "citations": [
-            "seg 5"
-          ],
-          "supported": "partial",
-          "reason": "The transcript mentions considering a similar service for older users, similar to Carphone Warehouse's repair policy."
-        },
-        {
-          "section": "decisions",
-          "claim": "Decision: The project will explore the inclusion of a remote control function that records programs by number.",
-          "citations": [
-            "seg 5"
-          ],
-          "supported": "partial",
-          "reason": "The transcript mentions the idea of using a program number for recording, which is discussed as a potential remote control function."
-        },
-        {
-          "section": "decisions",
           "claim": "Decision: The project will focus on younger age groups initially, broadening the market later.",
           "citations": [
             "seg 5"
@@ -11746,6 +11541,7 @@
           "section": "action_items",
           "claim": "Action item: Consider the need for a shortcut manual. (due: End of next meeting)",
           "citations": [
+            "seg 7",
             "seg 7"
           ],
           "supported": "partial",
@@ -11822,6 +11618,87 @@
           ],
           "supported": "partial",
           "reason": "The transcript mentions uncertainty about battery size and questions whether to look at alternatives, but does not specify which alternative battery options will be considered."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: What specific infrared communication protocol will be used for TV compatibility?",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "partial",
+          "reason": "The transcript mentions conforming to whatever form of communication the TVs are already using, implying infrared is used, but does not specify the exact protocol."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: How will the anti-lost feature be implemented?",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "partial",
+          "reason": "The speaker mentions considering a way to prevent loss, such as a feature on the side of the sofa, but does not specify how it will be implemented."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Would you prefer an LCD screen that is a multi-function remote?",
+          "citations": [
+            "seg 3"
+          ],
+          "supported": "no",
+          "reason": "The cited text mentions asking about an LCD screen that is a multi-function remote, but does not state that this was an open question."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Would you pay more for speech recognition in a remote control?",
+          "citations": [
+            "seg 3"
+          ],
+          "supported": "partial",
+          "reason": "The transcript mentions asking about payment for speech recognition and notes that the question was asked but not fully answered."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: How will the product be designed for different markets and age groups?",
+          "citations": [
+            "seg 4"
+          ],
+          "supported": "yes",
+          "reason": "The group discussed dividing designs by country and age group, considering physical differences and market preferences."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: What are the best ways to incorporate corporate image and fashionability into the design?",
+          "citations": [
+            "seg 4"
+          ],
+          "supported": "yes",
+          "reason": "The group acknowledged the need to incorporate corporate image and fashionability into the design and discussed variations across markets."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Which design options are most appealing to the market?",
+          "citations": [
+            "seg 7"
+          ],
+          "supported": "partial",
+          "reason": "The meeting discusses considering five to six designs and choosing those that appeal the most, indicating a focus on market appeal."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: How should the instruction manual address the advertisement feature?",
+          "citations": [
+            "seg 7"
+          ],
+          "supported": "partial",
+          "reason": "The transcript mentions considering how the instruction manual handles the advertisement feature, but does not specify how it should address it."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: What specific marketing issues need to be addressed before the next meeting?",
+          "citations": [
+            "seg 7"
+          ],
+          "supported": "yes",
+          "reason": "The transcript asks what specific marketing issues need to be addressed before the next meeting."
         }
       ],
       "stages": {
@@ -11862,8 +11739,8 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 91.58,
-          "s_per_audio_hour": 140.6,
+          "seconds": 89.34,
+          "s_per_audio_hour": 137.1,
           "peak_mem_gb": 17.27,
           "reused": false
         },
@@ -11894,6 +11771,8 @@
         "claims_action_items": 8,
         "claims_open_questions": 10,
         "output_language_ok": 1,
+        "truncated": 0,
+        "unsupported_numbers": 0,
         "coverage": 0.3333,
         "coverage_abstract": 0.3636,
         "coverage_decisions": 0.1667,
@@ -12013,6 +11892,7 @@
         }
       ],
       "uncited": [],
+      "unsupported_numbers": [],
       "support": [
         {
           "section": "summary",
@@ -12556,8 +12436,8 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 71.67,
-          "s_per_audio_hour": 116.1,
+          "seconds": 71.39,
+          "s_per_audio_hour": 115.7,
           "peak_mem_gb": 17.27,
           "reused": false
         },
@@ -12580,22 +12460,24 @@
       "run_id": "20261014-065245-ami-is1009b",
       "duration_s": 2052.3333125,
       "metrics": {
-        "claims": 61,
+        "claims": 79,
         "uncited_claims": 0,
-        "claims_summary": 8,
-        "claims_key_points": 21,
-        "claims_decisions": 11,
-        "claims_action_items": 10,
-        "claims_open_questions": 11,
+        "claims_summary": 10,
+        "claims_key_points": 30,
+        "claims_decisions": 13,
+        "claims_action_items": 12,
+        "claims_open_questions": 14,
         "output_language_ok": 1,
-        "coverage": 0.5625,
-        "coverage_abstract": 0.625,
+        "truncated": 0,
+        "unsupported_numbers": 0,
+        "coverage": 0.625,
+        "coverage_abstract": 0.75,
         "coverage_decisions": 0.75,
         "coverage_actions": 0.0,
         "coverage_problems": 0.3333,
-        "cited_claims": 61,
-        "support_rate": 0.8033,
-        "support_partial": 12,
+        "cited_claims": 79,
+        "support_rate": 0.7975,
+        "support_partial": 16,
         "support_no": 0,
         "support_unjudged": 0
       },
@@ -12633,7 +12515,7 @@
         {
           "part": "abstract",
           "text": "They discuss their target group and the possibility of removable plastic cases.",
-          "covered": false
+          "covered": true
         },
         {
           "part": "abstract",
@@ -12682,6 +12564,7 @@
         }
       ],
       "uncited": [],
+      "unsupported_numbers": [],
       "support": [
         {
           "section": "summary",
@@ -12760,6 +12643,24 @@
           ],
           "supported": "yes",
           "reason": "The cited text states that a user interface designer conducted research on remote features and emphasized functionality, safety, and design."
+        },
+        {
+          "section": "summary",
+          "claim": "Summary: The meeting discussed determining the target group for a product and its functionality, focusing on designing a remote control that caters to different user groups.",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "yes",
+          "reason": "The meeting discussed determining the target group and functionality of a remote control, considering different user subgroups and design adaptations."
+        },
+        {
+          "section": "summary",
+          "claim": "Summary: The discussion focused on designing a remote control with multiple button sizes and shapes to cater to a broad target group, considering cost-effectiveness and customization options.",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The discussion considered designing one remote with different button sizes and shapes for various user groups, targeting a broad audience, and explored cost-effectiveness and customization options through interchangeable plastic cases."
         },
         {
           "section": "key_points",
@@ -12951,6 +12852,87 @@
           "reason": "The cited text explicitly mentions safety concerns for children, non-harmful materials, and glowing buttons for visibility."
         },
         {
+          "section": "key_points",
+          "claim": "Key point: The target group is everyone with a TV, but subgroups include elderly people with limited finger function, nervous individuals, and children.",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states that the target group is everyone with a TV, and mentions subgroups including elderly people with limited finger function, nervous individuals, and children."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: The decision is whether to design one remote for all users or multiple remotes with different features for specific groups.",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "yes",
+          "reason": "The cited text explicitly discusses designing one remote for all users or multiple remotes with different features for specific groups, such as elderly people or children."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: The budget is a concern, particularly for adding specific buttons for different groups, and the feasibility of this is being discussed.",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "yes",
+          "reason": "The budget is a concern, particularly for adding specific buttons for different groups, and the feasibility is being discussed."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: The target group is everyone with a TV.",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the target group is 'basically everybody with a t. v.'"
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: The basic design will remain the same, but button sizes and shapes will vary (40% large buttons, 40% regular buttons).",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "partial",
+          "reason": "The claim specifies a 40% large buttons and 40% regular buttons, but the cited text only mentions a hypothetical 40% large buttons as an example and does not state that this distribution will be implemented or that button sizes will vary in that specific proportion."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: The remote will use the same electronics, with only the plastic case and buttons differing.",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states that the only differences will be in the plastic case and buttons, with the same electronics."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Removable plastic cases in portable phones allow for customization, which could be adapted for the remote.",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The cited text mentions removable plastic cases in portable phones as an example of customization that could be adapted for remotes."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Users can purchase additional color options separately if desired.",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The cited text mentions that people can buy an alternate package with different colors for a few francs or euros."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: The idea is to create one remote with functional variations for different user groups, such as larger or differently shaped buttons for children.",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states that the idea is to design one remote with functional variations like larger or differently shaped buttons for children."
+        },
+        {
           "section": "decisions",
           "claim": "Decision: The product should be positioned as a Christmas gift to maximise its appeal.",
           "citations": [
@@ -13050,6 +13032,24 @@
           "reason": "The transcript mentions that buttons being various shapes might be a help to people with elderly or arthritic hands."
         },
         {
+          "section": "decisions",
+          "claim": "Decision: Agree to design a single remote with functional variations for different user groups.",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The group agrees to design one remote with functional variations for different user groups, as stated in the transcript."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Money will determine whether specific features for subgroups can be implemented.",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The group agreed that money will tell whether specific features for subgroups can be implemented."
+        },
+        {
           "section": "action_items",
           "claim": "Action item: Prioritise features based on customer appeal and feasibility. (owner: Marketing Manager; due: End of the meeting)",
           "citations": [
@@ -13138,6 +13138,24 @@
           ],
           "supported": "partial",
           "reason": "The transcript mentions research into user preferences and includes safety considerations like child lock and sharp projections, but does not explicitly state an action item to research and implement design features."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Explore cost-effectiveness of varying button sizes and shapes. (due: End of next meeting)",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "partial",
+          "reason": "The transcript mentions considering different button sizes and shapes for different user groups and questions cost-effectiveness, but does not explicitly state an action item to explore this."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Investigate customization options for the remote. (due: End of next meeting)",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "partial",
+          "reason": "The group agreed to consider customization options for the remote, and mentioned they might return to the topic at the next meeting."
         },
         {
           "section": "open_questions",
@@ -13237,6 +13255,33 @@
           ],
           "supported": "yes",
           "reason": "The transcript explicitly raises the budget concern for designing different remotes for different user groups."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Who is the target group?",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "yes",
+          "reason": "The transcript explicitly states that 'the question is really, who is our target group?'"
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: How will the remote function for different groups?",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "partial",
+          "reason": "The transcript raises questions about functionality for different groups and whether budget allows for subgroups with different buttons."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Is the budget sufficient to cater to different user groups?",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "yes",
+          "reason": "The transcript explicitly raises the budget concern for designing different remotes for different user groups."
         }
       ],
       "stages": {
@@ -13277,8 +13322,8 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 75.44,
-          "s_per_audio_hour": 132.3,
+          "seconds": 90.88,
+          "s_per_audio_hour": 159.4,
           "peak_mem_gb": 17.22,
           "reused": false
         },
@@ -13301,22 +13346,24 @@
       "run_id": "20261014-065606-ami-is1009c",
       "duration_s": 1820.8333125,
       "metrics": {
-        "claims": 34,
-        "uncited_claims": 1,
+        "claims": 35,
+        "uncited_claims": 0,
         "claims_summary": 1,
         "claims_key_points": 19,
-        "claims_decisions": 7,
+        "claims_decisions": 6,
         "claims_action_items": 6,
-        "claims_open_questions": 1,
+        "claims_open_questions": 3,
         "output_language_ok": 1,
+        "truncated": 0,
+        "unsupported_numbers": 0,
         "coverage": 0.6316,
         "coverage_abstract": 0.6,
         "coverage_decisions": 1.0,
         "coverage_actions": 0.5,
         "coverage_problems": 0.5,
-        "cited_claims": 33,
-        "support_rate": 0.9091,
-        "support_partial": 1,
+        "cited_claims": 35,
+        "support_rate": 0.8857,
+        "support_partial": 2,
         "support_no": 2,
         "support_unjudged": 0
       },
@@ -13417,9 +13464,8 @@
           "covered": false
         }
       ],
-      "uncited": [
-        "How will the voice recognition feature be integrated with the television's system</co:"
-      ],
+      "uncited": [],
+      "unsupported_numbers": [],
       "support": [
         {
           "section": "summary",
@@ -13634,15 +13680,6 @@
         },
         {
           "section": "decisions",
-          "claim": "Decision: The marketing manager will present three presentations, with the order not being crucial.",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "no",
-          "reason": "The marketing manager is not identified as presenting the three presentations."
-        },
-        {
-          "section": "decisions",
           "claim": "Decision: Push buttons will be used instead of scroll wheels for cost reasons.",
           "citations": [
             "seg 4"
@@ -13739,6 +13776,33 @@
           ],
           "supported": "yes",
           "reason": "The meeting specifies that Jana and Francine will work together on a prototype using modelling clay."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: How will the voice recognition feature be integrated with the television's system?",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The transcript mentions the voice recognition feature and its function but does not address how it will be integrated with the television's system."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: How far will speech recognition work in practice?",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "yes",
+          "reason": "The transcript mentions doubt about how far speech recognition will work due to voice variation and distance issues."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: What is the cost of implementing speech recognition?",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "partial",
+          "reason": "The meeting notes mention pending research from the industrial engineer on the cost of speech recognition."
         }
       ],
       "stages": {
@@ -13779,8 +13843,8 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 67.61,
-          "s_per_audio_hour": 133.7,
+          "seconds": 68.59,
+          "s_per_audio_hour": 135.6,
           "peak_mem_gb": 17.16,
           "reused": false
         },
@@ -13803,23 +13867,25 @@
       "run_id": "20261014-065853-ami-ts3003c",
       "duration_s": 2570.0,
       "metrics": {
-        "claims": 37,
+        "claims": 69,
         "uncited_claims": 0,
         "claims_summary": 1,
-        "claims_key_points": 36,
-        "claims_decisions": 0,
-        "claims_action_items": 0,
-        "claims_open_questions": 0,
+        "claims_key_points": 37,
+        "claims_decisions": 15,
+        "claims_action_items": 10,
+        "claims_open_questions": 6,
         "output_language_ok": 1,
-        "coverage": 0.2222,
+        "truncated": 0,
+        "unsupported_numbers": 0,
+        "coverage": 0.5556,
         "coverage_abstract": 0.8,
-        "coverage_decisions": 0.0,
-        "coverage_actions": 0.0,
+        "coverage_decisions": 0.6667,
+        "coverage_actions": 0.6667,
         "coverage_problems": 0.0,
-        "cited_claims": 37,
-        "support_rate": 0.8649,
-        "support_partial": 1,
-        "support_no": 4,
+        "cited_claims": 69,
+        "support_rate": 0.6957,
+        "support_partial": 10,
+        "support_no": 11,
         "support_unjudged": 0
       },
       "sentences": [
@@ -13856,7 +13922,7 @@
         {
           "part": "decisions",
           "text": "The remote will use a conventional battery and a docking station which recharges the battery.",
-          "covered": false
+          "covered": true
         },
         {
           "part": "decisions",
@@ -13866,17 +13932,17 @@
         {
           "part": "decisions",
           "text": "The remote will have changeable case covers.",
-          "covered": false
+          "covered": true
         },
         {
           "part": "decisions",
           "text": "The case covers will be available in wood or plastic.",
-          "covered": false
+          "covered": true
         },
         {
           "part": "decisions",
           "text": "The case will be single curved.",
-          "covered": false
+          "covered": true
         },
         {
           "part": "actions",
@@ -13886,12 +13952,12 @@
         {
           "part": "actions",
           "text": "The user interface designer will continue with what he has been working on.",
-          "covered": false
+          "covered": true
         },
         {
           "part": "actions",
           "text": "The industrial designer and user interface designer will work together",
-          "covered": false
+          "covered": true
         },
         {
           "part": "problems",
@@ -13915,6 +13981,7 @@
         }
       ],
       "uncited": [],
+      "unsupported_numbers": [],
       "support": [
         {
           "section": "summary",
@@ -14250,12 +14317,300 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: The project is on track and meets the milestones.</co:",
+          "claim": "Key point: The project is on track and meets the milestones.",
           "citations": [
             "seg 8"
           ],
           "supported": "no",
-          "reason": "The cited text does not mention project progress, milestones, or tracking."
+          "reason": "The cited text does not state or imply that the project is on track or meets milestones."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: The team has completed the initial phase of the project successfully.",
+          "citations": [
+            "seg 8"
+          ],
+          "supported": "no",
+          "reason": "The cited text does not state or imply that the team has completed the initial phase or that it was successful."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Include telephone-shaped designs for the remote control and docking station.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "partial",
+          "reason": "The transcript states that trend watchers advised the remote control and docking station should be telephone shaped."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Offer two editions: one with wood-like colours and one with grey-black colours.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states that two editions should be offered: one with wood-like colour and feel for more exclusive people, and one with grey-black colour for people with less means."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: A dedicated button for subtitles will be implemented.",
+          "citations": [
+            "seg 2"
+          ],
+          "supported": "yes",
+          "reason": "The transcript mentions a 'special button for subtitles' and specifies actions like 'one push' for small subtitles and 'double click' for big subtitles."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: A display for button functions will be included.",
+          "citations": [
+            "seg 2"
+          ],
+          "supported": "yes",
+          "reason": "The transcript mentions a need for a small display to show the functions of the buttons."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: A basic battery or optional kinetic energy source will be considered.",
+          "citations": [
+            "seg 2"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states that a basic battery or optional kinetic energy source can be considered."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: A flat casing option will be used, with anti-slip rubber belt for buttons.",
+          "citations": [
+            "seg 2"
+          ],
+          "supported": "partial",
+          "reason": "The cited text mentions a flat casing option and considers a rubber belt for anti-slip, but does not state that a flat casing will be used or that an anti-slip rubber belt is for buttons."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: A single curved side remote control is the preferred design.",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The speaker suggests the single curve because it is better for elderly users to see the screen and holds a curve that helps with screen placement."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Voice recognition will not be included due to high costs and minimal usability benefits.",
+          "citations": [
+            "seg 4"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states that voice recognition would increase cost significantly and not make the remote control much easier to use, leading to the conclusion that it should be discarded."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: A battery (reloadable) will be used instead of voice recognition.",
+          "citations": [
+            "seg 4"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states that a battery which can be reloaded on a docking station is cheaper and better than voice recognition."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Design two different telephones with interchangeable case covers (wood or plastic).",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "no",
+          "reason": "The cited text discusses designing one remote with interchangeable wood or plastic case covers, not two different telephones."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Use a single remote control with a fancy design that fits both wood and plastic covers.",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states that a single remote should be designed with either a wood or plastic cover, and that it should be fancy."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Single curved side remote control is the preferred design.",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "partial",
+          "reason": "The speaker suggests the single curve because it is better for elderly users to see the screen and holds a curve that helps with screen placement."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: The remote control must be designed to fit comfortably in the hand, with the screen positioned on top and buttons arranged for both left and right-handed users.",
+          "citations": [
+            "seg 7"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the screen should be on top and flipped upside down for better hand access, and buttons are arranged for left and right-handed users."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: The project is on track and meets the milestones.",
+          "citations": [
+            "seg 8"
+          ],
+          "supported": "no",
+          "reason": "The cited text does not state or imply that the project is on track or meets milestones."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: The team has completed the initial phase of the project successfully.",
+          "citations": [
+            "seg 8"
+          ],
+          "supported": "no",
+          "reason": "The cited text does not state or imply that the team completed the initial phase successfully."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Develop the telephone-shaped remote control and docking station design. (owner: Design team; due: End of next week)",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The transcript mentions a telephone-shaped design recommendation for the remote control and docking station, but does not state that this design is to be developed or assign it to the Design team with a due date."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Conduct further research on speech recognition and interface design. (owner: Research team; due: End of next week)",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The transcript mentions research on speech recognition and interface design, but does not specify an action item with an owner or due date."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Implement the dedicated subtitle button and display for button functions. (due: End of next week)",
+          "citations": [
+            "seg 2"
+          ],
+          "supported": "no",
+          "reason": "The transcript mentions a special button for subtitles and a display for button functions, but does not state that these are to be implemented or assign a due date."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Consider the basic battery or optional kinetic energy source for the energy source. (due: End of next week)",
+          "citations": [
+            "seg 2"
+          ],
+          "supported": "partial",
+          "reason": "The cited text mentions considering a basic battery or optional kinetic energy source, and notes that if kinetic energy is chosen, the docking station becomes obsolete."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Design and manufacture the flat casing with anti-slip rubber belt for buttons. (due: End of next week)",
+          "citations": [
+            "seg 2"
+          ],
+          "supported": "partial",
+          "reason": "The cited text mentions a flat casing and an anti-slip rubber belt for buttons, but does not specify that the action item is to design and manufacture it or include a due date."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Upgrade the chip set for advanced functionality with the LCD screen. (due: End of next week)",
+          "citations": [
+            "seg 2"
+          ],
+          "supported": "partial",
+          "reason": "The transcript mentions the chip set should be advanced because an LCD screen is being used."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Verify pricing information with the manufacturing department. (due: End of next week)",
+          "citations": [
+            "seg 3"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states that the speaker has no information on pricing and will have to ask the manufacturing department."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Discuss the feasibility of implementing a docking station feature. (due: End of next week)",
+          "citations": [
+            "seg 3"
+          ],
+          "supported": "partial",
+          "reason": "The group acknowledged the docking station could be a marketing advantage and discussed its potential functions, including placing remotes and enabling voice recognition."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Collaborate with the user interface designer on the project. (owner: Industrial Designer; due: Not specified)",
+          "citations": [
+            "seg 7"
+          ],
+          "supported": "yes",
+          "reason": "The industrial designer and user interface designer are going to work together on this one."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Work with the industrial designer on the project. (owner: User Interface Designer; due: Not specified)",
+          "citations": [
+            "seg 7"
+          ],
+          "supported": "partial",
+          "reason": "The user interface designer is to work with the industrial designer on the project."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: How does the docking station integrate voice recognition for channel selection?",
+          "citations": [
+            "seg 3"
+          ],
+          "supported": "partial",
+          "reason": "The transcript mentions voice recognition for channels but does not specify how the docking station integrates it."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Which curved case design (single or double) should be used?",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "yes",
+          "reason": "The group discusses single and double curved cases and asks for explanation, indicating uncertainty about which design to use."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: How should the interface be designed, and what type of interface should be used?",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "yes",
+          "reason": "The group asked for a drawing of the interface and discussed form and functionality, indicating an open question about interface design."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Is it feasible to programme the remote with buttons for shifting channels and adjusting volume on both sides?",
+          "citations": [
+            "seg 5"
+          ],
+          "supported": "yes",
+          "reason": "The transcript asks if it would be feasible to programme the remote with buttons for shifting channels and adjusting volume on both sides."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Is the colour of the curved side important?",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The transcript questions whether the colour of the curved side is important."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Is the orientation of the curved side important?",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The transcript questions whether the orientation of the curved side matters, indicating it is an open question."
         }
       ],
       "stages": {
@@ -14296,8 +14651,8 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 71.83,
-          "s_per_audio_hour": 100.6,
+          "seconds": 107.37,
+          "s_per_audio_hour": 150.4,
           "peak_mem_gb": 17.22,
           "reused": false
         },
@@ -14342,7 +14697,7 @@
       "peak_mem_gb": 13.14
     },
     "reduce": {
-      "s_per_audio_hour": 123.6,
+      "s_per_audio_hour": 139.8,
       "peak_mem_gb": 17.27
     },
     "translate": {
@@ -14354,7 +14709,7 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 329.4,
+      "s_per_audio_hour": 345.6,
       "peak_mem_gb": 17.27
     }
   },

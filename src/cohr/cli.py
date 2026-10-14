@@ -137,6 +137,7 @@ def cmd_eval(args: argparse.Namespace) -> int:
             seed=args.seed,
             overrides=overrides,
             fresh=args.fresh,
+            rerun=args.rerun,
             models=ModelManager(Config()),
             judge_=not args.no_judge,
             ask_=not args.no_ask,
@@ -230,6 +231,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="config override, e.g. fuse.window_s=120 (repeatable)",
     )
     p.add_argument("--fresh", action="store_true", help="new runs instead of reusing stages")
+    p.add_argument(
+        "--rerun",
+        action="append",
+        default=[],
+        metavar="STAGE",
+        help="re-run this stage and the ones after it in reused runs, e.g. after a code-only "
+        "change that leaves its config hash (repeatable)",
+    )
     p.add_argument(
         "--no-judge",
         action="store_true",

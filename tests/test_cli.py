@@ -121,3 +121,18 @@ def test_a_model_deleted_after_a_run_stops_the_resume_cleanly(
     assert "not downloaded or incomplete" in err and "cohr models download" in err
     stages = schemas.load(run_dir, Manifest).stages
     assert stages["ingest"].status == "done" and set(stages) == {"ingest"}  # nothing else ran
+
+
+def test_eval_rerun_reaches_the_runs(monkeypatch: pytest.MonkeyPatch) -> None:
+    from cohr import evals
+
+    seen: dict[str, object] = {}
+
+    def run_set(name: str, **kwargs: object) -> None:
+        seen.update(kwargs)
+        raise ValueError("stop here")
+
+    monkeypatch.setattr(evals, "run_set", run_set)
+    with pytest.raises(SystemExit, match="stop here"):
+        main(["eval", "--item", "ami", "--rerun", "reduce", "--rerun", "render"])
+    assert seen["rerun"] == ["reduce", "render"] and seen["items"] == ["ami"]

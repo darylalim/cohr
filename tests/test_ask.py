@@ -20,8 +20,9 @@ from tests.test_reduce import FakeR7B, _items, _map, _segments, _slide
 
 # Reduce's config hash: Ask must not move it (no re-runs of existing notes). Moved on purpose
 # only by Reduce changes: 6c reduce.md (one fact per item); 6c two-pass (reduce_pass2 in
-# the prompt list, NotesDoc v4; reduce_part for long-meeting pass 1).
-REDUCE_HASH = "36f4a1b3719df25d80aac9fd6dd8a0985c1de1f6f8be51af7cec0f522ac1cbfb"
+# the prompt list, NotesDoc v4; reduce_part for long-meeting pass 1); 6e-2 reduce.max_tokens
+# 2048 → 8192 (NotesDoc v5, truncated).
+REDUCE_HASH = "5d92d62a572d76ee906387a0a72476cd041b34db1f74f59c0a684933d2e595e6"
 
 
 def sources() -> Sources:

@@ -1605,6 +1605,7 @@ class AmiReport(_Model):
     metrics: dict[str, float | int | None]
     sentences: list[SentenceResult]
     uncited: list[str]
+    unsupported_numbers: list[str] = []  # in the notes, in no transcript or slide (6e-2)
     support: list[ClaimSupport] = []
     stages: dict[str, StageCost]
 
@@ -1625,6 +1626,13 @@ def score_ami(
     doc = render.shown_notes(run_dir)
     claims = [c for name in SECTIONS for c in getattr(doc.sections, name)]
     uncited = [c.text for c in claims if not c.citations]
+    numbers = unsupported_numbers(
+        claims,
+        schemas.load(run_dir, Transcript),
+        schemas.load(run_dir, SlidesFile).slides,
+        "en",
+        "en",
+    )
     return AmiReport(
         id=f"ami-{meeting}",
         run_id=run_dir.name,
@@ -1634,9 +1642,12 @@ def score_ami(
             "uncited_claims": len(uncited),
             **{f"claims_{name}": len(getattr(doc.sections, name)) for name in SECTIONS},
             "output_language_ok": int(notes_language(doc, {"en"}) == "en"),
+            "truncated": schemas.load(run_dir, NotesDoc).truncated,  # Reduce cut (6e-2)
+            "unsupported_numbers": len(numbers),
         },
         sentences=[SentenceResult(part=part, text=t) for part, ts in refs.items() for t in ts],
         uncited=uncited,
+        unsupported_numbers=numbers,
         stages=stage_costs(schemas.load(run_dir, Manifest), duration_s, since),
     )
 
@@ -1680,6 +1691,7 @@ def run_ami(
     models: Any,
     overrides: Mapping[str, Any],
     fresh: bool = False,
+    rerun: Sequence[str] = (),
     log: Callable[[str], None] = print,
     progress: pipeline.ProgressFn | None = None,
 ) -> list[tuple[AmiReport, Path]]:
@@ -1697,7 +1709,7 @@ def run_ami(
         since = datetime.now(UTC)
         log(f"{name}: running {run_dir.name} ({duration / 60:.1f} min of audio)")
         t0 = time.perf_counter()
-        pipeline.run(run_dir, config=config, models=models, progress=progress)
+        pipeline.run(run_dir, config=config, models=models, progress=progress, force=rerun)
         secs = time.perf_counter() - t0
         log(f"{name}: pipeline {secs:.1f} s ({secs / duration * 3600 / 60:.1f} min per audio hour)")
         out.append((score_ami(meeting, refs, run_dir, duration, since), run_dir))
@@ -1719,6 +1731,10 @@ def ami_summary(reports: Sequence[AmiReport]) -> dict[str, float | int | None]:
             round(sum(c.supported == "yes" for c in support) / len(support), 4) if support else None
         ),
         "ami_uncited_claims": sum(int(r.metrics.get("uncited_claims") or 0) for r in reports),
+        "ami_truncated": sum(int(r.metrics.get("truncated") or 0) for r in reports),
+        "ami_unsupported_numbers": sum(
+            int(r.metrics.get("unsupported_numbers") or 0) for r in reports
+        ),
         "ami_s_per_audio_hour": stages["total"]["s_per_audio_hour"],
         "ami_peak_mem_gb": stages["total"]["peak_mem_gb"],
     }
@@ -2030,8 +2046,10 @@ def render_markdown(report: Report) -> str:
             "",
             "## AMI (real meetings, report-only)",
             "",
-            "| Meeting | min | coverage | " + " | ".join(parts) + " | support | uncited | s/h |",
-            "|---" * (len(parts) + 6) + "|",
+            "| Meeting | min | coverage | "
+            + " | ".join(parts)
+            + " | support | uncited | cut | s/h |",
+            "|---" * (len(parts) + 7) + "|",
         ]
         for m in report.ami:
             cov = [_pct(m.metrics.get(f"coverage_{p}")) for p in parts]
@@ -2040,8 +2058,11 @@ def render_markdown(report: Report) -> str:
                 f"| {m.id} | {m.duration_s / 60:.1f} | {_pct(m.metrics.get('coverage'))} | "
                 + " | ".join(cov)
                 + f" | {_pct(m.metrics.get('support_rate'))} | "
-                f"{_num(m.metrics.get('uncited_claims'))} | {total / m.duration_s * 3600:.0f} |"
+                f"{_num(m.metrics.get('uncited_claims'))} | {_num(m.metrics.get('truncated'))} | "
+                f"{total / m.duration_s * 3600:.0f} |"
             )
+        for m in report.ami:
+            lines += [f"- {m.id} number in no source: {n}" for n in m.unsupported_numbers]
         lines += ["", "AMI cost (s per audio hour, peak GB):", "", "| Stage | s/h | GB |"]
         lines.append("|---|---|---|")
         for name, c in report.ami_stages.items():
@@ -2216,6 +2237,7 @@ def run_set(
     seed: int | None = None,
     overrides: Mapping[str, Any] | None = None,
     fresh: bool = False,
+    rerun: Sequence[str] = (),
     models: Any = None,
     judge_: bool = True,
     ask_: bool = True,
@@ -2252,7 +2274,7 @@ def run_set(
         since = datetime.now(UTC)
         log(f"{spec.id}: running {run_dir.name}")
         t0 = time.perf_counter()
-        pipeline.run(run_dir, config=config, models=models, progress=progress)
+        pipeline.run(run_dir, config=config, models=models, progress=progress, force=rerun)
         log(f"{spec.id}: pipeline {time.perf_counter() - t0:.1f} s")
         report = score_item(truth, run_dir, since)
         if ask_ and not asks(spec):
@@ -2284,6 +2306,7 @@ def run_set(
             models=models,
             overrides=overrides,
             fresh=fresh,
+            rerun=rerun,
             log=log,
             progress=progress,
         )

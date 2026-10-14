@@ -5,7 +5,7 @@ Local, offline meeting notes for Apple Silicon. A recording plus slides (or a sc
 video) becomes notes in which every claim cites its timestamp `[mm:ss]` or `[slide N]`. All
 models run on MLX; nothing leaves your machine.
 
-Status: the pipeline, the app and the evals work; v1 is being measured (Phase 6e). Recordings
+Status: v1.0.0. The pipeline, the app and the evals meet the v1 targets (Phase 6e). Recordings
 in 14 languages (Transcribe's), notes in Command R7B's 23 languages plus "Other (beta)"
 languages translated by Tiny Aya. See `PLAN.md` and `NOTES.md`.
 

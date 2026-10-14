@@ -19,9 +19,9 @@ from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, NamedTuple
 
-from cohr import schemas
+from cohr import names, schemas
 from cohr.config import language_name, load_prompt
 from cohr.fuse import overlap, slide_text, tokens
 from cohr.mapper import clock, fill
@@ -53,10 +53,7 @@ MIN_TRANSCRIPT_CHARS = 300  # below this per segment, trimming can't make the in
 # gives ~12K-token groups that finish (recall 37.5 → 53.8%, 6c).
 GROUP_FILL = 0.4
 CLAIM_MATCH_MIN = 0.5  # pass-2 span → pass-1 claim token overlap, when the span has no marker
-# Two-pass output budget (6c long-en): with 2048 tokens, pass 1 on a ~23K-token group spent
-# them on key points before DECISIONS/ACTION_ITEMS. The long-meeting prompts also list those
-# before KEY_POINTS (figures only); this raises the floor for both passes.
-TWO_PASS_MAX_TOKENS = 4096
+END_RESPONSE = "<|END_RESPONSE|>"
 # The reply is started with the first marker (6d-1): in German and Arabic notes R7B translated
 # all five markers ("## Zusammenfassung", "## ملخص") whatever the prompt said, so every claim
 # fell into Summary. Started this way it writes the other four in English too (de, ar, seeds
@@ -152,7 +149,7 @@ def strip_wrapper(reply: str) -> str:
     """The text between <|START_RESPONSE|> and <|END_RESPONSE|>, special tokens removed."""
     if "<|START_RESPONSE|>" in reply:
         reply = reply.split("<|START_RESPONSE|>", 1)[1]
-    return _WRAPPER.sub("", reply.split("<|END_RESPONSE|>", 1)[0])
+    return _WRAPPER.sub("", reply.split(END_RESPONSE, 1)[0])
 
 
 @dataclass
@@ -328,6 +325,48 @@ def _match_score(a: str, b: str) -> float:
     return len(ta & tb) / min(len(ta), len(tb)) if ta and tb else 0.0
 
 
+def filed_task(claim: Claim, map_notes: Mapping[int, SegmentNotes]) -> bool:
+    """A decision that is one of Map's tasks: it matches an action item of a cited segment at
+    ACTION_MATCH_MIN and better than any of those segments' Map decisions (AMI ES2004b: "The
+    project will explore …", 6 of 15 decisions), or as well when that action item names an
+    owner (Map lists some tasks under both: "Laura to send contract to legal by Friday" in
+    clean-en, 4 of 7 decisions). Without an owner a tie stays a decision: Map also writes
+    decided designs as tasks ("Design the single curved side remote control", AMI TS3003c)."""
+    cited = [map_notes[c.id] for c in claim.citations if c.kind == "seg" and c.id in map_notes]
+    task, owned = 0.0, False
+    for a in (a for n in cited for a in n.action_items):
+        score = _match_score(claim.text, a.task)
+        if score > task or (score == task and a.owner):
+            task, owned = score, bool(a.owner)
+    decided = max((_match_score(claim.text, d) for n in cited for d in n.decisions), default=0)
+    return task >= ACTION_MATCH_MIN and (task > decided or (task == decided and owned))
+
+
+def restore_owners(doc: NotesDoc, texts: Sequence[str]) -> tuple[NotesDoc, list[str]]:
+    """Owners back in the meeting's spelling (`names.restore`); the changes, "लॉरा → Laura"."""
+    changed: list[str] = []
+    items = []
+    for item in doc.sections.action_items:
+        owner = names.restore(item.owner, texts) if item.owner else item.owner
+        if owner != item.owner:
+            changed.append(f"{item.owner} → {owner}")
+            item = item.model_copy(update={"owner": owner})
+        items.append(item)
+    sections = doc.sections.model_copy(update={"action_items": items})
+    return doc.model_copy(update={"sections": sections}), changed
+
+
+def add_task(items: list[ActionItem], task: ActionItem) -> None:
+    """Append a moved decision; when an action item already states it (ACTION_MATCH_MIN),
+    add its citations there instead of listing the task twice."""
+    for i, item in enumerate(items):
+        if _match_score(item.text, task.text) >= ACTION_MATCH_MIN:
+            new = [c for c in task.citations if c not in item.citations]
+            items[i] = item.model_copy(update={"citations": [*item.citations, *new]})
+            return
+    items.append(task)
+
+
 def action_item(claim: Claim, map_notes: Mapping[int, SegmentNotes]) -> ActionItem:
     """Owner and due from `[owner: …] [due: …] task`; if the line doesn't have them, copied
     from the best-matching map.json action item of a cited segment (overlap ≥ 0.6)."""
@@ -361,6 +400,7 @@ class ReduceStats:
     missing_markers: list[str] = field(default_factory=list)
     prompt_tokens: int = 0
     trimmed: int | None = None  # characters per segment, when transcripts were trimmed
+    moved: int = 0  # decisions moved to action items (filed_task)
     # two-pass only (§4)
     groups: int = 0
     pass1_uncited: int = 0
@@ -386,6 +426,7 @@ def notes_from_reply(
     split = split_sections(strip_wrapper(reply))
     stats = ReduceStats(unknown_markers=split.unknown, missing_markers=split.missing)
     out: dict[str, list[Any]] = {}
+    tasks: list[Claim] = []  # decisions that are Map's tasks: listed after the action items
     for name in SECTIONS:
         section: list[Any] = []
         for raw in claims(split.sections[name], sentences=name == "summary"):
@@ -393,8 +434,14 @@ def notes_from_reply(
             stats.claims += 1
             stats.dropped += dropped
             stats.uncited += not claim.citations
-            section.append(action_item(claim, map_notes) if name == "action_items" else claim)
+            if name == "decisions" and filed_task(claim, map_notes):
+                tasks.append(claim)
+            else:
+                section.append(action_item(claim, map_notes) if name == "action_items" else claim)
         out[name] = section
+    for claim in tasks:
+        add_task(out["action_items"], action_item(claim, map_notes))
+    stats.moved = len(tasks)
     doc = NotesDoc(sections=NotesSections(**out), passes=1, language=language, raw=reply)
     return doc, stats
 
@@ -557,6 +604,20 @@ def pass2_resolver(
 
 
 Generate = Callable[[str], str]  # prompt → reply
+
+
+class Reply(NamedTuple):
+    text: str
+    finish: str | None  # mlx-lm's finish reason: "stop" (end of turn), "length" (the cap)
+
+
+def cut_off(reply: Reply) -> bool:
+    """The reply stopped at max_tokens before R7B closed it (6e-1: 4 of 5 AMI notes ended at
+    2048 tokens and looked complete). A reply whose last token is <|END_RESPONSE|> at the cap
+    is complete."""
+    return reply.finish == "length" and END_RESPONSE not in reply.text
+
+
 Report = Callable[[float, str], None]  # progress (0–1), message
 
 
@@ -591,6 +652,7 @@ def two_pass(
         reply = generate(prompt)
         doc, part = build_notes(reply, targets, refine, notes, language)
         stats.pass1_uncited += part.uncited
+        stats.moved += part.moved
         stats.dropped += part.dropped
         docs.append({"title": group_title(group), "snippet": group_snippet(doc)})
         sources.append(PassOne([s.seg_id for s in group.segments], all_claims(doc)))
@@ -624,6 +686,7 @@ def two_pass(
     )
     final.groups, final.trimmed = stats.groups, stats.trimmed
     final.pass1_uncited, final.dropped = stats.pass1_uncited, final.dropped + stats.dropped
+    final.moved += stats.moved
     final.resolved = resolved
     final.prompt_tokens = size
     return doc, final
@@ -653,18 +716,26 @@ class CommandR7B:
         return len(self.tokenizer.encode(text))
 
     def generate(self, prompt: str, *, max_tokens: int, temperature: float, seed: int) -> str:
+        return self.complete(prompt, max_tokens=max_tokens, temperature=temperature, seed=seed).text
+
+    def complete(self, prompt: str, *, max_tokens: int, temperature: float, seed: int) -> Reply:
+        """mlx-lm's `generate` (the same text), keeping the finish reason it drops."""
         import mlx.core as mx
-        from mlx_lm import generate
+        from mlx_lm import stream_generate
         from mlx_lm.sample_utils import make_sampler
 
         mx.random.seed(seed)
-        return generate(
+        text, finish = "", None
+        for response in stream_generate(
             self.model,
             self.tokenizer,
             prompt,
             max_tokens=max_tokens,
             sampler=make_sampler(temp=temperature),
-        )
+        ):
+            text += response.text
+            finish = response.finish_reason
+        return Reply(text, finish)
 
 
 def load(path: Path) -> CommandR7B:
@@ -722,13 +793,18 @@ def run_stage(ctx: StageContext) -> None:
     instruction = fill(load_prompt("reduce"), target_language=name)
     refine = segment_refiner(segments, items, cfg.citation_min_score)
 
-    def generate(prompt: str, max_tokens: int = cfg.max_tokens) -> str:
-        return REPLY_START + lm.generate(
+    truncated = 0
+
+    def generate(prompt: str) -> str:
+        nonlocal truncated
+        reply = lm.complete(
             prompt + REPLY_START,
-            max_tokens=max_tokens,
+            max_tokens=cfg.max_tokens,
             temperature=cfg.temperature,
             seed=ctx.config.seed,
         )
+        truncated += cut_off(reply)
+        return REPLY_START + reply.text
 
     with ctx.model("reduce") as lm:
         docs, targets = documents(segments, map_notes, slides)
@@ -756,10 +832,22 @@ def run_stage(ctx: StageContext) -> None:
                 unaligned,
                 refine,
                 cfg.max_input_tokens,
-                lambda prompt: generate(prompt, max(cfg.max_tokens, TWO_PASS_MAX_TOKENS)),
+                generate,
                 ctx.report,
                 language,
             )
+    texts = [s.transcript_text for s in segments] + [slide_text(s) for s in slides]
+    doc, restored = restore_owners(doc, texts)
+    if restored:
+        ctx.log.info("reduce: owners in the meeting's spelling: %s", ", ".join(restored))
+    if truncated:
+        ctx.log.warning(
+            "reduce: %d repl%s cut at reduce.max_tokens = %d: the notes end early",
+            truncated,
+            "y" if truncated == 1 else "ies",
+            cfg.max_tokens,
+        )
+        doc = doc.model_copy(update={"truncated": truncated})
     if stats.trimmed is not None:
         ctx.log.warning("reduce: transcripts trimmed to %d characters per segment", stats.trimmed)
     if stats.groups:
@@ -777,6 +865,8 @@ def run_stage(ctx: StageContext) -> None:
         ctx.log.warning("reduce: missing section markers %s", stats.missing_markers)
     if stats.dropped:
         ctx.log.warning("reduce: dropped %d citations to unknown documents", stats.dropped)
+    if stats.moved:
+        ctx.log.info("reduce: %d decisions moved to action items (Map's tasks)", stats.moved)
     ctx.log.info(
         "reduce: %d claims, %d uncited, %d documents, %d prompt tokens",
         stats.claims,

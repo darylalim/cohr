@@ -9,10 +9,24 @@ from typing import Any
 
 import pytest
 
-from cohr import ami, evals
+from cohr import ami, evals, schemas
 from cohr.evals import AMI_HOME, SentenceResult
 from cohr.judge import CachedJudge
-from tests.test_eval_judge import FakeJudge, judge_run, manager
+from cohr.schemas import Transcript, TranscriptItem
+from tests.test_eval_judge import SEG0, SEG1, FakeJudge, manager
+from tests.test_eval_judge import judge_run as notes_run
+
+
+def judge_run(tmp_path: Path) -> Path:
+    """test_eval_judge's run, with the transcript the number check reads."""
+    run_dir = notes_run(tmp_path)
+    items = [
+        TranscriptItem(chunk_id=0, t0=0, t1=60, text=SEG0),
+        TranscriptItem(chunk_id=1, t0=60, t1=90, text=SEG1 + " Signups were 4,400."),
+    ]
+    schemas.save(run_dir, Transcript(language="en", runtime="mlx-speech", items=items))
+    return run_dir
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -152,6 +166,9 @@ def test_score_and_judge_a_meeting_per_part(tmp_path: Path) -> None:
     rep = scored(run_dir)
     assert rep.id == "ami-X"
     assert (rep.metrics["claims"], rep.metrics["uncited_claims"]) == (6, 1)
+    assert rep.metrics["truncated"] == 0
+    assert rep.unsupported_numbers == ["4450"]  # "Signups are 4,450"; 248,000 is said
+    assert rep.metrics["unsupported_numbers"] == 1
     assert rep.uncited == ["An uncited claim"]
     assert [s.covered for s in rep.sentences] == [None] * 5
 
@@ -208,6 +225,8 @@ def test_report_shows_meetings_and_keeps_them_out_of_the_gate(tmp_path: Path) ->
     assert report.summary["ami_coverage"] == 0.6
     assert report.summary["ami_coverage_problems"] == 0
     assert report.summary["ami_uncited_claims"] == 1
+    assert report.summary["ami_truncated"] == 0
+    assert report.summary["ami_unsupported_numbers"] == 1
     assert report.summary["uncited_claims"] == base.summary["uncited_claims"]  # not added
     assert evals.compare(report, base) == []
     md = evals.render_markdown(report)

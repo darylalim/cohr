@@ -2062,3 +2062,164 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
   output cap with a finish check, decisions vs tasks, owners, numbers), each measured on the
   sets it reaches, then the release gate (full + long; the 1.0.0 bump asked separately).
   5–7 (Japanese, eval gaps, Ask near-miss) default to after v1; step 0 may argue otherwise.
+
+## 2026-10-14 · Phase 6e-2 (carry-over fixes + v1)
+
+### 0. Proposal (user approved, with the choices below)
+- **Reduce's cap (1)**: AMI's Reduce prompts are 8–11K tokens for 30–43 min, so single pass
+  runs to ~2 h (32K) while the reply grows ~81 tokens per minute (TS3003c): ~4.9K at 60 min,
+  ~10K near 2 h. Plan: `stream_generate`'s finish reason; a reply is cut when it stopped on
+  "length" with no `<|END_RESPONSE|>`. Default 8192 for single and two-pass (temperature 0:
+  replies that already finished are unchanged, as ES2004d showed at 2048 and 4096). A reply
+  still cut is flagged (`truncated` in notes.json, run log, UI), never retried (at
+  temperature 0 a retry writes the same start again) and never completed.
+- **Decisions (2)**: not only Map. ES2004b's 15 notes decisions, each matched to its closest
+  map.json item: 8 are Map *action items*, 3 key points, 4 Map decisions; in the other AMI
+  meetings and long-en they come from Map decisions, about half of them task-like ("will
+  explore/consider"). Plan: Python in Reduce first (a decision matching a Map action item at
+  ACTION_MATCH_MIN moves to Action items with its citations); a Map prompt rule only if the
+  trace still shows it (seeds 1–3, then long-en and AMI). Traced again after step 1: today's
+  AMI notes are the cut 2048 ones.
+- **Owners (3)**: only clean-hi in the last run (clean-ar is Latin now); Map already writes
+  "लॉरा" in map.json, Reduce copies it, and the eval's exact owner match makes all 5 a wrong
+  owner. User's choice: fix the notes (the prompt says keep names as they appear): an owner
+  not in its cited segment is transliterated (`anyascii`, ISC) and matched to the names said
+  there; kept as written when nothing matches.
+- **Numbers (4)**: `unsupported_numbers` on AMI, report-only (ES2004b's "34%" is a Map key
+  point the guard kept). 万: the guard flags "$34,000" by design (one edit from both 354,000
+  and 134,000). User's choice: Map's input gets Japanese numbers as digits ("35万4000ドル" →
+  "354,000ドル", `_ja_value`) when the notes language isn't Japanese; the transcript and
+  citations are unchanged.
+- **After v1**: 5 (Japanese: 万 is covered by 4; chunk-start and dense-segment drops have no
+  single fix), 6 (eval-only gaps; the gate doesn't depend on them), 7 (Ask near-miss,
+  unchanged since 6b; Ask is 98.1% on the gate).
+
+### 1. Reduce's output cap (carry-over 1)
+- `CommandR7B.complete` runs `stream_generate` (the same text as mlx-lm's `generate`) and
+  keeps the finish reason; `generate` stays for Ask. `reduce.cut_off`: "length" with no
+  `<|END_RESPONSE|>`; a reply closed by its last allowed token is complete (test where it
+  must not fire), and so is an end of turn without the marker.
+- `reduce.max_tokens` 2048 → 8192, single and two-pass (`TWO_PASS_MAX_TOKENS` removed).
+  A reply still cut: `NotesDoc.truncated` (count, v5), a run-log warning, a warning on the
+  Notes page, and a "cut" column + `ami_truncated` in the AMI report. The cut claim is kept as
+  written and uncited. REDUCE_HASH moved (reason in its comment).
+- Existing replies (R7B tokenizer): quick 688–1098 tokens, long-en parts 824–1692 and pass 2
+  **3848 of 4096** (94%), every one closed with `<|END_RESPONSE|>`, so at temperature 0
+  none changes; long-en isn't re-run for this step.
+- quick (20261014-093829): **gate pass**; Reduce re-ran on all 4 items and every notes.json
+  is byte-identical to before (`raw` and sections), `truncated` 0.
+- AMI (`--item ami --no-ask`, report 20261014-094639-full): coverage 44.9 → **52.8%**
+  (abstract 62.8, decisions 52.2, actions 36.4, problems 33.3%), every number equal to 6e-1's
+  4096 diagnostic (the same replies at temperature 0), cut 0, uncited 0, support 75.2%.
+  Reduce 139 s per audio hour, AMI total 5.75 min/h.
+- New tooling: `cohr eval --rerun STAGE` (3ec3fbb), for code-only changes (step 2 on).
+
+### 2. Tasks filed as decisions (carry-over 2; Python, `reduce.filed_task`)
+- A notes decision moves to Action items (citations kept; owner/due from the Map item, as for
+  action items already) when it matches an action item of a cited segment at
+  ACTION_MATCH_MIN and **better** than any of those segments' Map decisions, or **as well**
+  when that action item names an owner. When an action item already states it, its
+  citations are added there (`add_task`): no task listed twice.
+- Why the owner on a tie, from the scores of every candidate move: strict wins are all
+  ES2004b's "The project will explore/consider/investigate/prepare …" (6, all tasks); ties
+  *with* an owner are synthetic duplicates of a listed task ("Laura to send contract to legal
+  by Friday": clean-en 4 of 7 decisions, noisy-en 3, clean-bn/sw 4, xling-es/ja 1); ties
+  *without* one were AMI decided designs Map also wrote as tasks ("Design the single curved
+  side remote control" = TS3003c's reference decision "The case will be single curved";
+  IS1009b "Ensure corporate image…"). A first version moving every tie moved those 5.
+  (Map also gave several of those ownerless AMI tasks a due "End of next week"; not acted on.)
+- Replay of the stored replies (no model): AMI ES2004b 15 → 9 decisions, IS1009c 7 → 6 (the
+  marketing manager's presentations), ES2004d, IS1009b, TS3003c unchanged.
+- quick `--rerun reduce` (20261014-094845; it ran the tie-moves-always version, which moves
+  the same claims on quick): **gate pass**, every metric equal but support 95.2 → 94.7%:
+  76 judged claims instead of 83, the 7 merged duplicates were all "yes".
+- Not covered (step 2b if needed): a task Map files only as a decision (xling-es "Victor will
+  write the notes for the next version"). AMI is measured with step 4's AMI run.
+
+### 3. Owners in the notes' script (carry-over 3; Python, `names.py`, `reduce.restore_owners`)
+- New dependency `anyascii` 0.3.3 (ISC, pure Python, no dependencies; checked in its
+  classifiers): transliteration only.
+- An owner with non-Latin letters, one word, not in the transcript or slides as written, is
+  matched to a capitalised Latin word said in the meeting: same consonants after
+  transliteration (blurred pairs merged: c/k, l/r, v/b/f, Arabic و/ي as vowels, aspiration
+  h dropped), closest spelling breaking ties (Arabic "ماريا" → Maria, not Omar), equal ties
+  kept as written. Candidates are words never also written in lowercase ("Team" when "the
+  team" is said). Kept: Latin owners, roles ("मार्केटिंग मैनेजर"), names nobody said.
+  Matches all 19 forms of the eval names in Devanagari, Arabic, Bengali and Japanese except
+  Japanese ビクター (no final r): Japanese owners in Japanese notes aren't in any set.
+- Applied once on the final notes (single and two-pass); logged ("लॉरा → Laura").
+- lang seed 1 (20261014-100217, with step 2; baseline-lang pass): recall 81.3 → **86.8%**,
+  clean-hi 53.8 → **92.3%** (actions 0 → 100%), made-up 0, every other item's recall equal.
+  Citation accuracy 95.9 → 89.9%: clean-hi 100 → 58.3%, because its 5 action items are now
+  found and scored. **New carry-over (cross-language jump times):** their Hindi text shares
+  no token with the English transcript, so `refine_time` falls back to the segment start
+  (seg 0 @ 0.002 s, 46–246 s early). Arabic notes escape it only because their task text
+  keeps the Latin names. Not caused by step 3; hidden until the facts matched.
+
+### 4. Numbers (carry-over 4)
+- **AMI report** (eval only): `unsupported_numbers` per meeting (count, list in the .md,
+  `ami_unsupported_numbers`), read as English. Measured with the next AMI run.
+- **万 in Map's input: tried, not kept.** `numbers.ja_grouped` gave Map "354,000ドル" for
+  "35万4000ドル" when the notes aren't Japanese (digits + 万/億 only: kanji-only runs can be
+  words, "十分", "万一"). xling-ja `--no-ask --no-judge`, seeds 1–3, before → after: recall
+  76.9/53.8/76.9 → 84.6/53.8/76.9% (mean 69.2 → 71.8), but **354,000 missed on every seed
+  either way**: given the grouped digits, Tiny Aya still wrote "3,400,000" (seed 3; before,
+  "345,000"). The one fact gained is 11,800, said in digits all along (a different Map sample
+  from a changed input). So the 万 misread is Map's digit copying, not its reading of 万; the
+  guard flags the result (no unique repair), as before. The patch is kept out of the tree.
+  The xling-ja runs on disk hold the trial's Map output for seeds 1–3: re-run Map
+  (`--rerun map`) when xling-ja is next measured at those seeds.
+- Transcribe's own number errors (FLEURS ar, nl): recorded in 6e-1, not fixed.
+
+### 5. Release gate (full, then long; user-approved; `--rerun reduce`)
+- **full** (20261014-113730, `baseline-full.json`): **gate pass**. Against 6e-1's run:
+  recall 85.5 → **88.7%**, made-up items 6 → 1, action recall 85.5 → 94.5%, citation accuracy
+  94.1 → 90.8% (clean-hi 100 → 58.3%: cross-language jump times, step 3), support
+  85.1 → 85.3%, Ask 98.3%. AMI: coverage 44.9 → **52.8%** (abstract 62.8, decisions 52.2,
+  actions 36.4, problems 33.3%), support 80.2 → 76.6%, uncited 2 → 0, cut 0, numbers in no
+  source 0, 5.8 min per audio hour, peak 17.3 GB. xling-ja's Map re-ran from clean code
+  (config stale after the step 4b trial). Baseline rewritten (b6ddfaf).
+- **long** (20261014-123008, report-only): "FAIL" against a baseline from 6b-2. long-en was
+  regenerated (evals/gen changed in 6d-2 and long hadn't run since), so every stage ran on
+  new audio: recall 70.0 → 67.5%, made-up items 8 → 12, made-up open questions 1 → 4, Ask
+  94.4 → 77.8%, support 80.5 → 75.7%. Attribution, Reduce replayed with main's code on the
+  same run (no model change, 2048 cap):
+  - main: recall 63.75%, made-up items 8, open questions 4, action recall 40%.
+  - branch: recall 67.5%, made-up items 12, open questions 4, action recall 55%.
+  - The four pass-1 replies are byte-identical (each closed with `<|END_RESPONSE|>`), so
+    the 8192 cap changes nothing here. The difference is step 2: pass 1's moved decisions
+    reach pass 2's input as action items, and pass 2 then keeps more tasks: 3 planted ones
+    found (migrate the staging database, write the release notes, prepare the customer
+    survey), 3 vague Map tasks ("Continue monitoring retention metrics…", "Review and
+    clarify the reporting of cloud costs", "Address the support queue backlog…") and one
+    with a wrong date (competitor research "1 November", said "11 November").
+  - Ask reads map.json, not the notes: its drop is the new audio's Map, not this branch.
+  `baseline-long.json` rewritten from this run (b6ddfaf).
+- **lang** seed 1 (20261014-124855, `--no-ask`, report-only): recall 81.3 → **86.8%**
+  (clean-hi 53.8 → 92.3%, every other item equal; xling-ja 76.9% with Map re-run from clean
+  code), made-up items 5 → 0, citation accuracy 95.9 → 89.9% (clean-hi 58.3%, jump times),
+  support 77.0 → 76.8%. `baseline-lang.json` rewritten.
+- quick: `baseline.json` rewritten from step 2's run (20261014-094845; step 3 doesn't reach
+  Latin owners, step 4 is eval-only). Gate green: ruff, ty, pytest 526 passed.
+
+### After v1 (post-v1 list)
+1. **Long-en made-up tasks (new):** with step 2, pass 2 keeps Map's vague tasks ("Continue
+   monitoring…", "Review and clarify…") along with the real ones (+3 found, +4 made up). A
+   filter for task-shaped claims with no owner, no due and no planted verb is the candidate;
+   judge it on long-en and AMI together.
+2. **Cross-language jump times:** non-English notes whose text shares no token with the
+   transcript cite the segment start (clean-hi 58.3%). Candidate: refine on the claim's
+   citation-bearing Map item text (English) instead of the translated claim.
+3. **Map files a task only as a decision** (step 2b, xling-es "Victor will write the notes
+   for the next version"): a Map prompt rule, judged on seeds 1–3.
+4. **Map miscopies digits in ja meetings** (D35): 354,000 written 3,400,000 / 345,000 even
+   from grouped digits. The guard flags it; no repair.
+5. **Japanese ビクター** isn't matched to Victor (no final r); Japanese owners in Japanese
+   notes aren't in any set.
+6. **Map's ownerless "End of next week" dues** on AMI tasks (step 2 trace).
+7. **Ask on the regenerated long-en**: 77.8% (was 94.4% on the old audio); the 4 misses
+   are actions answered from the wrong part. Not caused by 6e-2; check with Ask ranking.
+8. Carry-overs 5–7 from 6e-1: Japanese chunk-start and dense-segment drops, eval-only gaps,
+   Ask near-miss (55.6% on full).
+9. ~~The 1.0.0 bump~~: done on request (`uv version --bump major`, pyproject + uv.lock;
+   README status). Merging PR #42 to main releases v1.0.0 once CI passes (§16).
