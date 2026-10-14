@@ -5,21 +5,67 @@ Local, offline meeting notes for Apple Silicon. A recording plus slides (or a sc
 video) becomes notes in which every claim cites its timestamp `[mm:ss]` or `[slide N]`. All
 models run on MLX; nothing leaves your machine.
 
-Status: in development (Phase 1: scaffold + ingest). See `PLAN.md` and `NOTES.md`.
+Status: the pipeline, the app and the evals work; v1 is being measured (Phase 6e). Recordings
+in 14 languages (Transcribe's), notes in Command R7B's 23 languages plus "Other (beta)"
+languages translated by Tiny Aya. See `PLAN.md` and `NOTES.md`.
 
 ## Requirements
-- Apple Silicon Mac, Python 3.13, [uv](https://docs.astral.sh/uv/), `ffmpeg` on `PATH`.
+- Apple Silicon Mac, Python 3.13, [uv](https://docs.astral.sh/uv/), `ffmpeg` on `PATH`
+  (`brew install ffmpeg`).
+- Memory: the default `resident` policy keeps each model loaded once it's used (peak ~17 GB:
+  32 GB Macs). `sequential` loads one model at a time (peak ~6 GB, same notes): choose it
+  as the Memory policy on the New run page on a 16 GB Mac.
+- Disk: ~14.4 GB for the models (below), plus each run's media unless you prune it.
+- Speed (M2 Max, 32 GB): about 6 minutes per hour of audio, audio only; slides add Vision.
 
-## Usage
+## Setup
 ```
 uv sync
-uv run cohr run meeting.m4a --slides deck.pdf     # creates runs/<id>/ (ingest only for now)
-uv run cohr runs                                  # list runs with size and status
-uv run cohr resume <run>                          # re-run from the first incomplete stage
-uv run cohr prune <run>                           # drop media, keep notes and JSON
-uv run cohr rm <run>                              # delete a run
+uv run cohr models download     # the five pipeline models, pinned revisions (~14.4 GB)
+uv run cohr models              # what's downloaded, with sizes
+```
+`cohr models download` checks free space first and resumes an interrupted download when run
+again. Models go to the Hugging Face cache (`~/.cache/huggingface/hub`), or to
+`$COHR_HF_HOME/hub` when that's set. Only `cohr models download` uses the network; runs never do.
+
+## App
+```
+uv run streamlit run app.py
+```
+Pages: **New run** (upload or link a recording and slides, pick the languages), **Notes** (cited
+notes, with a Sources panel of the audio and slides beside or below them), **Ask** (questions about a run,
+answered with citations), **Runs** (status, size, prune, delete).
+
+## Command line
+```
+uv run cohr run meeting.m4a --slides deck.pdf --target de   # creates runs/<id>/ and processes it
+uv run cohr run --video screen.mp4 --lang es                 # slides from the video's frames
+uv run cohr runs                                             # list runs with size and status
+uv run cohr resume <run>                                     # re-run from the first incomplete stage
+uv run cohr prune <run>                                      # drop media, keep notes and JSON
+uv run cohr rm <run>                                         # delete a run
 ```
 Settings: `COHR_RUNS_DIR` (default `./runs`), `COHR_HF_HOME` (model cache location).
+
+## Deleting models
+Remove one model with `hf cache rm` (it ships with huggingface_hub; add
+`--cache-dir "$COHR_HF_HOME/hub"` if you set `COHR_HF_HOME`). Run it with `--dry-run` first:
+```
+uv run hf cache rm model/mlx-community/c4ai-command-r7b-12-2024-4bit --dry-run
+uv run hf cache rm model/mlx-community/c4ai-command-r7b-12-2024-4bit
+```
+`uv run cohr models` lists the five repos. **Don't use `hf cache prune`**: it removes revisions
+that no branch points to, and cohr pins exactly such revisions, so it deletes cohr's models
+(its dry run lists R7B, Tiny Aya, North Micro Vision and the judge). If you use it for other
+caches, run `hf cache prune --dry-run` first. `cohr models download` fetches anything removed.
+
+## Evals
+Quality is measured on meetings with known facts (`evals/README.md`, PLAN §18):
+- `quick`: four 5-minute English meetings (clean, noisy, PDF deck, misspoken number); ~10 min.
+- `lang`: notes in German, Arabic, Hindi, Swahili and Bengali; Spanish and Japanese meetings.
+- `long`: one 2.5-hour meeting (two-pass notes and Ask at scale); ~1 h.
+- `full`: `quick` + `lang` + FLEURS clips in 14 languages + 5 real AMI meetings; the
+  release check, ~1 h.
 
 ## License
 Two layers with separate licenses:
@@ -28,3 +74,5 @@ Two layers with separate licenses:
   licenses. Cohere Transcribe and North Micro Vision are Apache-2.0, Silero VAD is MIT, and
   Tiny Aya Global and Command R7B are **CC-BY-NC-4.0**. With the default models the app is for
   personal and research use only.
+- **Eval data** (`full` only, fetched at eval time, never committed): AMI Meeting Corpus
+  (University of Edinburgh et al.) and FLEURS (Google), both CC BY 4.0.

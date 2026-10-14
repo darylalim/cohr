@@ -169,8 +169,8 @@ with st.form("new_run", border=False):
             default="resident",
             key="nr_policy",
             required=True,
-            help="Resident keeps the models loaded (~20 GB, fast re-runs). Sequential unloads "
-            "each one after its stage (~8 GB peak).",
+            help="Resident keeps the models loaded (~17 GB peak, fast re-runs). Sequential "
+            "unloads each one after its stage (~6 GB peak, same notes).",
         )
         st.segmented_control(
             "Local files",
