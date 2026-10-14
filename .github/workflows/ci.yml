@@ -38,3 +38,45 @@ jobs:
         run: uv run ty check
       - name: Unit tests
         run: uv run pytest -q -m "not models"
+  release:                       # PLAN §16: a new [project].version on main → tag + Release
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest       # building sdist/wheel needs no MLX
+    timeout-minutes: 10
+    permissions:
+      contents: write            # this job only; the workflow default stays read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0         # all tags, for the downgrade check
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0 (no moving major tags)
+      - name: Read version
+        id: v
+        run: |
+          V=$(python3 -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$V" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"; echo "v$V already released; skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Refuse downgrade
+        if: steps.v.outputs.exists == 'false'
+        env:
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          LATEST=$(git tag -l 'v*' | sed 's/^v//' | sort -V | tail -1)
+          if [ -n "$LATEST" ] && [ "$(printf '%s\n' "$LATEST" "$V" | sort -V | tail -1)" != "$V" ]; then
+            echo "::error::version $V is lower than latest tag v$LATEST"; exit 1
+          fi
+      - name: Build
+        if: steps.v.outputs.exists == 'false'
+        run: uv build                # dist/*.whl + dist/*.tar.gz
+      - name: Create release
+        if: steps.v.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          PRE=""; case "$V" in *a*|*b*|*rc*|*dev*) PRE="--prerelease";; esac
+          gh release create "v$V" dist/*.whl dist/*.tar.gz --target "$GITHUB_SHA" --title "v$V" --generate-notes $PRE
