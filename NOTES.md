@@ -2056,3 +2056,9 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
 6e-2 (separate session, kickoff written from the ranking above): carry-over fixes, then the
 full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user (2026-10-14):
 `full` gates on its quick items' metrics and stage speeds; memory stays ungated.
+
+## 2026-10-14 · 6e-2 kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 6e-2": carry-overs 1–4 from the 6e-1 ranking (Reduce's
+  output cap with a finish check, decisions vs tasks, owners, numbers), each measured on the
+  sets it reaches, then the release gate (full + long; the 1.0.0 bump asked separately).
+  5–7 (Japanese, eval gaps, Ask near-miss) default to after v1; step 0 may argue otherwise.
