@@ -1807,3 +1807,67 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
 - `quick` seed 1 `--fresh` with Ask + judge (20261013-142754): **gate pass**, recall 86.8%,
   citation 100%, made-up 0, Ask 96.2%, support 92.7%, repairs 10 / unverified 2 (all =
   baseline). No Map prompt change, so one seed (CLAUDE.md's seeds 1–3 rule is for prompts).
+
+### 2. Regional Map model: Fire (D18; user: Fire only, keep weights only if adopted)
+- Mechanism (kept, though nothing is adopted): `ModelSpec.quantize_bits` converts a snapshot
+  to N-bit MLX in `cohr models download` (`mlx_lm.convert`, group size 64 like
+  tiny-aya-global-8bit-mlx; written to `<hub cache>/cohr-converted/<repo>@<rev>-q8` through a
+  temp dir); runtime loads never convert. `Config.map_model_by_lang` (empty) swaps
+  `models["map"]` for a matching target before validation, so Map's and translate's
+  `models.map` hash moves for that language only; an unset `quantize_bits` isn't dumped, so no
+  existing hash moved (REDUCE_HASH and the snapshots unchanged).
+- Fire: `mlx-community/tiny-aya-fire` (ungated, CC-BY-NC-4.0, bf16, 6.7 GB) at
+  5d5ab5856168aff9ab495b448ef3725752d94351, converted to 8-bit (8.5 bits per weight, 3.3 GB,
+  like Global's 3.6 GB). No HF token was needed or used.
+- **Bug found:** the first Fire runs scored exactly like Global on every seed: `pipeline.run`
+  never gave the run's config to the shared ModelManager, so the eval (one manager built with
+  `Config()`) loaded the default models for any `-c models.…` or `map_model_by_lang` override.
+  Fixed in `pipeline.run` (`models.set_config(config)`, test). Only those three reports had a
+  model override (checked every report in evals/reports).
+- Items: `clean-hi` (R7B writes Hindi; Map writes Hindi) and `clean-bn` ("Other (beta)": Map
+  and Reduce in English, Tiny Aya translates), both clean-en's script, in the `lang` set.
+  `--no-ask --no-judge` (D18 is exact-field recall and output language), seeds 1–3:
+
+| item | Global recall (s1/s2/s3, mean) | Fire recall (mean) | Δ | language ok | made-up |
+|---|---|---|---|---|---|
+| clean-hi | 53.8 / 69.2 / 53.8 (59.0) | 53.8 / 61.5 / 53.8 (56.4) | −2.6 | 3/3 = 3/3 | 5/4/5 = 5/4/5 |
+| clean-bn | 92.3 / 76.9 / 92.3 (87.2) | 84.6 / 92.3 / 92.3 (89.7) | +2.5 | 3/3 = 3/3 | 0 = 0 |
+
+  **Not adopted:** the bar is ≥ 2× the D16 noise (2 × 2.9 = 5.8 points) and neither language
+  reaches it. `map_model_by_lang` stays empty. Fire's download and conversion were deleted
+  (huggingface_hub's cache API for the snapshot; ~10 GB freed). Earth and Water not tried
+  (user's choice).
+- Found on the way: clean-hi's recall is low for both models because R7B writes owners in
+  Devanagari (लॉरा for Laura, ओमर for Omar): the exact owner match misses all 5 actions and
+  counts them as made up, as 6d-1 saw for Arabic on some seeds (carry-over, now hi and ar).
+  Also a real error: Tom's "Monday" became मंगलवार (Tuesday) in the Hindi notes.
+
+### Final gate (seed 1, `--fresh`, final code)
+- `quick` with Ask + judge (20261013-153253): **pass**, recall 86.8%, citation 100%, made-up 0,
+  uncited 0, Ask 96.2%, Ask citation 100%, support 92.7%, repairs 10 (all = baseline).
+- `lang` (no Ask, judge on; 20261013-152713), 7 items: recall **81.3%**, citation 96.0%,
+  numbers 91.1%, actions 65.7%, made-up 5 (all clean-hi: Devanagari owners), language 7/7,
+  WER 1.1% (es 2.1%), CER 7.1% (ja), judge recall 75.0%, support 77.0%.
+
+| item | recall | citation | made-up | support |
+|---|---|---|---|---|
+| conflict-de | 76.9% | 100% | 0 | 86.4% |
+| clean-ar | 84.6% | 100% | 0 | 88.9% |
+| clean-sw | 92.3% | 100% | 0 | 21.7% |
+| clean-hi | 53.8% | 100% | 5 | 90.5% |
+| clean-bn | 92.3% | 100% | 0 | 95.7% |
+| xling-es | 92.3% | 100% | 0 | 95.0% |
+| xling-ja | 76.9% | 70.0% | 0 | 66.7% |
+
+  The 6d-1 items equal their baseline. Written as `evals/baseline-lang.json` (report-only):
+  four new items (xling-es, xling-ja, clean-hi, clean-bn), hence the made-up rise.
+
+### Next
+- Carry-overs for 6e: Transcribe drops the first sentence of some Japanese chunks (3 of 18;
+  try a lead-in pad or overlap, all sets re-run); owners transliterated by R7B in hi and ar
+  (eval misses them; a fix could match the owner against Map's Latin owner for the same
+  task, or ask Reduce to keep Latin names); Hindi due date Monday → Tuesday; Map's coverage of
+  dense segments and its 万 misreads (flagged now, not repaired: two candidates); no Japanese
+  slide-conflict check; "Other (beta)" carry-overs from 6d-1 still open.
+- CLAUDE.md lessons worth adding (separate PR, ask): eval model overrides need
+  `pipeline.run`'s `set_config` (fixed); read a meeting's numbers in its own language.

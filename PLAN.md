@@ -21,6 +21,9 @@ Phase 6b done 2026-10-11 (planted open questions, 3 near-misses per item; Ask ne
 7/12; Map open-question rule, made-up open questions 5 → 0; D24).
 Phase 6c done 2026-10-12 (Reduce one fact per item; two-pass reduce and Ask FTS5 ranking for
 long meetings; `long` set with `long-en`; VAD per 10-minute block; D17, D25–D27).
+Phase 6b-2 done 2026-10-13 (Map fixes; D20 narrowed, D28). Phase 6d-1 done 2026-10-13 (notes
+in other languages; D29, D30). Phase 6d-2 done 2026-10-13 (Spanish and Japanese meetings,
+numbers read in the meeting's language; D18 Fire not adopted).
 Hub metadata verified 2026-10-04 and 2026-10-10; packages, licenses and Streamlit config checked
 2026-10-05.
 
@@ -333,9 +336,12 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
     any reading is in the sources. With a scale suffix ("42.5k") or plain-space grouping
     ("42 500", which may also be two numbers) it is only kept or flagged, never repaired.
   - Digits glued to letters ("Q3", "R7B", "3D") are names, not numbers: not checked. Neither
-    are numbers inside `terms` and numbers written as words. Non-English number
-    words in the source are not normalized (English only, like the eval), so a target language
-    whose transcript spells numbers out may flag more; the eval's cross-language items show it.
+    are numbers inside `terms` and numbers written as words. The sources are read the way
+    the meeting's language writes numbers (6d-2, `numbers.source_numbers_in`): Spanish "11.800"
+    and "42,500" are 11800 and 42500 (a separator before exactly three digits groups), "354 mil"
+    is 354000; Japanese "35万4000" and "四万二千五百" are 354000 and 42500. English number
+    words are read; other languages' number words aren't (Transcribe wrote digits in es/ja).
+    A Map number is kept or repaired only by the notes language's readings (`native_readings`).
   - The guard does not resolve a speech/slide conflict (§18 `slide-conflict-en`): both values
     are in the sources, so both pass. Map ignores `map.md`'s slide rule, so (6b-2, user's
     choice) a pure-Python step **marks** the conflict instead of picking a side: a slide table
@@ -361,7 +367,9 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   switching a language's model re-runs only Map and the stages after it. MLX weights:
   `mlx-community/tiny-aya-fire` exists. Earth and Water need `mlx_lm.convert` (8-bit) from the
   pinned CohereLabs revision, uploaded to a personal Hub repo or converted locally on first use.
-  Decide this in Phase 6 and document it in `NOTES.md`.
+  Decide this in Phase 6 and document it in `NOTES.md`. **6d-2:** `ModelSpec.quantize_bits`
+  converts a repo locally at `cohr models download` time; Fire was tried (D18) and not adopted,
+  so `map_model_by_lang` is empty.
   **Access:** the CohereLabs originals are gated. Converting them needs the license accepted on
   the Hub and an HF token from the `HF_TOKEN` environment variable or `.env` (never committed,
   §6, §14 H2). The default models need no token: all six default MLX repos were ungated on
@@ -1122,6 +1130,20 @@ compared with a committed baseline:
     `map_model_by_lang` filled only for languages that pass D18 (may stay empty). Gated model
     downloads and the HF token need the user's approval. Kickoff prompt in §21 (written after
     6d-1, from its findings).
+    Done 2026-10-13 (NOTES.md). Results: the generator speaks Spanish and Japanese (per-language
+    tables; English scripts unchanged; Helvetica/Hiragino on the slides). Transcribe writes
+    digits (es "11.800", "354 mil"; ja "35万4000", once "四万二千五百"); the guard and the eval
+    read the sources in the meeting's language and keep only the notes language's readings
+    (D20): `xling-es` recall 69.2 → 92.3%, `xling-ja` 76.9% (its misses are an ASR drop and
+    Map). D18: Fire not adopted (hi −2.6, bn +2.5 vs a 5.8 bar); `map_model_by_lang` empty.
+    Found: `pipeline.run` didn't switch a shared ModelManager to the run's models (eval
+    model overrides were ignored; fixed). `lang` seed 1 (7 items): recall 81.3%, citation
+    96.0%, language 7/7; baseline rewritten. `quick` unchanged (86.8%).
+    Carry-overs (6e): Transcribe drops the first sentence of 3 of 18 Japanese chunks (cut
+    0.4 s earlier, it's kept: chunk padding or overlap); R7B writes owners in Devanagari (hi)
+    and Arabic script (ar), which the eval's owner match misses (clean-hi made-up 5), and once
+    wrote Tuesday for Monday in Hindi; Map drops facts in dense Japanese segments and misreads
+    万 forms ("35万4000" → "$34,000", now flagged); no slide-conflict check for Japanese.
 - **6e: full set + v1.** FLEURS and AMI in `full` (§18); error messages for missing ffmpeg or
   models; an end-to-end check of the sequential memory policy; a cache size note for the README;
   the `full` release gate; bump to `1.0.0` to release v1 (§16, only when asked).
@@ -1783,7 +1805,7 @@ script's text can't work when the notes are in another language. For these items
 | Set | Contents | Time | When |
 |---|---|---|---|
 | `quick` | `clean-en`, `noisy-en`, `pdf-slides-en`, `slide-conflict-en` | ~5 min | After prompt or model changes; before every commit to `reduce.py`/`mapper.py` prompts |
-| `lang` | `conflict-de`, `clean-ar` (R7B in de/ar), `clean-sw` ("Other (beta)", translated) | ~10 min | After Reduce, number-reading or translate changes (6d-1); report-only baseline `evals/baseline-lang.json`, `-c seed=1 --no-ask` |
+| `lang` | `conflict-de`, `clean-ar`, `clean-hi` (R7B in de/ar/hi), `clean-sw`, `clean-bn` ("Other (beta)", translated), `xling-es`, `xling-ja` (Spanish and Japanese meetings, English notes; 6d-2) | ~20 min | After Reduce, Map, number-reading or translate changes (6d-1, 6d-2); report-only baseline `evals/baseline-lang.json`, `-c seed=1 --no-ask` |
 | `long` | `long-en` | ~1 h (generation, ~40 min pipeline, Ask) | After two-pass Reduce or Ask ranking changes; report-only baseline `evals/baseline-long.json` |
 | `full` | All variants + 14-language FLEURS sample (20 clips each) + 5 AMI meetings | ~1 h | Before every version bump (§16) |
 
@@ -1922,9 +1944,9 @@ section.
 | D15 | Judge agreement ≥ 80% (§18) | Judge metrics excluded from gate | 30 labeled pairs | Phase 4b-2 | **Pass, no margin**: 3-way 80.0% (24/30), yes vs not-yes 96.7% (29/30). All 12 "yes" right; 4 of 8 "partial" judged "no" (an added detail read as a contradiction), 1 "partial" judged "yes", 1 "no" judged "partial". Support rate counts only "yes", so the partial/no confusion barely moves it. Judge metrics stay out of the gate until D16 (Phase 6) |
 | D16 | Eval gate thresholds (§18) | recall −5, accuracy −3, speed +25% | Run-to-run noise on 3 `quick` runs, same media, pipeline seeds 1–3 (`-c seed=N`): threshold = max(default, 2× noise), Ask metrics included | Phase 6a | **Recall −5.9 (noise 2.9), made-up +2 (noise 1), rest at defaults** (citation −3, uncited and gap text no rise, stages +25%: noisiest Reduce 10.5%); Ask accuracy −5 and Ask citation −3 (noise 0, defaults borrowed from recall/citation). Report-only (user, 6a): follow-up and German after history (noise 25 points: one question per item), German alone and near-miss (25-point steps), support rate (noise 9.1, D15 no margin). Open questions not counted as made up: 13 / 11 / 4 over the seeds. Baseline = seed 1 |
 | D17 | FTS5 available in uv's Python (§13) | Assumed | `PRAGMA compile_options` | Phase 6c (Ask ranking needs it; was Phase 7) | **Available**: uv's Python 3.13.12 has SQLite 3.50.4 with `ENABLE_FTS5`; the `trigram` tokenizer works on Japanese. Trigram can't match terms under 3 characters, so CJK questions are split into 3-character windows |
-| D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6d-2 | |
+| D18 | Regional Tiny Aya variant per target language (§5.5) | Global for every language (`map_model_by_lang` empty) | Planted-facts `en → target <lang>` for 2 languages per variant's region, Global vs variant, scored with cross-language matching (§18): adopt if exact-field fact recall improves by ≥ 2× the D16 noise and output-language accuracy is no worse | Phase 6d-2 || **Not adopted (Fire tried, user's choice)**: `mlx-community/tiny-aya-fire` converted to 8-bit locally (`ModelSpec.quantize_bits`), Global vs Fire on `clean-hi` and `clean-bn`, seeds 1–3: hi 59.0 → 56.4% (−2.6), bn 87.2 → 89.7% (+2.5), both under the 5.8-point bar (2 × 2.9); output language 3/3 either way. `map_model_by_lang` stays empty; Earth and Water not tried |
 | D19 | Citation refinement: min chunk score and the eval's jump tolerance (§5.6, §18) | score ≥ 0.1, ±15 s | Share of planted facts whose refined `t` lands within tolerance on `quick`; check that 15 s isn't hiding misses (look at the error distribution) | Phase 4b-1 | **0.1 and ±15 s, plus a sentence offset inside the chunk**: chunk `t0` alone was a median 12.5 s early (61% within 15 s); with the offset 98% (53 of 54 errors ≤ 5 s, so 15 s hides nothing). Min score 0.0 = 0.1 > 0.2 (94.6%) > 0.3 (91.1%) |
-| D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | **Default rule kept**: 8 repairs on `quick`, all to the transcript's value (0 wrong); number recall 81.2% → 87.5%, fact recall 82.3% → 85.3%, made-up 3 → 3, citation accuracy 98.2% → 100%; numbers in no source 6 → 1 (a flagged `3,360` with two candidates). Short numbers are weak evidence (any one-digit number is one edit from the next): watch on `full`. **6b-2 narrowed the candidates** (user chose the separator rule): a wrong repair ("$770,000" → $740 via the decimal-comma reading) is now flagged, and "November 2nd" is repaired to the only day said (22nd); `quick` seed 1: recall 83.8 → 85.3%, made-up 1 → 0, wrong owner/due 1 → 0, unsupported numbers 2 → 1 |
+| D20 | Map number guard: repair rule (§5.5) | Repair when exactly one source number is one digit edit or a factor of 10/100/1000 away; else flag | `quick` before/after on the same seeds: number recall up, no wrong repair, no other metric worse; if a wrong repair shows up, narrow the rule (e.g. factor-of-10 only) | Phase 4b-1b | **Default rule kept**: 8 repairs on `quick`, all to the transcript's value (0 wrong); number recall 81.2% → 87.5%, fact recall 82.3% → 85.3%, made-up 3 → 3, citation accuracy 98.2% → 100%; numbers in no source 6 → 1 (a flagged `3,360` with two candidates). Short numbers are weak evidence (any one-digit number is one edit from the next): watch on `full`. **6b-2 narrowed the candidates** (user chose the separator rule): a wrong repair ("$770,000" → $740 via the decimal-comma reading) is now flagged, and "November 2nd" is repaired to the only day said (22nd); `quick` seed 1: recall 83.8 → 85.3%, made-up 1 → 0, wrong owner/due 1 → 0, unsupported numbers 2 → 1 **6d-2: sources and keeping read by language**: the sources are read the way the meeting's language writes numbers (`source_numbers_in`: es "11.800" = 11800 and "mil", ja 万 and kanji numerals), and a number is kept only by the notes language's readings, as repairs already were (English "$34,000" was kept as the 34 of "34%"). xling-es recall 69.2 → 92.3% (4 right repairs), xling-ja "$13,000" → $134,000 and "$34,000" flagged; quick unchanged (10 repairs) |
 | D21 | Notes layout in medium windows (§7) | Two columns; close the sidebar | Options within the no-CSS rule (NOTES.md 2026-10-11 5a finding) | Before 5b | **Beside/Below toggle** in the Notes header, default Beside, per session. Rejected: Sources always in the drawer (undoes D14, loses side-by-side on wide screens), a "close the sidebar" hint only, `initial_sidebar_state="collapsed"` on Notes (localStorage overrides it). Built in 5b |
 | D22 | Ask history format (§5.7) | R7B's multi-turn `rag` messages | Manual check on clean-en: follow-ups cited and answered | Phase 5b | **Folded into one user turn** (Reduce's `prompt()`), language line last. Native multi-turn: 4 of 6 answers were a new tool call, no answer. Native + `<|START_RESPONSE|>` prefill: answered, but follow-ups lost their citations. Folded: every English answer cited, jump times inside the truth spans |
 | D23 | Ask answer-language detection (§5.7) | lingua, fallback = target language | lingua confidences on sample questions in 9 languages | Phase 5b | **≥ 2 words (or CJK), confidence ≥ 0.2, lead ≥ 0.05**: "Priya?" read as Indonesian at 0.56 and "Wat is het budget?" tied nl/en at 0.25; full sentences scored 0.25–1.0 with a clear lead |
