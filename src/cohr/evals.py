@@ -1681,6 +1681,7 @@ def run_ami(
     models: Any,
     overrides: Mapping[str, Any],
     fresh: bool = False,
+    rerun: Sequence[str] = (),
     log: Callable[[str], None] = print,
     progress: pipeline.ProgressFn | None = None,
 ) -> list[tuple[AmiReport, Path]]:
@@ -1698,7 +1699,7 @@ def run_ami(
         since = datetime.now(UTC)
         log(f"{name}: running {run_dir.name} ({duration / 60:.1f} min of audio)")
         t0 = time.perf_counter()
-        pipeline.run(run_dir, config=config, models=models, progress=progress)
+        pipeline.run(run_dir, config=config, models=models, progress=progress, force=rerun)
         secs = time.perf_counter() - t0
         log(f"{name}: pipeline {secs:.1f} s ({secs / duration * 3600 / 60:.1f} min per audio hour)")
         out.append((score_ami(meeting, refs, run_dir, duration, since), run_dir))
@@ -2221,6 +2222,7 @@ def run_set(
     seed: int | None = None,
     overrides: Mapping[str, Any] | None = None,
     fresh: bool = False,
+    rerun: Sequence[str] = (),
     models: Any = None,
     judge_: bool = True,
     ask_: bool = True,
@@ -2257,7 +2259,7 @@ def run_set(
         since = datetime.now(UTC)
         log(f"{spec.id}: running {run_dir.name}")
         t0 = time.perf_counter()
-        pipeline.run(run_dir, config=config, models=models, progress=progress)
+        pipeline.run(run_dir, config=config, models=models, progress=progress, force=rerun)
         log(f"{spec.id}: pipeline {time.perf_counter() - t0:.1f} s")
         report = score_item(truth, run_dir, since)
         if ask_ and not asks(spec):
@@ -2289,6 +2291,7 @@ def run_set(
             models=models,
             overrides=overrides,
             fresh=fresh,
+            rerun=rerun,
             log=log,
             progress=progress,
         )

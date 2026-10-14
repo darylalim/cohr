@@ -7,8 +7,9 @@ Current phase: see the last entry in NOTES.md.
 ## Commands (always through uv)
 uv sync --all-groups · uv run ruff format . · uv run ruff check --fix . · uv run ty check
 uv run pytest (no models) · uv run streamlit run app.py · uv run cohr run … · uv run cohr eval --set quick
-Eval flags: -c seed=N · --no-ask --no-judge (fast loop) · --fresh (code-only changes, e.g. the
-number guard, don't move a stage's config hash) · --update-baseline (instant right after a run)
+Eval flags: -c seed=N · --no-ask --no-judge (fast loop) · --rerun STAGE (code-only changes, e.g.
+the number guard, don't move a stage's config hash; re-runs that stage onward; --fresh redoes
+every stage) · --update-baseline (instant right after a run)
 uv run cohr eval --set long --baseline evals/baseline-long.json (~40 min; ask first)
 uv run cohr eval --set lang -c seed=1 --no-ask (de, ar, beta sw; report-only, ~10 min)
 uv run python scripts/trace_facts.py evals/reports/<ts>.json: each planted fact's path transcript → Map → notes
