@@ -19,7 +19,7 @@ from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, NamedTuple
 
 from cohr import schemas
 from cohr.config import language_name, load_prompt
@@ -53,10 +53,7 @@ MIN_TRANSCRIPT_CHARS = 300  # below this per segment, trimming can't make the in
 # gives ~12K-token groups that finish (recall 37.5 → 53.8%, 6c).
 GROUP_FILL = 0.4
 CLAIM_MATCH_MIN = 0.5  # pass-2 span → pass-1 claim token overlap, when the span has no marker
-# Two-pass output budget (6c long-en): with 2048 tokens, pass 1 on a ~23K-token group spent
-# them on key points before DECISIONS/ACTION_ITEMS. The long-meeting prompts also list those
-# before KEY_POINTS (figures only); this raises the floor for both passes.
-TWO_PASS_MAX_TOKENS = 4096
+END_RESPONSE = "<|END_RESPONSE|>"
 # The reply is started with the first marker (6d-1): in German and Arabic notes R7B translated
 # all five markers ("## Zusammenfassung", "## ملخص") whatever the prompt said, so every claim
 # fell into Summary. Started this way it writes the other four in English too (de, ar, seeds
@@ -152,7 +149,7 @@ def strip_wrapper(reply: str) -> str:
     """The text between <|START_RESPONSE|> and <|END_RESPONSE|>, special tokens removed."""
     if "<|START_RESPONSE|>" in reply:
         reply = reply.split("<|START_RESPONSE|>", 1)[1]
-    return _WRAPPER.sub("", reply.split("<|END_RESPONSE|>", 1)[0])
+    return _WRAPPER.sub("", reply.split(END_RESPONSE, 1)[0])
 
 
 @dataclass
@@ -557,6 +554,20 @@ def pass2_resolver(
 
 
 Generate = Callable[[str], str]  # prompt → reply
+
+
+class Reply(NamedTuple):
+    text: str
+    finish: str | None  # mlx-lm's finish reason: "stop" (end of turn), "length" (the cap)
+
+
+def cut_off(reply: Reply) -> bool:
+    """The reply stopped at max_tokens before R7B closed it (6e-1: 4 of 5 AMI notes ended at
+    2048 tokens and looked complete). A reply whose last token is <|END_RESPONSE|> at the cap
+    is complete."""
+    return reply.finish == "length" and END_RESPONSE not in reply.text
+
+
 Report = Callable[[float, str], None]  # progress (0–1), message
 
 
@@ -653,18 +664,26 @@ class CommandR7B:
         return len(self.tokenizer.encode(text))
 
     def generate(self, prompt: str, *, max_tokens: int, temperature: float, seed: int) -> str:
+        return self.complete(prompt, max_tokens=max_tokens, temperature=temperature, seed=seed).text
+
+    def complete(self, prompt: str, *, max_tokens: int, temperature: float, seed: int) -> Reply:
+        """mlx-lm's `generate` (the same text), keeping the finish reason it drops."""
         import mlx.core as mx
-        from mlx_lm import generate
+        from mlx_lm import stream_generate
         from mlx_lm.sample_utils import make_sampler
 
         mx.random.seed(seed)
-        return generate(
+        text, finish = "", None
+        for response in stream_generate(
             self.model,
             self.tokenizer,
             prompt,
             max_tokens=max_tokens,
             sampler=make_sampler(temp=temperature),
-        )
+        ):
+            text += response.text
+            finish = response.finish_reason
+        return Reply(text, finish)
 
 
 def load(path: Path) -> CommandR7B:
@@ -722,13 +741,18 @@ def run_stage(ctx: StageContext) -> None:
     instruction = fill(load_prompt("reduce"), target_language=name)
     refine = segment_refiner(segments, items, cfg.citation_min_score)
 
-    def generate(prompt: str, max_tokens: int = cfg.max_tokens) -> str:
-        return REPLY_START + lm.generate(
+    truncated = 0
+
+    def generate(prompt: str) -> str:
+        nonlocal truncated
+        reply = lm.complete(
             prompt + REPLY_START,
-            max_tokens=max_tokens,
+            max_tokens=cfg.max_tokens,
             temperature=cfg.temperature,
             seed=ctx.config.seed,
         )
+        truncated += cut_off(reply)
+        return REPLY_START + reply.text
 
     with ctx.model("reduce") as lm:
         docs, targets = documents(segments, map_notes, slides)
@@ -756,10 +780,18 @@ def run_stage(ctx: StageContext) -> None:
                 unaligned,
                 refine,
                 cfg.max_input_tokens,
-                lambda prompt: generate(prompt, max(cfg.max_tokens, TWO_PASS_MAX_TOKENS)),
+                generate,
                 ctx.report,
                 language,
             )
+    if truncated:
+        ctx.log.warning(
+            "reduce: %d repl%s cut at reduce.max_tokens = %d: the notes end early",
+            truncated,
+            "y" if truncated == 1 else "ies",
+            cfg.max_tokens,
+        )
+        doc = doc.model_copy(update={"truncated": truncated})
     if stats.trimmed is not None:
         ctx.log.warning("reduce: transcripts trimmed to %d characters per segment", stats.trimmed)
     if stats.groups:

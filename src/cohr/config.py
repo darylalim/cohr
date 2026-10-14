@@ -200,7 +200,11 @@ class MapConfig(_Section):
 
 
 class ReduceConfig(_Section):
-    max_tokens: int = 2048
+    # Output cap, single and two-pass (6e-2). 2048 cut 4 of 5 AMI meetings (30–43 min); the
+    # reply grows ~81 tokens per minute (TS3003c: 3470 at 42.8 min), and single pass runs to
+    # ~2 h of AMI-like speech (max_input_tokens). At temperature 0 a reply that finished
+    # under a smaller cap is unchanged. A reply still cut is flagged (NotesDoc.truncated).
+    max_tokens: int = 8192
     temperature: float = 0.0
     max_input_tokens: int = 32_000  # above this: two-pass reduce (§4)
     citation_min_score: float = 0.1  # D19

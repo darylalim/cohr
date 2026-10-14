@@ -2093,3 +2093,18 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
 - **After v1**: 5 (Japanese: 万 is covered by 4; chunk-start and dense-segment drops have no
   single fix), 6 (eval-only gaps; the gate doesn't depend on them), 7 (Ask near-miss,
   unchanged since 6b; Ask is 98.1% on the gate).
+
+### 1. Reduce's output cap (carry-over 1)
+- `CommandR7B.complete` runs `stream_generate` (the same text as mlx-lm's `generate`) and
+  keeps the finish reason; `generate` stays for Ask. `reduce.cut_off`: "length" with no
+  `<|END_RESPONSE|>`; a reply closed by its last allowed token is complete (test where it
+  must not fire), and so is an end of turn without the marker.
+- `reduce.max_tokens` 2048 → 8192, single and two-pass (`TWO_PASS_MAX_TOKENS` removed).
+  A reply still cut: `NotesDoc.truncated` (count, v5), a run-log warning, a warning on the
+  Notes page, and a "cut" column + `ami_truncated` in the AMI report. The cut claim is kept as
+  written and uncited. REDUCE_HASH moved (reason in its comment).
+- Existing replies (R7B tokenizer): quick 688–1098 tokens, long-en parts 824–1692 and pass 2
+  **3848 of 4096** (94%), every one closed with `<|END_RESPONSE|>`, so at temperature 0
+  none changes; long-en isn't re-run for this step.
+- quick (20261014-093829): **gate pass**; Reduce re-ran on all 4 items and every notes.json
+  is byte-identical to before (`raw` and sections), `truncated` 0.

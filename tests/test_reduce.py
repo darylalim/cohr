@@ -293,10 +293,12 @@ def test_build_notes_without_markers_keeps_everything_in_summary() -> None:
 
 
 class FakeR7B:
-    """Replies in order (the last one repeats); tokens = characters × tokens_per_char."""
+    """Replies in order (the last one repeats); tokens = characters × tokens_per_char;
+    `finish` is mlx-lm's finish reason for every reply."""
 
-    def __init__(self, reply: str | list[str], tokens_per_char: float = 0.0):
+    def __init__(self, reply: str | list[str], tokens_per_char: float = 0.0, finish: str = "stop"):
         self.replies = [reply] if isinstance(reply, str) else list(reply)
+        self.finish = finish
         self.tokens_per_char = tokens_per_char
         self.instructions: list[str] = []
         self.docs: list[list[dict[str, str]]] = []
@@ -315,6 +317,12 @@ class FakeR7B:
         self.calls.append({"max_tokens": max_tokens, "temperature": temperature, "seed": seed})
         self.prompts.append(prompt)
         return self.replies[min(len(self.calls), len(self.replies)) - 1]
+
+    def complete(
+        self, prompt: str, *, max_tokens: int, temperature: float, seed: int
+    ) -> reduce.Reply:
+        text = self.generate(prompt, max_tokens=max_tokens, temperature=temperature, seed=seed)
+        return reduce.Reply(text, self.finish)
 
 
 def _run(tmp_path: Path, config: Config, slides: list[Slide] | None = None) -> Path:
@@ -342,7 +350,7 @@ def test_stage_writes_notes(tmp_path: Path) -> None:
     doc = schemas.load(run_dir, NotesDoc)
     assert doc.language == "ja"
     assert [(c.kind, c.id) for c in doc.sections.key_points[0].citations] == [("slide", 2)]
-    assert lm.calls == [{"max_tokens": 2048, "temperature": 0.0, "seed": 3}]
+    assert lm.calls == [{"max_tokens": 8192, "temperature": 0.0, "seed": 3}]
     assert "Write meeting notes in Japanese" in lm.instructions[0]
     assert lm.instructions[0].rstrip().endswith("keeping the five English section markers.")
     assert len(lm.docs[0]) == 5
@@ -566,9 +574,60 @@ def test_stage_runs_two_passes_over_the_cap(
     assert doc.passes == 2 and doc.two_pass is not None and len(doc.two_pass.groups) == 2
     assert lm.instructions[-1].startswith("Write meeting notes in English for a long meeting")
     assert lm.instructions[-2].startswith("Write notes in English for one part of a long meeting")
-    assert [c["max_tokens"] for c in lm.calls] == [reduce.TWO_PASS_MAX_TOKENS] * 3
+    assert [c["max_tokens"] for c in lm.calls] == [ReduceConfig().max_tokens] * 3
     assert [d["title"] for d in lm.docs[-1]][2:] == ["slide 2: Plan", "slide 3: Retention"]
     assert "two passes, 2 groups" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("text", "finish", "cut"),
+    [
+        ("## KEY_POINTS\n- <co>Retention rose to 41%</co: 0:[", "length", True),  # AMI IS1009c
+        ("## KEY_POINTS\n- none\n##", "length", True),  # AMI IS1009b: a bare marker
+        # closed with its last token at the cap: complete
+        ("## OPEN_QUESTIONS\n- none\n<|END_RESPONSE|>", "length", False),
+        ("## OPEN_QUESTIONS\n- none\n<|END_RESPONSE|>", "stop", False),
+        ("## OPEN_QUESTIONS\n- none\n", "stop", False),  # end of turn: not the cap
+        ("## OPEN_QUESTIONS\n- none\n", None, False),
+    ],
+)
+def test_cut_off(text: str, finish: str | None, cut: bool) -> None:
+    assert reduce.cut_off(reduce.Reply(text, finish)) is cut
+
+
+# Cut by the cap mid-section (6e-1, AMI TS3003c): no DECISIONS, ACTION_ITEMS, OPEN_QUESTIONS.
+CUT_REPLY = REPLY.split("## DECISIONS")[0] + "- <co>Retention rose"
+
+
+def test_stage_flags_a_cut_reply(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    run_dir = _run(tmp_path, Config())
+    lm = FakeR7B(CUT_REPLY.replace("0:[3]", "0:[4]"), finish="length")
+    reduce.run_stage(ctx_for(run_dir, "reduce", fake_manager(Config(), tmp_path, reduce=lm)))
+    doc = schemas.load(run_dir, NotesDoc)
+    assert doc.truncated == 1
+    assert doc.sections.decisions == [] and doc.sections.action_items == []
+    assert "1 reply cut at reduce.max_tokens = 8192" in caplog.text
+    # The cut claim is kept as written, uncited: nothing is completed or invented (§5.6).
+    assert [c.text for c in doc.sections.key_points][-1] == "Retention rose"
+
+
+def test_stage_keeps_a_reply_closed_at_the_cap(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Must not fire: <|END_RESPONSE|> was the last token the cap allowed."""
+    run_dir = _run(tmp_path, Config())
+    lm = FakeR7B(REPLY.replace("0:[3]", "0:[4]"), finish="length")
+    reduce.run_stage(ctx_for(run_dir, "reduce", fake_manager(Config(), tmp_path, reduce=lm)))
+    assert schemas.load(run_dir, NotesDoc).truncated == 0
+    assert "cut at reduce.max_tokens" not in caplog.text
+
+
+def test_two_pass_counts_cut_replies(tmp_path: Path) -> None:
+    capped = Config(reduce=ReduceConfig(max_input_tokens=150))
+    run_dir = _run(tmp_path, capped)
+    lm = PartsR7B([*PASS1, PASS2], finish="length")  # none closes with <|END_RESPONSE|>
+    reduce.run_stage(ctx_for(run_dir, "reduce", fake_manager(capped, tmp_path, reduce=lm)))
+    assert schemas.load(run_dir, NotesDoc).truncated == 3
 
 
 def test_stage_under_the_cap_is_one_pass(tmp_path: Path) -> None:

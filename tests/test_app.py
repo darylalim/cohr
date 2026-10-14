@@ -177,6 +177,15 @@ def test_notes_has_one_sources_block_per_segment(tmp_path: Path) -> None:
     assert len(at.get("image")) == 2
 
 
+def test_notes_warns_when_reduce_was_cut(tmp_path: Path) -> None:
+    run_dir = make_fixture_run(tmp_path)
+    assert not app("app_pages/notes.py").warning  # complete notes: no warning
+    doc = schemas.load(run_dir, NotesDoc)
+    schemas.save(run_dir, doc.model_copy(update={"truncated": 1}))
+    at = app("app_pages/notes.py")
+    assert any("output limit" in w.value for w in at.warning)
+
+
 def test_notes_without_media_after_prune(tmp_path: Path) -> None:
     run_dir = make_fixture_run(tmp_path)
     storage.prune_media(run_dir)

@@ -49,6 +49,13 @@ media = ui.run_media(run_dir, manifest, slides)
 
 if error := st.session_state.get(ERROR_KEY):
     st.error(error, icon=":material/error:")
+reduced = notes if isinstance(notes, NotesDoc) else schemas.load(run_dir, NotesDoc)
+if reduced.truncated:
+    st.warning(
+        "These notes end early: the model reached its output limit (reduce.max_tokens), "
+        "so the last sections may be missing or cut short.",
+        icon=":material/warning:",
+    )
 with st.container(horizontal=True, vertical_alignment="bottom"):
     st.download_button(
         "Download notes.md",

@@ -271,7 +271,8 @@ class NotesDoc(RunFile):
     # v3: a seg citation's `t` is placed inside the chunk at the cited sentence (D19), so
     # older runs re-run Reduce (same reply at temperature 0, new jump times).
     # v4: two_pass (pass-1 groups and how pass-2 citations resolved, §4).
-    FORMAT_VERSION: ClassVar[int] = 4
+    # v5: truncated (6e-2), with reduce.max_tokens 2048 → 8192.
+    FORMAT_VERSION: ClassVar[int] = 5
     FILENAME: ClassVar[str] = "notes.json"
 
     sections: NotesSections
@@ -279,6 +280,7 @@ class NotesDoc(RunFile):
     language: str
     raw: str  # R7B's reply with citation markup, as generated (debugging, evals)
     two_pass: TwoPass | None = None  # passes == 2 only
+    truncated: int = 0  # R7B replies cut at reduce.max_tokens: the notes end early (6e-2)
 
 
 class TranslatedNotes(RunFile):

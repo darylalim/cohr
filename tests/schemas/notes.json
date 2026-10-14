@@ -1,5 +1,5 @@
 {
-  "format_version": 4,
+  "format_version": 5,
   "schema": {
     "$defs": {
       "ActionItem": {
@@ -231,6 +231,11 @@
       },
       "sections": {
         "$ref": "#/$defs/NotesSections"
+      },
+      "truncated": {
+        "default": 0,
+        "title": "Truncated",
+        "type": "integer"
       },
       "two_pass": {
         "anyOf": [

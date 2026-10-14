@@ -1634,6 +1634,7 @@ def score_ami(
             "uncited_claims": len(uncited),
             **{f"claims_{name}": len(getattr(doc.sections, name)) for name in SECTIONS},
             "output_language_ok": int(notes_language(doc, {"en"}) == "en"),
+            "truncated": schemas.load(run_dir, NotesDoc).truncated,  # Reduce cut (6e-2)
         },
         sentences=[SentenceResult(part=part, text=t) for part, ts in refs.items() for t in ts],
         uncited=uncited,
@@ -1719,6 +1720,7 @@ def ami_summary(reports: Sequence[AmiReport]) -> dict[str, float | int | None]:
             round(sum(c.supported == "yes" for c in support) / len(support), 4) if support else None
         ),
         "ami_uncited_claims": sum(int(r.metrics.get("uncited_claims") or 0) for r in reports),
+        "ami_truncated": sum(int(r.metrics.get("truncated") or 0) for r in reports),
         "ami_s_per_audio_hour": stages["total"]["s_per_audio_hour"],
         "ami_peak_mem_gb": stages["total"]["peak_mem_gb"],
     }
@@ -2030,8 +2032,10 @@ def render_markdown(report: Report) -> str:
             "",
             "## AMI (real meetings, report-only)",
             "",
-            "| Meeting | min | coverage | " + " | ".join(parts) + " | support | uncited | s/h |",
-            "|---" * (len(parts) + 6) + "|",
+            "| Meeting | min | coverage | "
+            + " | ".join(parts)
+            + " | support | uncited | cut | s/h |",
+            "|---" * (len(parts) + 7) + "|",
         ]
         for m in report.ami:
             cov = [_pct(m.metrics.get(f"coverage_{p}")) for p in parts]
@@ -2040,7 +2044,8 @@ def render_markdown(report: Report) -> str:
                 f"| {m.id} | {m.duration_s / 60:.1f} | {_pct(m.metrics.get('coverage'))} | "
                 + " | ".join(cov)
                 + f" | {_pct(m.metrics.get('support_rate'))} | "
-                f"{_num(m.metrics.get('uncited_claims'))} | {total / m.duration_s * 3600:.0f} |"
+                f"{_num(m.metrics.get('uncited_claims'))} | {_num(m.metrics.get('truncated'))} | "
+                f"{total / m.duration_s * 3600:.0f} |"
             )
         lines += ["", "AMI cost (s per audio hour, peak GB):", "", "| Stage | s/h | GB |"]
         lines.append("|---|---|---|")

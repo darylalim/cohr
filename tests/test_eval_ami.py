@@ -152,6 +152,7 @@ def test_score_and_judge_a_meeting_per_part(tmp_path: Path) -> None:
     rep = scored(run_dir)
     assert rep.id == "ami-X"
     assert (rep.metrics["claims"], rep.metrics["uncited_claims"]) == (6, 1)
+    assert rep.metrics["truncated"] == 0
     assert rep.uncited == ["An uncited claim"]
     assert [s.covered for s in rep.sentences] == [None] * 5
 
@@ -208,6 +209,7 @@ def test_report_shows_meetings_and_keeps_them_out_of_the_gate(tmp_path: Path) ->
     assert report.summary["ami_coverage"] == 0.6
     assert report.summary["ami_coverage_problems"] == 0
     assert report.summary["ami_uncited_claims"] == 1
+    assert report.summary["ami_truncated"] == 0
     assert report.summary["uncited_claims"] == base.summary["uncited_claims"]  # not added
     assert evals.compare(report, base) == []
     md = evals.render_markdown(report)
