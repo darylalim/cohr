@@ -2602,4 +2602,7 @@ quick must pass its gate at the end. Don't bump the version: that's 6e-2, and on
 When done: write evals/baseline-full.json (say why in the commit), tick the checklist, add
 any new decision to §20, add a NOTES.md entry, make sure the gate passes, and open a PR (ask
 before pushing). Stop there; 6e-2 is separate.
+Step 0 is done (commit 8818b88 on phase-6e-1-full, NOTES.md "6e-1 · 0. Proposal"): start at
+step 1. Approved downloads: AMI audio (5 meetings, official mirror) and FLEURS (streamed);
+the AMI annotations zip is already in evals/data/ami/.
 ```
