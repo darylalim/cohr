@@ -45,6 +45,11 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
   translate.md example-free. It also changes digits when translating: check values in Python.
 - Example lines in prompts must not overlap evals/gen/script.py's task or topic wording.
 - A fallback needs a test where it must not fire (a too-strict filter hid behind one in 6b-2).
+- Read a meeting's numbers in its own language (`numbers.source_numbers_in`), notes in the
+  notes language: Transcribe writes es "11.800", ja "35万4000", and the English reading (11.8;
+  35 and 4000) let the guard keep wrong values (6d-2). Run an es/ja meeting before guessing.
+- A model override that scores exactly like the default on every seed didn't apply: check the
+  run log's "loading <model> from" line (eval overrides loaded the defaults until 6d-2).
 - Changing any Reduce prompt moves REDUCE_HASH in tests/test_ask.py; update it only on purpose.
 - The guard hook blocks Bash commands containing the full-eval or models-marker text (heredocs
   too): write such text with the Edit/Write tools. It also blocks `rm -rf`: copy scratch
