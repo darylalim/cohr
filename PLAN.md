@@ -1815,20 +1815,24 @@ script's text can't work when the notes are in another language. For these items
 | `quick` | `clean-en`, `noisy-en`, `pdf-slides-en`, `slide-conflict-en` | ~5 min | After prompt or model changes; before every commit to `reduce.py`/`mapper.py` prompts |
 | `lang` | `conflict-de`, `clean-ar`, `clean-hi` (R7B in de/ar/hi), `clean-sw`, `clean-bn` ("Other (beta)", translated), `xling-es`, `xling-ja` (Spanish and Japanese meetings, English notes; 6d-2) | ~20 min | After Reduce, Map, number-reading or translate changes (6d-1, 6d-2); report-only baseline `evals/baseline-lang.json`, `-c seed=1 --no-ask` |
 | `long` | `long-en` | ~1 h (generation, ~40 min pipeline, Ask) | After two-pass Reduce or Ask ranking changes; report-only baseline `evals/baseline-long.json` |
-| `full` | All variants + 14-language FLEURS sample (20 clips each) + 5 AMI meetings | ~1 h | Before every version bump (§16) |
+| `full` | The `quick` and `lang` items + 14-language FLEURS sample (20 clips each, Transcribe only) + 5 AMI meetings (3.05 h of audio, English notes); `long-en` stays in `long` (6e-1, user) | ~1 h (estimate: synthetic ~20 min, FLEURS ~4, AMI ~26 + judge ~9) | Before every version bump (§16), followed by `long` |
 
 External data is downloaded at eval time into `evals/data/` (gitignored). Nothing from it is
 committed or redistributed.
 
 | Data | Source | License | What we use |
 |---|---|---|---|
-| FLEURS | HF dataset `google/fleurs`, `snapshot_download(allow_patterns=["data/<lang>/test.tsv", "data/<lang>/audio/test.tar.gz"])` for the 14 languages | CC BY 4.0 | 20 test clips per language + reference transcripts |
-| AMI audio + transcripts | HF dataset `edinburghcstr/ami` (parquet, `ihm` config) | CC BY 4.0 | 5 meetings |
+| FLEURS | HF dataset `google/fleurs` at revision `70bb2e84b976b7e960aa89f1c648e09c59f894dd`: `data/<lang>/test.tsv` and `data/<lang>/audio/test.tar.gz` **streamed** (6e-1, user): the tars are 159–658 MB each (5.9 GB for 14 languages), so the sample is 20 clips drawn by seed from the first 100 tar members, one per sentence (the TSV repeats a sentence per speaker); ~0.9 GB read once, ~10 MB kept | CC BY 4.0 | 20 test clips per language + reference transcripts |
+| AMI audio | Official mirror: `https://groups.inf.ed.ac.uk/ami/AMICorpusMirror/amicorpus/<id>/audio/<id>.Mix-Headset.wav` (16 kHz mix of the headset mics, whole meeting; 6e-1, user). Not `edinburghcstr/ami`: it holds one row per utterance per speaker (uppercase, no punctuation), so a meeting would have to be rebuilt without crosstalk or room noise | CC BY 4.0 | 5 meetings, ~352 MB |
 | AMI reference summaries | Official annotations: `https://groups.inf.ed.ac.uk/ami/AMICorpusAnnotations/ami_public_manual_1.6.2.zip` (22.9 MB; `LICENCE.txt` inside) | CC BY 4.0 | `abstractive/<meeting>.abssumm.xml` (142 meetings) |
 
 **AMI join and scoring:**
 - Join audio and summaries on meeting ID (e.g. `ES2004a`); use only meetings present in both.
-  The 5 meetings are fixed in `evals/sets/full.yaml`.
+  The 5 meetings are fixed in `evals/sets/full.yaml` (6e-1): ES2004b, ES2004d, IS1009b,
+  IS1009c, TS3003c (AMI test split, three scenario series, 30–43 min each; kickoff "a"
+  meetings skipped, ES2004c swapped for ES2004d: 1 decision, 0 actions). Reference sentences:
+  abstract 43, decisions 23, actions 11, problems 12, so one sentence moves a section's
+  coverage by 4–9 points.
 - Each `abssumm.xml` has `<abstract>`, `<decisions>`, `<actions>` and `<problems>`, each a list of
   `<sentence>` elements. Map them to our sections: `decisions` → Decisions, `actions` → Action
   items, `problems` → Open questions; `abstract` → Summary (judged for coverage only).
@@ -1965,6 +1969,7 @@ section.
 | D28 | Speech/slide conflict (§5.5, §18 `slide-conflict-en`) | Prompt: use the slide's value | Map ignores the prompt rule on every seed; a guard that swaps in the slide value would be wrong when a speaker corrects an outdated slide | Phase 6b-2 | **Show both** (user): a slide table row whose one value was never said, while the sentences naming its label hold exactly one number on no slide, gets "(slide: $18,000)" after the spoken value in Map's strings; `slide_conflicts` in MapFile v4. `quick` seed 1: slide_value_used false → true, recall 85.3 → 86.8%; dry run on 36 real segments found only the planted conflict |
 | D29 | Right-to-left notes on the Notes page and in `notes.md` (§5.6, §7) | Plain Markdown, no direction marks | Browser check of `clean-ar` (6d-1, Claude in Chrome) within the no-CSS rule | Phase 6d-1 | **Unicode isolates per line**: Arabic-only lines read right (one RTL run, citation at the end), but a line with Latin names or dates ("(المسؤول: Tom; الموعد: Monday)") was reordered, citation on the far side. `render.isolate` wraps each claim line, the summary paragraph and Ask answers in RLI … PDI for ar/fa/he/ur (`notes.md` format v2): reading order right, citation links still jump to Sources. Bullets and alignment stay on the left (that needs `dir`/CSS, not allowed) |
 | D30 | Where "Other (beta)" translation runs (§5.6) | — | Proposal before coding (6d-1 kickoff) | Phase 6d-1 | **Own `translate` stage** (user): between reduce and render, new `notes_translated.json` (TranslatedNotes v1), NotesDoc unchanged; a translate-prompt change re-runs only translate + render, and the English notes stay for the eval's citations-identical check. Rejected: inside reduce (two models in one stage, a prompt change re-runs R7B). `clean-sw` seeds 1–3: Swahili 3/3, citations identical 3/3, exact recall 92.3% = the English notes' on each seed, 4 claims kept English per run |
+| D31 | What `full` gates on (§18) | — | Proposal before code (6e-1 kickoff) | Phase 6e-1 | **Proposed, user to confirm after the first run**: the `quick` items' metrics at the D16/D24/D25 thresholds and the speed/memory rows gate; FLEURS WER/CER, AMI coverage and the `lang` items are report-only until their run-to-run noise is measured (D16's rule) |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).
@@ -2597,4 +2602,7 @@ quick must pass its gate at the end. Don't bump the version: that's 6e-2, and on
 When done: write evals/baseline-full.json (say why in the commit), tick the checklist, add
 any new decision to §20, add a NOTES.md entry, make sure the gate passes, and open a PR (ask
 before pushing). Stop there; 6e-2 is separate.
+Step 0 is done (commit 8818b88 on phase-6e-1-full, NOTES.md "6e-1 · 0. Proposal"): start at
+step 1. Approved downloads: AMI audio (5 meetings, official mirror) and FLEURS (streamed);
+the AMI annotations zip is already in evals/data/ami/.
 ```

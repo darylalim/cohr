@@ -1883,3 +1883,27 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
 - The kickoff asks for a proposal first: §18's "~1 h" for full predates long-en (~40 min
   alone), and FLEURS/AMI download sizes aren't known yet. README.md is still Phase 1's (status,
   "ingest only for now"), so 6e-1 updates it alongside the cache size note.
+
+## 2026-10-13 · Phase 6e-1 (full set + robustness, measured)
+
+### 0. Proposal: what `full` contains (user approved all four choices)
+- **AMI audio from the official mirror**, not `edinburghcstr/ami`: the Hub dataset holds one
+  row per utterance per speaker (`begin_time`/`end_time`, uppercase text, no punctuation), so
+  a meeting would have to be mixed back onto a timeline with no crosstalk, room noise or
+  untranscribed speech. `amicorpus/<id>/audio/<id>.Mix-Headset.wav` is the whole meeting
+  (16 kHz), from the same site and licence as the summaries.
+- **FLEURS streamed**: the test tars are 159 MB (nl) to 658 MB (it), 5.9 GB for 14 languages,
+  to use 280 clips. The parquet branch is larger (en 402 vs 290 MB) and the rows API refuses
+  the dataset ("scan size limit exceeded"). Sample = 20 clips by seed from the first 100 tar
+  members at the pinned revision `70bb2e84…`, one per sentence; ~0.9 GB read, ~10 MB kept.
+- **`long-en` stays in `long`**: `full` ≈ 1 h (synthetic ~20 min, FLEURS ~4, AMI ~26 + judge
+  ~9, estimated from quick's 513 s per audio hour without Vision); the release gate runs
+  `full`, then `long`.
+- **Meetings**: ES2004b, ES2004d, IS1009b, IS1009c, TS3003c (test split, 30–43 min each, 3.05 h,
+  ~352 MB). ES2004c dropped after reading its summary (1 decision, 0 actions). Reference
+  sentences: abstract 43, decisions 23, actions 11, problems 12; one sentence is 4–9 points
+  of a section's coverage, so AMI coverage starts report-only (D31, proposed).
+- Licences checked again: FLEURS and `edinburghcstr/ami` cards `cc-by-4.0`, ungated; the AMI
+  licence page and `LICENCE.txt` in `ami_public_manual_1.6.2.zip` (downloaded, 22.9 MB, 143
+  `abstractive/*.abssumm.xml`): "released under the Creative Commons Attribution 4.0
+  International Public License agreement (CC BY 4.0)".
