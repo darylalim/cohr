@@ -52,7 +52,14 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
   run log's "loading <model> from" line (eval overrides loaded the defaults until 6d-2).
 - Before building on an external dataset, check its real layout and file sizes (Hub tree API,
   HEAD requests), not just its name and card: `edinburghcstr/ami` is per-utterance clips, not
-  meetings, and FLEURS needs 5.9 GB of test tars for 280 clips (6e-1, §18).
+  meetings, and FLEURS needs 5.9 GB of test tars for 280 clips (6e-1, §18). The AMI mirror
+  cut a scripted download, then answered 403: ask the user to download in a browser into
+  evals/data/ami/ (`ami.ensure` skips files already there).
+- Notes missing a section ("missing section markers" in the run log) or ending mid-citation:
+  count the tokens of `raw` in notes.json against `reduce.max_tokens` before blaming the
+  prompt. R7B's citation markup is token-heavy; 4 of 5 AMI notes hit 2048 silently (6e-1).
+- A set always run with a flag (lang with `--no-ask`) never tests what the flag skips: run a
+  new item once with Ask and the judge on (6e-1: the first full run crashed on xling-es Ask).
 - Changing any Reduce prompt moves REDUCE_HASH in tests/test_ask.py; update it only on purpose.
 - The guard hook blocks Bash commands containing the full-eval or models-marker text (heredocs
   too): write such text with the Edit/Write tools. It also blocks `rm -rf`: copy scratch
