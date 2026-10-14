@@ -1,0 +1,29 @@
+# Full eval set (PLAN §18, 6e-1): the release gate, before every version bump, then `long`.
+# The quick and lang items (same specs, same runs in evals/data/runs/), FLEURS (Transcribe
+# only) and, from 6e-1 step 2, AMI. long-en stays in its own set (~40 min alone).
+# Run: uv run cohr eval --set full (~1 h). One language: --item fleurs-ja; all FLEURS: --item fleurs.
+include: [quick, lang]
+
+# google/fleurs at a pinned revision, streamed (the test tars are 159–658 MB each): 20 clips
+# per language by seed from the first 100 tar members, one per sentence. Kept in
+# evals/data/fleurs/<lang>/ (gitignored). CC BY 4.0.
+fleurs:
+  revision: 70bb2e84b976b7e960aa89f1c648e09c59f894dd
+  seed: 1
+  clips: 20
+  pool: 100
+  languages:  # Transcribe's 14 (asr.LANGUAGES) → FLEURS config
+    ar: ar_eg
+    de: de_de
+    el: el_gr
+    en: en_us
+    es: es_419
+    fr: fr_fr
+    it: it_it
+    ja: ja_jp
+    ko: ko_kr
+    nl: nl_nl
+    pl: pl_pl
+    pt: pt_br
+    vi: vi_vn
+    zh: cmn_hans_cn

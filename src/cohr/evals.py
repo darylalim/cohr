@@ -38,8 +38,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from cohr import ask, atomic, judge, pipeline, render, schemas, storage
+from cohr import ask, asr, atomic, fleurs, judge, pipeline, render, schemas, storage
 from cohr.config import Config, prompt_hash
+from cohr.fleurs import FleursSpec
 from cohr.fuse import slide_text, tokens
 from cohr.judge import CachedJudge, Generate, Label, Supported
 from cohr.mapper import clock, source_numbers
@@ -133,7 +134,9 @@ class ItemSpec(_Model):
 
 class EvalSet(_Model):
     name: str
-    items: list[ItemSpec]
+    include: list[str] = []  # other sets whose items come first (full: quick, lang)
+    items: list[ItemSpec] = []
+    fleurs: FleursSpec | None = None  # Transcribe-only clips (full, 6e-1)
 
 
 def load_set(name: str, root: Path = Path()) -> EvalSet:
@@ -143,7 +146,9 @@ def load_set(name: str, root: Path = Path()) -> EvalSet:
     if not path.is_file():
         raise FileNotFoundError(f"no eval set {name!r} ({path})")
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    return EvalSet.model_validate({"name": name, **data})
+    eval_set = EvalSet.model_validate({"name": name, **data})
+    included = [it for other in eval_set.include for it in load_set(other, root).items]
+    return eval_set.model_copy(update={"items": [*included, *eval_set.items]})
 
 
 # --- truth.json (written by evals/gen) -----------------------------------------------------
@@ -493,12 +498,6 @@ def gap_text(transcript: Transcript, gaps: Sequence[Span]) -> tuple[int, list[st
     return words, texts
 
 
-def wer(reference: str, hypothesis: str) -> float:
-    import jiwer  # eval dependency group
-
-    return float(jiwer.wer(wer_text(reference), wer_text(hypothesis)))
-
-
 CER_LANGUAGES = ("ja", "ko", "zh")  # no spaces between words: scored by character (§18)
 _GROUPED = re.compile(r"(?<=\d)[.,\u00a0\u202f ](?=\d{3}(?!\d))")
 _UNIT_WORDS = {
@@ -523,11 +522,17 @@ def asr_text(text: str, language: str) -> str:
 
 def asr_error(reference: str, hypothesis: str, language: str) -> tuple[str, float]:
     """("wer", WER) in English (unchanged) and other spaced languages, ("cer", CER) in ja/ko/zh."""
+    return asr_corpus_error([reference], [hypothesis], language)
+
+
+def asr_corpus_error(
+    references: Sequence[str], hypotheses: Sequence[str], language: str
+) -> tuple[str, float]:
+    """asr_error over many utterances: total edits / total reference words (or characters)."""
     import jiwer  # eval dependency group
 
-    if language == "en":
-        return "wer", wer(reference, hypothesis)
-    ref, hyp = asr_text(reference, language), asr_text(hypothesis, language)
+    norm = wer_text if language == "en" else lambda t: asr_text(t, language)
+    ref, hyp = [norm(t) for t in references], [norm(t) for t in hypotheses]
     if language in CER_LANGUAGES:
         return "cer", float(jiwer.cer(ref, hyp))
     return "wer", float(jiwer.wer(ref, hyp))
@@ -1410,6 +1415,125 @@ def ask_cache(root: Path, name: str) -> Path:
 # --- set report, baseline comparison -------------------------------------------------------
 
 
+# --- FLEURS (§18, 6e-1): Transcribe alone on read sentences ----------------------------------
+#
+# Each clip is one sentence, so it goes to Transcribe whole (no VAD, no chunking). Error per
+# language is over the 20 clips together (edits / reference words or characters). The refs
+# are FLEURS's raw transcriptions; English number words are read as digits (wer_text), other
+# languages' aren't (asr_text), so a number Transcribe writes in digits counts as an error
+# there. Report-only (D31): kept out of `summary`'s gated keys and `stages`.
+
+
+class ClipResult(_Model):
+    file: str
+    reference: str
+    hypothesis: str
+    error: float
+
+
+class FleursRow(_Model):
+    language: str
+    metric: Literal["wer", "cer"]
+    error: float
+    clips: int
+    audio_s: float
+    seconds: float  # Transcribe time on these clips (no download)
+    s_per_audio_hour: float | None
+    results: list[ClipResult]
+
+
+def read_clip(path: Path) -> Any:
+    import soundfile as sf
+
+    audio, sr = sf.read(path, dtype="float32")
+    if sr != asr.SR:
+        raise ValueError(f"{path}: {sr} Hz, Transcribe needs {asr.SR}")
+    return audio if audio.ndim == 1 else audio.mean(axis=1)
+
+
+def fleurs_languages(spec: FleursSpec | None, items: Sequence[str]) -> list[str]:
+    """Languages to run: all with no --item filter or `fleurs`; `fleurs-<lang>` picks one."""
+    if spec is None:
+        return []
+    if not items or "fleurs" in items:
+        return list(spec.languages)
+    return [lang for lang in spec.languages if f"fleurs-{lang}" in items]
+
+
+def score_fleurs(language: str, sample: fleurs.Sample, hypotheses: Sequence[str]) -> FleursRow:
+    refs = [c.text for c in sample.items]
+    metric, error = asr_corpus_error(refs, hypotheses, language)
+    results = [
+        ClipResult(
+            file=c.file,
+            reference=c.text,
+            hypothesis=h,
+            error=round(asr_error(c.text, h, language)[1], 4),
+        )
+        for c, h in zip(sample.items, hypotheses, strict=True)
+    ]
+    return FleursRow(
+        language=language,
+        metric="cer" if metric == "cer" else "wer",
+        error=round(error, 4),
+        clips=len(results),
+        audio_s=0.0,
+        seconds=0.0,
+        s_per_audio_hour=None,
+        results=results,
+    )
+
+
+def run_fleurs(
+    spec: FleursSpec,
+    languages: Sequence[str],
+    *,
+    root: Path,
+    models: Any,
+    overrides: Mapping[str, Any],
+    fs: fleurs.FileSystem | None = None,
+    log: Callable[[str], None] = print,
+) -> list[FleursRow]:
+    if models is None:
+        raise RuntimeError("FLEURS needs a ModelManager")
+    rows = []
+    for lang in languages:
+        sample, folder = fleurs.load_sample(spec, lang, root, fs=fs, log=log)
+        audio = [read_clip(folder / c.file) for c in sample.items]
+        models.set_config(apply_overrides(Config(source_language=lang), overrides))
+        t0 = time.perf_counter()
+        with models.use("transcribe") as model:
+            hyps = [model.transcribe(a, lang).strip() for a in audio]
+        secs = time.perf_counter() - t0
+        audio_s = sum(len(a) for a in audio) / asr.SR
+        row = score_fleurs(lang, sample, hyps).model_copy(
+            update={
+                "audio_s": round(audio_s, 1),
+                "seconds": round(secs, 2),
+                "s_per_audio_hour": round(secs / audio_s * 3600, 1) if audio_s else None,
+            }
+        )
+        log(f"fleurs-{lang}: {row.metric} {row.error:.1%}, {secs:.1f} s")
+        rows.append(row)
+    return rows
+
+
+def fleurs_summary(rows: Sequence[FleursRow]) -> dict[str, float | None]:
+    """Mean WER over the spaced languages, mean CER over ja/ko/zh, and Transcribe's speed."""
+
+    def mean(metric: str) -> float | None:
+        vals = [r.error for r in rows if r.metric == metric]
+        return round(sum(vals) / len(vals), 4) if vals else None
+
+    audio_s = sum(r.audio_s for r in rows)
+    secs = sum(r.seconds for r in rows)
+    return {
+        "fleurs_wer": mean("wer"),
+        "fleurs_cer": mean("cer"),
+        "fleurs_s_per_audio_hour": round(secs / audio_s * 3600, 1) if audio_s else None,
+    }
+
+
 class Report(_Model):
     created_at: datetime
     set: str
@@ -1423,6 +1547,7 @@ class Report(_Model):
     citation_errors: list[float] = Field(default_factory=list)  # every t_error, for D19
     judge: JudgeCost | None = None  # eval-only cost, kept out of `stages` and the gate
     ask: JudgeCost | None = None  # Ask eval cost (same shape; R7B already resident)
+    fleurs: list[FleursRow] = []  # full only: per language, report-only (D31)
     baseline: str | None = None
     regressions: list[str] = []
 
@@ -1576,6 +1701,8 @@ PCT_KEYS = {
     "vad_speech_f1",
     "wer",
     "cer",
+    "fleurs_wer",
+    "fleurs_cer",
     "slides_found",
     "slide_title_exact",
     "slide_cell_accuracy",
@@ -1657,6 +1784,27 @@ def render_markdown(report: Report) -> str:
         lines += ["", f"Judge: {j.calls} calls, {j.cached} cached, {j.seconds:g} s."]
     if a := report.ask:
         lines += ["", f"Ask: {a.calls} calls, {a.cached} cached, {a.seconds:g} s."]
+
+    if report.fleurs:
+        lines += [
+            "",
+            "## FLEURS (Transcribe only, report-only)",
+            "",
+            "| Language | Metric | Error | Clips | Audio s | s/h |",
+            "|---|---|---|---|---|---|",
+        ]
+        lines += [
+            f"| {r.language} | {r.metric} | {_pct(r.error)} | {r.clips} | {_num(r.audio_s)} "
+            f"| {_num(r.s_per_audio_hour)} |"
+            for r in report.fleurs
+        ]
+        lines += ["", "Worst clip per language:", ""]
+        for r in report.fleurs:
+            if worst := max(r.results, key=lambda c: c.error, default=None):
+                lines.append(
+                    f"- {r.language} {_pct(worst.error)}: {worst.reference} → "
+                    f"{worst.hypothesis or '(empty)'}"
+                )
 
     errs = report.citation_errors
     if errs:
@@ -1820,7 +1968,8 @@ def run_set(
     (shared, so resident models stay loaded across items)."""
     eval_set = load_set(name, root)
     specs = [s for s in eval_set.items if not items or s.id in items]
-    if not specs:
+    fleurs_langs = fleurs_languages(eval_set.fleurs, items)
+    if not specs and not fleurs_langs:
         raise ValueError(f"no items {list(items)} in set {name!r}")
     overrides = dict(overrides or {})
     reports: list[ItemReport] = []
@@ -1856,6 +2005,12 @@ def run_set(
         reports.append(report)
         run_dirs.append(run_dir)
 
+    fleurs_rows = []
+    if eval_set.fleurs and fleurs_langs:
+        fleurs_rows = run_fleurs(
+            eval_set.fleurs, fleurs_langs, root=root, models=models, overrides=overrides, log=log
+        )
+
     judge_cost = None
     if judge_:
         reports, judge_cost = judge_items(
@@ -1885,11 +2040,12 @@ def run_set(
         | ({p: prompt_hash(p)[:12] for p in judge.PROMPTS} if judge_ else {})
         | ({p: prompt_hash(p)[:12] for p in ASK_PROMPTS} if ask_ else {}),
         items=reports,
-        summary=summarize(reports),
+        summary=summarize(reports) | (fleurs_summary(fleurs_rows) if fleurs_rows else {}),
         stages=stage_summary(reports),
         citation_errors=sorted(errors),
         judge=judge_cost,
         ask=ask_cost,
+        fleurs=fleurs_rows,
     )
 
 

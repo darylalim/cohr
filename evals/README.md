@@ -42,7 +42,7 @@ Generate one item by hand: `uv run python -m evals.gen clean-en evals/data/gen/c
 |---|---|
 | `quick` | `clean-en` (screen recording), `noisy-en` (background noise, music and noise gaps), `pdf-slides-en` (audio + PDF deck, text alignment), `slide-conflict-en` (a number misspoken, correct on the slide) |
 | `long` | `long-en`: ~2.5 h, audio + PDF deck, 5 regions × 8 topics, 88 facts; Ask asks a 24-question sample (6c). ~1 h with generation |
-| `full` | Phase 6: adds cross-language items, `long-en`, FLEURS and AMI |
+| `full` | The `quick` and `lang` items, plus FLEURS: 20 test clips per language in Transcribe's 14, scored by WER (CER for ja/ko/zh) on Transcribe alone, report-only. Streamed from the Hub on first use (~15 MB kept per language in `evals/data/fleurs/`). `--item fleurs` runs only FLEURS, `--item fleurs-ja` one language. AMI follows (6e-1) |
 
 ## Metrics
 
