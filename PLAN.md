@@ -1144,9 +1144,17 @@ compared with a committed baseline:
     and Arabic script (ar), which the eval's owner match misses (clean-hi made-up 5), and once
     wrote Tuesday for Monday in Hindi; Map drops facts in dense Japanese segments and misreads
     万 forms ("35万4000" → "$34,000", now flagged); no slide-conflict check for Japanese.
-- **6e: full set + v1.** FLEURS and AMI in `full` (§18); error messages for missing ffmpeg or
-  models; an end-to-end check of the sequential memory policy; a cache size note for the README;
-  the `full` release gate; bump to `1.0.0` to release v1 (§16, only when asked).
+- **6e: full set + v1**, split in two (user, 2026-10-13): `quick` already meets the v1
+  targets, so the carry-overs don't block v1; the first `full` run ranks them.
+  - **6e-1: full set + robustness, measured.** FLEURS and AMI in `full` (§18) with the CC BY
+    footer; the speed check on real meetings (AMI, §9 definition of done); error messages for
+    missing ffmpeg or models (CLI and UI); an end-to-end check of the sequential memory policy;
+    README brought up to date (status, app, `cohr models download`, model cache size and
+    `hf cache delete`). The first `full` run is a measurement: no fixes, `baseline-full.json`
+    written. Kickoff prompt in §21.
+  - **6e-2: carry-over fixes + v1.** The carry-overs from 6b-2, 6c, 6d-1 and 6d-2 that the
+    `full` run ranks highest, then the `full` release gate and the bump to `1.0.0` (§16, only
+    when asked). Kickoff prompt written after 6e-1, from its findings.
 Kickoff prompts for 6b–6e are written after the previous sub-phase, using its findings.
 **Phase 7 (after v1): cross-meeting search:** SQLite + FTS5 index and Search page per §13.
 
@@ -2532,4 +2540,57 @@ its gate at the end (step 1 touches numbers.py, which the guard uses).
 When done: update evals/baseline-lang.json (say why in the commit), tick the checklist, add
 any new decision to §20, add a NOTES.md entry, make sure the gate passes, and open a PR (ask
 before pushing). Stop there; 6e is separate.
+```
+
+### Kickoff prompt for Phase 6e-1 (full set + robustness, measured)
+```text
+Continue cohr: Phase 6e-1 (full set and robustness, measured). Read CLAUDE.md, then PLAN.md
+§4 (memory policy), §9 (the 6e bullets, the definition of done, and the carry-overs in the
+6b-2, 6c, 6d-1 and 6d-2 Results), §11 (licensing), §12 (storage), §18 (eval sets, FLEURS and
+AMI, AMI join and scoring, reports and the release gate), §20 (D15, D16) and the latest
+NOTES.md entry (Phase 6d-2). Work on branch phase-6e-1-full.
+quick meets the v1 targets; 6e-1 builds what v1 still lacks and measures it. No quality
+fixes in 6e-1: carry-overs go to 6e-2, ranked by what the first full run shows. Commit each
+step separately.
+0. Proposal before code (ask me): what `full` contains and how long it runs. §18 says
+   "all variants + 20 FLEURS clips × 14 languages + 5 AMI meetings, ~1 h", but long-en alone
+   is ~40 min; say whether long-en stays in its own set, and estimate the run time and the
+   download sizes (FLEURS test audio per language, AMI ihm parquet). External data is
+   fetched at eval time into evals/data/ (gitignored, never committed); ask before any
+   download. Check each dataset's license on its card again (CC BY 4.0, §18) and the AMI
+   annotations zip's LICENCE.txt.
+1. FLEURS (Transcribe only): 20 test clips per language, fixed by a seed in
+   evals/sets/full.yaml; WER, or CER for ja/ko/zh (`asr_error`, 6d-2); per-language rows in
+   the report. FLEURS clips are single sentences: score Transcribe on the clip, no VAD.
+2. AMI: the 5 meetings fixed in full.yaml (in both the audio and the official annotations);
+   audio only (no slides), English notes. The judge scores coverage per reference sentence
+   (§18 mapping: decisions → Decisions, actions → Action items, problems → Open questions,
+   abstract → Summary); parse the XML with stdlib `xml.etree` (ISO-8859-1). Seconds per audio
+   hour per stage on these real meetings is the definition of done's speed check (≤ 20 min
+   per audio hour, `resident`); peak memory too.
+3. The report footer for external data (§18, exact text) on every report that includes it,
+   and the same line in evals/README.md. `full` gates against evals/baseline-full.json
+   (GATED_SETS has `full` already); the first run writes it.
+4. Robustness: missing ffmpeg and missing or partly downloaded models give a clear message in
+   the CLI and the UI (both exist in part: ingest.require, ModelsMissing; check every path
+   that can hit them, e.g. a model deleted from the cache after a run, HF offline), with
+   tests. An end-to-end run of a quick item with `memory_policy=sequential`: notes identical
+   in content to `resident` on the same seed, and the peak memory per stage (§4) recorded.
+5. README: the status line is from Phase 1. Bring it up to date: what works, the app
+   (`uv run streamlit run app.py`), `cohr models download` and the model cache size (~15 GB,
+   measured from the cache), deleting models with `hf cache delete`, the eval sets in one line
+   each, and the CC-BY-NC note that's there.
+6. The first full run (ask me first: it's slow and downloads data). A measurement: no fixes.
+   Record in NOTES.md: FLEURS WER/CER per language, AMI coverage per section and support rate,
+   speed and peak memory, and the synthetic items against their quick/lang baselines. Then
+   rank the carry-overs (PLAN §9 6b-2 to 6d-2 Results: Japanese chunk-start drops, owners in
+   Devanagari/Arabic script, Map's 万 misreads and dense-segment drops, long-en tasks filed as
+   decisions, Ask near-miss under the cap, Ask and slide conflicts, the "Other (beta)" limits)
+   by what the full run shows, as the input for the 6e-2 kickoff.
+Rules from CLAUDE.md apply. Ask me before the full run, any dataset or model download, the
+opt-in model tests, and new dependencies (check licenses, §11). quick and lang runs are fine;
+quick must pass its gate at the end. Don't bump the version: that's 6e-2, and only when I ask.
+When done: write evals/baseline-full.json (say why in the commit), tick the checklist, add
+any new decision to §20, add a NOTES.md entry, make sure the gate passes, and open a PR (ask
+before pushing). Stop there; 6e-2 is separate.
 ```

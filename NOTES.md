@@ -1871,3 +1871,15 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
   slide-conflict check; "Other (beta)" carry-overs from 6d-1 still open.
 - CLAUDE.md lessons worth adding (separate PR, ask): eval model overrides need
   `pipeline.run`'s `set_config` (fixed); read a meeting's numbers in its own language.
+
+## 2026-10-13 · Phase 6e split and 6e-1 kickoff prompt (no code)
+- 6e split in two (user): 6e-1 = full set (FLEURS, AMI), robustness (ffmpeg/model errors in
+  CLI and UI, sequential memory policy end to end), README update, first full run as a
+  measurement; 6e-2 = the carry-over fixes the full run ranks highest, the release gate and the
+  1.0.0 bump (only when asked). Why: quick already meets every v1 target (recall 86.8%,
+  citation 100%, made-up 0, language 100%), so the ~15 carry-overs from 6b-2 to 6d-2 don't
+  block v1, and the first full run (real AMI meetings, 14 FLEURS languages) is better input for
+  choosing among them than the synthetic sets.
+- The kickoff asks for a proposal first: §18's "~1 h" for full predates long-en (~40 min
+  alone), and FLEURS/AMI download sizes aren't known yet. README.md is still Phase 1's (status,
+  "ingest only for now"), so 6e-1 updates it alongside the cache size note.
