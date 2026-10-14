@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
-from cohr import schemas
+from cohr import names, schemas
 from cohr.config import language_name, load_prompt
 from cohr.fuse import overlap, slide_text, tokens
 from cohr.mapper import clock, fill
@@ -340,6 +340,20 @@ def filed_task(claim: Claim, map_notes: Mapping[int, SegmentNotes]) -> bool:
             task, owned = score, bool(a.owner)
     decided = max((_match_score(claim.text, d) for n in cited for d in n.decisions), default=0)
     return task >= ACTION_MATCH_MIN and (task > decided or (task == decided and owned))
+
+
+def restore_owners(doc: NotesDoc, texts: Sequence[str]) -> tuple[NotesDoc, list[str]]:
+    """Owners back in the meeting's spelling (`names.restore`); the changes, "लॉरा → Laura"."""
+    changed: list[str] = []
+    items = []
+    for item in doc.sections.action_items:
+        owner = names.restore(item.owner, texts) if item.owner else item.owner
+        if owner != item.owner:
+            changed.append(f"{item.owner} → {owner}")
+            item = item.model_copy(update={"owner": owner})
+        items.append(item)
+    sections = doc.sections.model_copy(update={"action_items": items})
+    return doc.model_copy(update={"sections": sections}), changed
 
 
 def add_task(items: list[ActionItem], task: ActionItem) -> None:
@@ -822,6 +836,10 @@ def run_stage(ctx: StageContext) -> None:
                 ctx.report,
                 language,
             )
+    texts = [s.transcript_text for s in segments] + [slide_text(s) for s in slides]
+    doc, restored = restore_owners(doc, texts)
+    if restored:
+        ctx.log.info("reduce: owners in the meeting's spelling: %s", ", ".join(restored))
     if truncated:
         ctx.log.warning(
             "reduce: %d repl%s cut at reduce.max_tokens = %d: the notes end early",

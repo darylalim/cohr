@@ -2135,3 +2135,23 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
   76 judged claims instead of 83, the 7 merged duplicates were all "yes".
 - Not covered (step 2b if needed): a task Map files only as a decision (xling-es "Victor will
   write the notes for the next version"). AMI is measured with step 4's AMI run.
+
+### 3. Owners in the notes' script (carry-over 3; Python, `names.py`, `reduce.restore_owners`)
+- New dependency `anyascii` 0.3.3 (ISC, pure Python, no dependencies; checked in its
+  classifiers): transliteration only.
+- An owner with non-Latin letters, one word, not in the transcript or slides as written, is
+  matched to a capitalised Latin word said in the meeting: same consonants after
+  transliteration (blurred pairs merged: c/k, l/r, v/b/f, Arabic و/ي as vowels, aspiration
+  h dropped), closest spelling breaking ties (Arabic "ماريا" → Maria, not Omar), equal ties
+  kept as written. Candidates are words never also written in lowercase ("Team" when "the
+  team" is said). Kept: Latin owners, roles ("मार्केटिंग मैनेजर"), names nobody said.
+  Matches all 19 forms of the eval names in Devanagari, Arabic, Bengali and Japanese except
+  Japanese ビクター (no final r): Japanese owners in Japanese notes aren't in any set.
+- Applied once on the final notes (single and two-pass); logged ("लॉरा → Laura").
+- lang seed 1 (20261014-100217, with step 2; baseline-lang pass): recall 81.3 → **86.8%**,
+  clean-hi 53.8 → **92.3%** (actions 0 → 100%), made-up 0, every other item's recall equal.
+  Citation accuracy 95.9 → 89.9%: clean-hi 100 → 58.3%, because its 5 action items are now
+  found and scored. **New carry-over (cross-language jump times):** their Hindi text shares
+  no token with the English transcript, so `refine_time` falls back to the segment start
+  (seg 0 @ 0.002 s, 46–246 s early). Arabic notes escape it only because their task text
+  keeps the Latin names. Not caused by step 3; hidden until the facts matched.

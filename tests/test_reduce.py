@@ -15,6 +15,7 @@ from cohr.schemas import (
     MapActionItem,
     MapFile,
     NotesDoc,
+    NotesSections,
     Segment,
     SegmentNotes,
     SegmentsFile,
@@ -742,3 +743,26 @@ def test_stage_under_the_cap_is_one_pass(tmp_path: Path) -> None:
     reduce.run_stage(ctx_for(run_dir, "reduce", fake_manager(Config(), tmp_path, reduce=lm)))
     doc = schemas.load(run_dir, NotesDoc)
     assert (doc.passes, doc.two_pass, len(lm.calls)) == (1, None, 1)
+
+
+def test_restore_owners_uses_the_meetings_spelling() -> None:
+    doc = NotesDoc(
+        sections=NotesSections(
+            summary=[],
+            key_points=[],
+            decisions=[],
+            action_items=[
+                ActionItem(text="अनुबंध भेजें", citations=SEG0, owner="लॉरा", due="शुक्रवार"),
+                ActionItem(text="वीडियो", citations=SEG0, owner="प्रिया"),  # not said: kept
+                ActionItem(text="सर्वे", citations=SEG0),
+            ],
+            open_questions=[],
+        ),
+        passes=1,
+        language="hi",
+        raw="",
+    )
+    fixed, changed = reduce.restore_owners(doc, ["Laura, send the contract by Friday."])
+    assert [a.owner for a in fixed.sections.action_items] == ["Laura", "प्रिया", None]
+    assert fixed.sections.action_items[0].due == "शुक्रवार"  # only the owner changes
+    assert changed == ["लॉरा → Laura"]
