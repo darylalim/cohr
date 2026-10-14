@@ -325,6 +325,34 @@ def _match_score(a: str, b: str) -> float:
     return len(ta & tb) / min(len(ta), len(tb)) if ta and tb else 0.0
 
 
+def filed_task(claim: Claim, map_notes: Mapping[int, SegmentNotes]) -> bool:
+    """A decision that is one of Map's tasks: it matches an action item of a cited segment at
+    ACTION_MATCH_MIN and better than any of those segments' Map decisions (AMI ES2004b: "The
+    project will explore …", 6 of 15 decisions), or as well when that action item names an
+    owner (Map lists some tasks under both: "Laura to send contract to legal by Friday" in
+    clean-en, 4 of 7 decisions). Without an owner a tie stays a decision: Map also writes
+    decided designs as tasks ("Design the single curved side remote control", AMI TS3003c)."""
+    cited = [map_notes[c.id] for c in claim.citations if c.kind == "seg" and c.id in map_notes]
+    task, owned = 0.0, False
+    for a in (a for n in cited for a in n.action_items):
+        score = _match_score(claim.text, a.task)
+        if score > task or (score == task and a.owner):
+            task, owned = score, bool(a.owner)
+    decided = max((_match_score(claim.text, d) for n in cited for d in n.decisions), default=0)
+    return task >= ACTION_MATCH_MIN and (task > decided or (task == decided and owned))
+
+
+def add_task(items: list[ActionItem], task: ActionItem) -> None:
+    """Append a moved decision; when an action item already states it (ACTION_MATCH_MIN),
+    add its citations there instead of listing the task twice."""
+    for i, item in enumerate(items):
+        if _match_score(item.text, task.text) >= ACTION_MATCH_MIN:
+            new = [c for c in task.citations if c not in item.citations]
+            items[i] = item.model_copy(update={"citations": [*item.citations, *new]})
+            return
+    items.append(task)
+
+
 def action_item(claim: Claim, map_notes: Mapping[int, SegmentNotes]) -> ActionItem:
     """Owner and due from `[owner: …] [due: …] task`; if the line doesn't have them, copied
     from the best-matching map.json action item of a cited segment (overlap ≥ 0.6)."""
@@ -358,6 +386,7 @@ class ReduceStats:
     missing_markers: list[str] = field(default_factory=list)
     prompt_tokens: int = 0
     trimmed: int | None = None  # characters per segment, when transcripts were trimmed
+    moved: int = 0  # decisions moved to action items (filed_task)
     # two-pass only (§4)
     groups: int = 0
     pass1_uncited: int = 0
@@ -383,6 +412,7 @@ def notes_from_reply(
     split = split_sections(strip_wrapper(reply))
     stats = ReduceStats(unknown_markers=split.unknown, missing_markers=split.missing)
     out: dict[str, list[Any]] = {}
+    tasks: list[Claim] = []  # decisions that are Map's tasks: listed after the action items
     for name in SECTIONS:
         section: list[Any] = []
         for raw in claims(split.sections[name], sentences=name == "summary"):
@@ -390,8 +420,14 @@ def notes_from_reply(
             stats.claims += 1
             stats.dropped += dropped
             stats.uncited += not claim.citations
-            section.append(action_item(claim, map_notes) if name == "action_items" else claim)
+            if name == "decisions" and filed_task(claim, map_notes):
+                tasks.append(claim)
+            else:
+                section.append(action_item(claim, map_notes) if name == "action_items" else claim)
         out[name] = section
+    for claim in tasks:
+        add_task(out["action_items"], action_item(claim, map_notes))
+    stats.moved = len(tasks)
     doc = NotesDoc(sections=NotesSections(**out), passes=1, language=language, raw=reply)
     return doc, stats
 
@@ -602,6 +638,7 @@ def two_pass(
         reply = generate(prompt)
         doc, part = build_notes(reply, targets, refine, notes, language)
         stats.pass1_uncited += part.uncited
+        stats.moved += part.moved
         stats.dropped += part.dropped
         docs.append({"title": group_title(group), "snippet": group_snippet(doc)})
         sources.append(PassOne([s.seg_id for s in group.segments], all_claims(doc)))
@@ -635,6 +672,7 @@ def two_pass(
     )
     final.groups, final.trimmed = stats.groups, stats.trimmed
     final.pass1_uncited, final.dropped = stats.pass1_uncited, final.dropped + stats.dropped
+    final.moved += stats.moved
     final.resolved = resolved
     final.prompt_tokens = size
     return doc, final
@@ -809,6 +847,8 @@ def run_stage(ctx: StageContext) -> None:
         ctx.log.warning("reduce: missing section markers %s", stats.missing_markers)
     if stats.dropped:
         ctx.log.warning("reduce: dropped %d citations to unknown documents", stats.dropped)
+    if stats.moved:
+        ctx.log.info("reduce: %d decisions moved to action items (Map's tasks)", stats.moved)
     ctx.log.info(
         "reduce: %d claims, %d uncited, %d documents, %d prompt tokens",
         stats.claims,

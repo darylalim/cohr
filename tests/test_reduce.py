@@ -9,6 +9,7 @@ import pytest
 from cohr import reduce, schemas
 from cohr.config import Config, ReduceConfig
 from cohr.schemas import (
+    ActionItem,
     Citation,
     Claim,
     MapActionItem,
@@ -577,6 +578,111 @@ def test_stage_runs_two_passes_over_the_cap(
     assert [c["max_tokens"] for c in lm.calls] == [ReduceConfig().max_tokens] * 3
     assert [d["title"] for d in lm.docs[-1]][2:] == ["slide 2: Plan", "slide 3: Retention"]
     assert "two passes, 2 groups" in caplog.text
+
+
+def _seg_notes(
+    decisions: list[str], tasks: list[str], owner: str | None = "Tom"
+) -> dict[int, SegmentNotes]:
+    actions = [MapActionItem(owner=owner, task=t, due="Friday") for t in tasks]
+    return {
+        0: SegmentNotes(
+            seg_id=0,
+            summary="",
+            key_points=[],
+            decisions=decisions,
+            action_items=actions,
+            open_questions=[],
+            terms=[],
+        )
+    }
+
+
+SEG0 = [Citation(kind="seg", id=0)]
+
+
+@pytest.mark.parametrize(
+    ("text", "citations", "decisions", "tasks", "moved"),
+    [
+        # AMI ES2004b: Map's task, filed as a decision by Reduce
+        ("The project will prepare a questionnaire", SEG0, [], ["Prepare a questionnaire"], True),
+        # xling-es: Map lists the task under both: a task
+        (
+            "Laura will send the contract",
+            SEG0,
+            ["Laura will send the contract"],
+            ["Send the contract"],
+            True,
+        ),
+        # must not fire: a Map decision matches it better than the task
+        (
+            "Prepare the questionnaire for users",
+            SEG0,
+            ["Prepare the questionnaire for users"],
+            ["Prepare a questionnaire about remote controls"],
+            False,
+        ),
+        # must not fire: shares a word with a task, under ACTION_MATCH_MIN
+        ("Launch the beta on 3 November", SEG0, [], ["Write the beta release notes"], False),
+        ("Prepare a questionnaire", [], [], ["Prepare a questionnaire"], False),  # uncited
+        ("Prepare a questionnaire", [Citation(kind="slide", id=0)], [], ["Prepare a q"], False),
+    ],
+)
+def test_filed_task(
+    text: str, citations: list[Citation], decisions: list[str], tasks: list[str], moved: bool
+) -> None:
+    claim = Claim(text=text, citations=citations)
+    assert reduce.filed_task(claim, _seg_notes(decisions, tasks)) is moved
+
+
+def test_a_tie_without_an_owner_stays_a_decision() -> None:
+    """AMI TS3003c: Map wrote a decided design as a task and a decision, with no owner."""
+    claim = Claim(text="Design the single curved side remote control", citations=SEG0)
+    design = ["Design the single curved side remote control"]
+    assert not reduce.filed_task(claim, _seg_notes(design, design, owner=None))
+    assert reduce.filed_task(claim, _seg_notes(design, design))  # an owner: a task
+
+
+def test_a_filed_task_moves_to_action_items_with_its_citations() -> None:
+    reply = (
+        "## SUMMARY\nShort.\n## KEY_POINTS\n- none\n## DECISIONS\n"
+        "- <co>Keep the price at 25 euros</co: 0:[0]>\n"
+        "- <co>The project will prepare a questionnaire</co: 0:[0]>\n"
+        "## ACTION_ITEMS\n- [owner: Ana] [due: ?] <co>Book the room</co: 0:[0]>\n"
+        "## OPEN_QUESTIONS\n- none\n<|END_RESPONSE|>"
+    )
+    doc, stats = reduce.build_notes(
+        reply,
+        [("seg", 0)],
+        lambda seg, span: 1.0,
+        _seg_notes([], ["Prepare a questionnaire"]),
+        "en",
+    )
+    assert [c.text for c in doc.sections.decisions] == ["Keep the price at 25 euros"]
+    moved = doc.sections.action_items[-1]
+    assert (moved.text, moved.owner, moved.due) == (
+        "The project will prepare a questionnaire",
+        "Tom",
+        "Friday",
+    )
+    assert [(c.kind, c.id) for c in moved.citations] == [("seg", 0)]
+    assert doc.sections.action_items[0].owner == "Ana"  # the model's own items come first
+    assert (stats.moved, stats.claims) == (1, 4)
+
+
+def test_a_moved_task_already_listed_adds_its_citations() -> None:
+    listed = ActionItem(text="Send the contract to legal", citations=SEG0, owner="Laura")
+    items = [listed]
+    reduce.add_task(
+        items,
+        ActionItem(
+            text="Laura will send the contract to legal",
+            citations=[Citation(kind="seg", id=0), Citation(kind="seg", id=2)],
+        ),
+    )
+    assert len(items) == 1 and items[0].owner == "Laura"
+    assert [(c.kind, c.id) for c in items[0].citations] == [("seg", 0), ("seg", 2)]
+    reduce.add_task(items, ActionItem(text="Book the room", citations=SEG0))
+    assert [i.text for i in items] == ["Send the contract to legal", "Book the room"]
 
 
 @pytest.mark.parametrize(

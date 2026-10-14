@@ -2113,3 +2113,25 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
   4096 diagnostic (the same replies at temperature 0), cut 0, uncited 0, support 75.2%.
   Reduce 139 s per audio hour, AMI total 5.75 min/h.
 - New tooling: `cohr eval --rerun STAGE` (3ec3fbb), for code-only changes (step 2 on).
+
+### 2. Tasks filed as decisions (carry-over 2; Python, `reduce.filed_task`)
+- A notes decision moves to Action items (citations kept; owner/due from the Map item, as for
+  action items already) when it matches an action item of a cited segment at
+  ACTION_MATCH_MIN and **better** than any of those segments' Map decisions, or **as well**
+  when that action item names an owner. When an action item already states it, its
+  citations are added there (`add_task`): no task listed twice.
+- Why the owner on a tie, from the scores of every candidate move: strict wins are all
+  ES2004b's "The project will explore/consider/investigate/prepare …" (6, all tasks); ties
+  *with* an owner are synthetic duplicates of a listed task ("Laura to send contract to legal
+  by Friday": clean-en 4 of 7 decisions, noisy-en 3, clean-bn/sw 4, xling-es/ja 1); ties
+  *without* one were AMI decided designs Map also wrote as tasks ("Design the single curved
+  side remote control" = TS3003c's reference decision "The case will be single curved";
+  IS1009b "Ensure corporate image…"). A first version moving every tie moved those 5.
+  (Map also gave several of those ownerless AMI tasks a due "End of next week"; not acted on.)
+- Replay of the stored replies (no model): AMI ES2004b 15 → 9 decisions, IS1009c 7 → 6 (the
+  marketing manager's presentations), ES2004d, IS1009b, TS3003c unchanged.
+- quick `--rerun reduce` (20261014-094845; it ran the tie-moves-always version, which moves
+  the same claims on quick): **gate pass**, every metric equal but support 95.2 → 94.7%:
+  76 judged claims instead of 83, the 7 merged duplicates were all "yes".
+- Not covered (step 2b if needed): a task Map files only as a decision (xling-es "Victor will
+  write the notes for the next version"). AMI is measured with step 4's AMI run.
