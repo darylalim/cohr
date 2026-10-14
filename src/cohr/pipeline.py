@@ -293,6 +293,11 @@ def run(
         config = Config.model_validate(manifest.config)
     else:
         manifest.config = config.model_dump(mode="json")
+    if models is not None:
+        # The run's models, not the ones the manager was built with: the eval shares one
+        # manager across items, and `-c models.…`/map_model_by_lang were loading the defaults
+        # (6d-2, D18). Releases only models whose spec changed.
+        models.set_config(config)
     state = _RunState(run_dir, manifest)
     hashes = stage_hashes(stages, config, manifest)
     todo = _todo(stages, config, manifest, run_dir, forced)
