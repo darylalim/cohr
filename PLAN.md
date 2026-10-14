@@ -1150,8 +1150,8 @@ compared with a committed baseline:
     footer; the speed check on real meetings (AMI, §9 definition of done); error messages for
     missing ffmpeg or models (CLI and UI); an end-to-end check of the sequential memory policy;
     README brought up to date (status, app, `cohr models download`, model cache size and
-    `hf cache delete`). The first `full` run is a measurement: no fixes, `baseline-full.json`
-    written. Kickoff prompt in §21.
+    `hf cache rm`, not `prune`). The first `full` run is a measurement: no fixes,
+    `baseline-full.json` written. Kickoff prompt in §21.
   - **6e-2: carry-over fixes + v1.** The carry-overs from 6b-2, 6c, 6d-1 and 6d-2 that the
     `full` run ranks highest, then the `full` release gate and the bump to `1.0.0` (§16, only
     when asked). Kickoff prompt written after 6e-1, from its findings.
@@ -2578,8 +2578,12 @@ step separately.
    in content to `resident` on the same seed, and the peak memory per stage (§4) recorded.
 5. README: the status line is from Phase 1. Bring it up to date: what works, the app
    (`uv run streamlit run app.py`), `cohr models download` and the model cache size (~15 GB,
-   measured from the cache), deleting models with `hf cache delete`, the eval sets in one line
-   each, and the CC-BY-NC note that's there.
+   measured from the cache), deleting models with `hf cache rm model/<repo>`, the eval sets in
+   one line each, and the CC-BY-NC note that's there. huggingface_hub 1.33 has no
+   `hf cache delete` (its cache commands are list, prune, rm, verify). Warn against
+   `hf cache prune`: it removes revisions that no ref points to, and cohr's pinned revisions
+   are such revisions (its dry run listed tiny-aya-global-8bit-mlx). Say to run `--dry-run`
+   first with either command.
 6. The first full run (ask me first: it's slow and downloads data). A measurement: no fixes.
    Record in NOTES.md: FLEURS WER/CER per language, AMI coverage per section and support rate,
    speed and peak memory, and the synthetic items against their quick/lang baselines. Then
