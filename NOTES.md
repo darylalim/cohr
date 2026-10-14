@@ -1713,3 +1713,62 @@ text, so its Map column is blank for de/ar text facts):
 - D18 (regional Map models) is step 2 and needs the user's approval for gated downloads and the
   HF token; `map_model_by_lang` doesn't exist in config.py yet. 6d-1's carry-overs are optional.
 - §9's 6d-2 bullet now points to the prompt.
+
+## 2026-10-13 · Phase 6d-2 (other source languages, regional Map models)
+
+### 0. Generator in es/ja, measurement (no fixes)
+- `evals/gen/script.py`: a `Lang` table per language (topics, decisions, tasks, open
+  questions, line templates, dues, voices, slide formats), lined up with the English lists so
+  a seed plants the same facts, owners, dues and values in every language. English scripts
+  unchanged (QUICK_SCRIPTS and the lang twins pass). Owners keep Latin names. Numbers are
+  plain digits in the script ("42500 dólares", "42500ドル"): `say` reads them the same way in
+  every locale, and how they come back is Transcribe's choice. Slides: es "42.500 $" / "34 %",
+  ja "42,500ドル". Truth dues stay English ("Friday", "October 20"): cross-language scoring
+  compares only their digits. Distinguishable-texts test per language (ja: 3 texts reworded,
+  katakana bigrams overlapped at 0.6–0.64).
+- Voices: es Mónica (es_ES), Paulina (es_MX), Eddy (es_ES); ja Kyoko, Eddy (ja_JP), Reed (ja_JP).
+- Found while building: PIL's default font has no CJK glyphs and no "é" (boxes on the slides).
+  Slides use Helvetica (es) and Hiragino Kaku Gothic W3 (ja); English keeps the default, so its
+  slides are unchanged. My first ja table had 来週末 (= next weekend) for "end of next week";
+  Map translated it right ("next weekend"); fixed to 来週の終わり and xling-ja re-run.
+- Eval: `asr_error` gives WER for es (NFKC, thousands separators dropped, "%" → "por ciento")
+  and CER for ja/ko/zh (`cer` metric); English `wer` unchanged.
+- Probe (say → Transcribe, 12 lines): Transcribe writes **digits** in both languages, never
+  number words, except es "354 mil dólares" and ja 万 forms. Grouping follows the voice's
+  locale: es_ES "42.500", es_MX "42,500" for the same "42500"; "34 por ciento" → "34%". ja:
+  "42,500", "4万2500", "35万4000", and once kanji "四万二千五百" for the same sentence cut
+  differently.
+
+`lang` items `xling-es` (report 20261013-135635) and `xling-ja` (20261013-140133, re-run
+after the 来週末 fix), seed 1, `--no-ask`, judge on:
+
+| item | WER/CER | recall (exact) | numbers | actions | judge recall | citation | made-up | lang ok | support |
+|---|---|---|---|---|---|---|---|---|---|
+| xling-es | WER 2.1% | 69.2% (9/13) | 6/8 | 3/5 | 5/5 | 100% | 1 | en ✓ | 85.0% |
+| xling-ja | CER 7.1% | 76.9% (10/13) | 5/8 | 5/5 | 4/5 | 70.0% | 0 | en ✓ | 66.7% |
+
+Guard: es 0 repairs, 2 flagged (465, 260); ja 2 repairs (46,500 → 4,650 and 26,000 → 2,600,
+both right, from the slide), 0 flagged. Owners: es Transcribe writes "María" for Maria
+(Map and notes keep the accent); ja voices spell Latin names letter by letter, Transcribe
+writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
+
+**Each miss** (Map read by hand; trace_facts matches by English text):
+| item | miss | cause |
+|---|---|---|
+| es | f7 $11,800 | **guard**: transcript "11.800 dólares" (es grouping), Map wrote "$11.80"; English `numbers_in` reads the source as 11.8, so the guard kept it |
+| es | f15 4,650 | **guard**: Map "465" (and "260" for 2,600); flagged, not repaired: two candidates, 4650 (transcript) and 4.65 (slide "4.650" read the English way) |
+| es | f12 Maria's survey | **scoring**: owner "María" ≠ "Maria" (also the 1 made-up item) |
+| es | f8 Victor's release notes | Map: filed as a decision without a due date (the 6b-2 carry-over) |
+| es | unsupported 6 (42500, 354000, …) | **scoring**: sources read the English way ("42.500" = 42.5) and "354 mil" not read |
+| ja | f6 $42,500 | **ASR**: the sentence is dropped at a chunk start (both runs); Vision also lost the slide's values; Map wrote an invented "$195,500" (flagged) on run 1 |
+| ja | f9 $354,000 | **Map + guard**: transcript "35万4000ドル" / "13万4000ドル", Map wrote "$34,000" / "$13,000"; the guard read the source as {35, 4000, 13} and kept both through their decimal-comma readings (34 from "34%", 13 from "13万") |
+| ja | f7 $11,800 | Map: dropped (in the transcript as "11,800ドル"; seg 0 is dense, the 6b-2 coverage carry-over) |
+| ja | citations | Maria's task −21.8 s, Tom's −143 s, 4,650 −104 s: Map seg 1 bundles them in one key point |
+
+- **Transcribe drops sentences at chunk starts in Japanese:** 3 of 18 chunks lose their first
+  line (42500ドル, 2600, the opening); es 0 of 15. Re-transcribing chunk 5 cut 0.4 s earlier
+  or 9 s shorter keeps the sentence (as "42,500", "4万2500" or "四万二千五百"). Not a numbers.py
+  problem; recorded for a chunking decision (outside 6d-2's scope unless the user wants it).
+- Step 1 targets, in pure Python: read source numbers the way the source language writes
+  them (ja 万/kanji numerals, es "mil" and "11.800" as 11800), in the guard and the eval; the
+  eval's owner match ignoring accents.
