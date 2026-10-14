@@ -248,3 +248,66 @@ def test_reports_without_fleurs_still_load() -> None:
     baseline = evals.load_report(ROOT / "evals" / "baseline.json")
     assert baseline.fleurs == []
     assert "fleurs_wer" not in baseline.summary
+
+
+def test_full_gates_only_on_the_quick_items() -> None:
+    full = evals.load_set("full", ROOT)
+    assert full.gate == [it.id for it in evals.load_set("quick", ROOT).items]
+
+
+def test_a_gate_on_a_set_not_included_is_refused(tmp_path: Path) -> None:
+    (tmp_path / "evals" / "sets").mkdir(parents=True)
+    (tmp_path / "evals" / "sets" / "bad.yaml").write_text("gate: [quick]\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="doesn't include"):
+        evals.load_set("bad", tmp_path)
+
+
+def test_compare_uses_the_gated_summary_and_stages() -> None:
+    base = evals.load_report(ROOT / "evals" / "baseline.json")
+    worse = base.summary | {"fact_recall": 0.1, "made_up_items": 99}
+    slow = {
+        k: {**v, "s_per_audio_hour": (v["s_per_audio_hour"] or 0) * 9}
+        for k, v in base.stages.items()
+    }
+    # full: the lang items drag the whole summary down, the gated (quick) part is unchanged
+    full = base.model_copy(
+        update={
+            "summary": worse,
+            "stages": slow,
+            "gate_items": ["clean-en"],
+            "gate_summary": base.summary,
+            "gate_stages": base.stages,
+        }
+    )
+    assert evals.compare(full, full) == []
+    assert evals.compare(full.model_copy(update={"gate_summary": worse}), full) != []
+    assert any(
+        "slower" in r for r in evals.compare(full.model_copy(update={"gate_stages": slow}), full)
+    )
+    # reports without a gate (quick, older reports) compare the whole summary
+    assert evals.compare(base.model_copy(update={"summary": worse}), base) != []
+
+
+def test_footer_only_on_reports_with_external_data(tmp_path: Path) -> None:
+    base = evals.load_report(ROOT / "evals" / "baseline.json")
+    assert evals.EXTERNAL_DATA_FOOTER not in evals.render_markdown(base)
+    row = evals.score_fleurs(
+        "en",
+        fleurs.Sample(
+            language="en",
+            config="en_us",
+            revision="r",
+            seed=1,
+            clips=1,
+            pool=1,
+            items=[Clip(file="a.wav", sentence_id=1, text="Hi.")],
+        ),
+        ["Hi."],
+    )
+    md = evals.render_markdown(base.model_copy(update={"fleurs": [row]}))
+    assert md.rstrip().endswith(evals.EXTERNAL_DATA_FOOTER)
+    readme = (ROOT / "evals" / "README.md").read_text(encoding="utf-8")
+    assert evals.EXTERNAL_DATA_FOOTER in readme
+    assert " ".join(evals.EXTERNAL_DATA_FOOTER.split()) in " ".join(
+        (ROOT / "PLAN.md").read_text(encoding="utf-8").split()
+    )

@@ -60,6 +60,13 @@ cross-language text facts. Its cost is reported as its own row.
 
 ## Data
 
-`quick` uses synthetic data only. When `full` adds external data (Phase 6), its reports end
-with: "Evaluation data: AMI Meeting Corpus (University of Edinburgh et al., CC BY 4.0);
-FLEURS (Google, CC BY 4.0). Data was not modified or redistributed."
+`quick`, `lang` and `long` use synthetic data only. `full` adds FLEURS (`google/fleurs`,
+streamed from the Hub) and 5 AMI meetings (audio from the official mirror, summaries from the
+official annotations zip), kept in `evals/data/` (gitignored, never committed). Every report
+that includes them ends with this line:
+
+Evaluation data: AMI Meeting Corpus (University of Edinburgh et al., CC BY 4.0); FLEURS (Google, CC BY 4.0). Data was not modified or redistributed.
+
+`full` gates only on its `quick` items' metrics and stage speeds (D31, `gate:` in
+`evals/sets/full.yaml`), against `evals/baseline-full.json`; `lang`, FLEURS and AMI are
+report-only.

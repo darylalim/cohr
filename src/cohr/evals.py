@@ -103,6 +103,11 @@ GATED_SETS = ("quick", "full")
 JUDGE_CACHE_DIR = DATA_DIR / "judge"  # judge answers per item (gitignored with evals/data)
 CALIBRATION = GEN_DIR / "judge_calibration.json"
 AGREEMENT_MIN = 0.8  # D15: judge metrics may enter the gate only above this (Phase 6)
+# CC BY attribution (§18): the last line of every report with FLEURS or AMI in it.
+EXTERNAL_DATA_FOOTER = (
+    "Evaluation data: AMI Meeting Corpus (University of Edinburgh et al., CC BY 4.0); "
+    "FLEURS (Google, CC BY 4.0). Data was not modified or redistributed."
+)
 
 
 class _Model(BaseModel):
@@ -136,6 +141,7 @@ class ItemSpec(_Model):
 class EvalSet(_Model):
     name: str
     include: list[str] = []  # other sets whose items come first (full: quick, lang)
+    gate: list[str] = []  # included sets whose items gate (D31; full: quick); empty = all items
     items: list[ItemSpec] = []
     fleurs: FleursSpec | None = None  # Transcribe-only clips (full, 6e-1)
     ami: AmiSpec | None = None  # real meetings, audio only (full, 6e-1)
@@ -149,8 +155,16 @@ def load_set(name: str, root: Path = Path()) -> EvalSet:
         raise FileNotFoundError(f"no eval set {name!r} ({path})")
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     eval_set = EvalSet.model_validate({"name": name, **data})
-    included = [it for other in eval_set.include for it in load_set(other, root).items]
-    return eval_set.model_copy(update={"items": [*included, *eval_set.items]})
+    if unknown := set(eval_set.gate) - set(eval_set.include):
+        raise ValueError(f"set {name!r} gates on sets it doesn't include: {sorted(unknown)}")
+    included = {other: load_set(other, root).items for other in eval_set.include}
+    items = [it for its in included.values() for it in its]
+    return eval_set.model_copy(
+        update={
+            "items": [*items, *eval_set.items],
+            "gate": [it.id for other in eval_set.gate for it in included[other]],
+        }
+    )
 
 
 # --- truth.json (written by evals/gen) -----------------------------------------------------
@@ -1717,6 +1731,11 @@ class Report(_Model):
     citation_errors: list[float] = Field(default_factory=list)  # every t_error, for D19
     judge: JudgeCost | None = None  # eval-only cost, kept out of `stages` and the gate
     ask: JudgeCost | None = None  # Ask eval cost (same shape; R7B already resident)
+    # D31: the metrics and stages the gate compares, over the gated items only (full: the
+    # quick items); None = the whole summary and stages (quick, and reports before 6e-1)
+    gate_items: list[str] | None = None
+    gate_summary: dict[str, float | int | None] | None = None
+    gate_stages: dict[str, dict[str, float | None]] | None = None
     fleurs: list[FleursRow] = []  # full only: per language, report-only (D31)
     ami: list[AmiReport] = []  # full only: per meeting, report-only (D31)
     ami_stages: dict[str, dict[str, float | None]] = {}  # stage → s/h, peak GB on AMI
@@ -1816,9 +1835,18 @@ def stage_summary(
     return out
 
 
+def gated_summary(report: Report) -> dict[str, float | int | None]:
+    return report.summary if report.gate_summary is None else report.gate_summary
+
+
+def gated_stages(report: Report) -> dict[str, dict[str, float | None]]:
+    return report.stages if report.gate_stages is None else report.gate_stages
+
+
 def compare(report: Report, baseline: Report) -> list[str]:
-    """Release-gate regressions (§18): empty means the report passes."""
-    s, b = report.summary, baseline.summary
+    """Release-gate regressions (§18): empty means the report passes. A set with a `gate`
+    list (full, D31) compares only its gated items' summary and stages."""
+    s, b = gated_summary(report), gated_summary(baseline)
     out = []
 
     def drop(key: str, limit: float) -> None:
@@ -1835,9 +1863,10 @@ def compare(report: Report, baseline: Report) -> list[str]:
         drop(key, limit)
     for key, limit in MAX_RISE.items():
         rise(key, limit)
-    for stage, cost in report.stages.items():
+    base_stages = gated_stages(baseline)
+    for stage, cost in gated_stages(report).items():
         new = cost.get("s_per_audio_hour")
-        old = baseline.stages.get(stage, {}).get("s_per_audio_hour")
+        old = base_stages.get(stage, {}).get("s_per_audio_hour")
         if new and old and new > old * (1 + MAX_STAGE_SLOWDOWN):
             out.append(f"stage {stage} {new / old - 1:.0%} slower ({old} → {new} s/audio h)")
     return out
@@ -1924,6 +1953,9 @@ def render_markdown(report: Report) -> str:
     ]
     if report.overrides:
         lines += [f"Overrides: `{json.dumps(report.overrides)}`", ""]
+    if report.gate_items is not None:
+        gate = ", ".join(report.gate_items) or "none run"
+        lines += [f"Gate (D31): {gate}; everything else is report-only.", ""]
     if report.baseline:
         verdict = "**FAIL**" if report.regressions else "pass"
         lines += [f"Baseline `{report.baseline}`: {verdict}", ""]
@@ -2073,6 +2105,8 @@ def render_markdown(report: Report) -> str:
             f"- support {c.supported} ({', '.join(c.citations)}): {c.claim} · {c.reason}"
             for c in weak
         ]
+    if report.fleurs or report.ami:
+        lines += ["", "---", "", EXTERNAL_DATA_FOOTER]
     return "\n".join(lines) + "\n"
 
 
@@ -2256,6 +2290,7 @@ def run_set(
         )
     errors = [f.t_error for it in reports for f in it.facts if f.t_error is not None]
     hours = sum(r.duration_s for r in reports) / 3600
+    gated = [r for r in reports if r.id in eval_set.gate]
     ask_cost = (
         JudgeCost(
             loaded=asker.calls > 0,
@@ -2288,6 +2323,9 @@ def run_set(
         fleurs=fleurs_rows,
         ami=ami_reports,
         ami_stages=stage_summary(ami_reports) if ami_reports else {},
+        gate_items=[r.id for r in gated] if eval_set.gate else None,
+        gate_summary=summarize(gated) if eval_set.gate else None,
+        gate_stages=stage_summary(gated) if eval_set.gate else None,
     )
 
 
