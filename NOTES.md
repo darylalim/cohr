@@ -2108,3 +2108,8 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
   none changes; long-en isn't re-run for this step.
 - quick (20261014-093829): **gate pass**; Reduce re-ran on all 4 items and every notes.json
   is byte-identical to before (`raw` and sections), `truncated` 0.
+- AMI (`--item ami --no-ask`, report 20261014-094639-full): coverage 44.9 → **52.8%**
+  (abstract 62.8, decisions 52.2, actions 36.4, problems 33.3%), every number equal to 6e-1's
+  4096 diagnostic (the same replies at temperature 0), cut 0, uncited 0, support 75.2%.
+  Reduce 139 s per audio hour, AMI total 5.75 min/h.
+- New tooling: `cohr eval --rerun STAGE` (3ec3fbb), for code-only changes (step 2 on).
