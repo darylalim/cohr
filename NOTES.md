@@ -2062,3 +2062,34 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
   output cap with a finish check, decisions vs tasks, owners, numbers), each measured on the
   sets it reaches, then the release gate (full + long; the 1.0.0 bump asked separately).
   5–7 (Japanese, eval gaps, Ask near-miss) default to after v1; step 0 may argue otherwise.
+
+## 2026-10-14 · Phase 6e-2 (carry-over fixes + v1)
+
+### 0. Proposal (user approved, with the choices below)
+- **Reduce's cap (1)**: AMI's Reduce prompts are 8–11K tokens for 30–43 min, so single pass
+  runs to ~2 h (32K) while the reply grows ~81 tokens per minute (TS3003c): ~4.9K at 60 min,
+  ~10K near 2 h. Plan: `stream_generate`'s finish reason; a reply is cut when it stopped on
+  "length" with no `<|END_RESPONSE|>`. Default 8192 for single and two-pass (temperature 0:
+  replies that already finished are unchanged, as ES2004d showed at 2048 and 4096). A reply
+  still cut is flagged (`truncated` in notes.json, run log, UI), never retried (at
+  temperature 0 a retry writes the same start again) and never completed.
+- **Decisions (2)**: not only Map. ES2004b's 15 notes decisions, each matched to its closest
+  map.json item: 8 are Map *action items*, 3 key points, 4 Map decisions; in the other AMI
+  meetings and long-en they come from Map decisions, about half of them task-like ("will
+  explore/consider"). Plan: Python in Reduce first (a decision matching a Map action item at
+  ACTION_MATCH_MIN moves to Action items with its citations); a Map prompt rule only if the
+  trace still shows it (seeds 1–3, then long-en and AMI). Traced again after step 1: today's
+  AMI notes are the cut 2048 ones.
+- **Owners (3)**: only clean-hi in the last run (clean-ar is Latin now); Map already writes
+  "लॉरा" in map.json, Reduce copies it, and the eval's exact owner match makes all 5 a wrong
+  owner. User's choice: fix the notes (the prompt says keep names as they appear): an owner
+  not in its cited segment is transliterated (`anyascii`, ISC) and matched to the names said
+  there; kept as written when nothing matches.
+- **Numbers (4)**: `unsupported_numbers` on AMI, report-only (ES2004b's "34%" is a Map key
+  point the guard kept). 万: the guard flags "$34,000" by design (one edit from both 354,000
+  and 134,000). User's choice: Map's input gets Japanese numbers as digits ("35万4000ドル" →
+  "354,000ドル", `_ja_value`) when the notes language isn't Japanese; the transcript and
+  citations are unchanged.
+- **After v1**: 5 (Japanese: 万 is covered by 4; chunk-start and dense-segment drops have no
+  single fix), 6 (eval-only gaps; the gate doesn't depend on them), 7 (Ask near-miss,
+  unchanged since 6b; Ask is 98.1% on the gate).
