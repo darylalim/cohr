@@ -1187,6 +1187,7 @@ compared with a committed baseline:
     audio (recall 67.5%, made-up items 12, Ask 77.8%). Post-v1 list in NOTES.md.
 Kickoff prompts for 6b–6e are written after the previous sub-phase, using its findings.
 **Phase 7 (after v1): cross-meeting search:** SQLite + FTS5 index and Search page per §13.
+Kickoff prompt in §21.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2686,4 +2687,50 @@ new dependencies. quick and lang runs are fine; quick must pass its gate at each
 When done: tick the checklist, add new decisions to §20, add a NOTES.md entry with the
 post-v1 list (what stayed open and why), make sure the gate passes, and open a PR (ask
 before pushing).
+```
+
+### Kickoff prompt for Phase 7 (cross-meeting search)
+```text
+Continue cohr: Phase 7 (cross-meeting search, after v1). Read CLAUDE.md, then PLAN.md §13
+(search index), §7 (pages, the Search page and layout rules), §12 (storage: runs, Delete,
+Prune media), §5.7 and D17/D27 in §20 (Ask's FTS5 ranking and the trigram windows for
+zh/ja/ko), §8 and §19, and the latest NOTES.md entry (Phase 6e-2, its post-v1 list).
+Work on branch phase-7-search from main (v1.0.0 is released: #42, #43, tag v1.0.0).
+Phase 7 runs no models: the index is built from files already on disk, so there are no eval
+runs to ask about. The 6e-2 post-v1 list stays open; don't fix it here unless step 0 argues
+that search depends on one of its items.
+0. Proposal before code (ask me). §13's schema is a sketch from planning, so check it against
+   today's files and code first:
+   - What goes in the index: segment transcripts, slides, notes claims (`render.shown_notes`,
+     so an "Other (beta)" run is searched in the language people read) and action items with
+     owner and due. Say whether citations are stored so a hit on a claim opens its [mm:ss].
+   - Tokenizer: §13 says unicode61; Ask (D17) found trigram works for ja, with 3-character
+     windows (`ask.query_terms`). Propose how zh/ja/ko text is indexed and queried (a second
+     FTS5 table, or trigram for those runs), and reuse Ask's term code instead of a copy.
+   - Sync: who re-indexes after a stage finishes, Delete and Prune media (pipeline, jobs, the
+     storage functions or the pages), keyed by `manifest_hash`. Only runs in `runs_dir()`:
+     eval runs under evals/data/runs/ are never indexed by the app.
+   - Opening a result: how the Search page selects the run and jumps to the segment in Notes
+     (`ui.RUN_KEY` + `st.switch_page`; the #seg-N anchors work within one page only).
+   - The CLI (`cohr index rebuild`, and whether `cohr search` is worth adding) and whether
+     index.db is a schemas.py model (§19) or plain SQL with its own `schema_version`.
+   - A search check without models: query each eval run's planted facts against an index built
+     from evals/data/runs/ (every language there), report-only. Say whether it's worth it.
+1. The index module (src/cohr/index.py): build, rebuild, re-index one run in one transaction,
+   drop and rebuild on a missing, corrupt or old-schema file. test_index.py per §13: rebuild
+   from fixture runs equals incremental updates; Delete and Prune update rows; a corrupt or
+   old-schema file triggers a rebuild; a partial run (no notes yet) is indexed by what it has.
+2. Sync hooks and `cohr index rebuild`, with a test where re-indexing must not happen (an
+   unchanged manifest_hash).
+3. Search page (app_pages/search.py, layout="wide"): query box, filters (date range,
+   language, kind), FTS5 snippet() results with the run and a link that opens the cited
+   moment in Notes; the cross-meeting action-item table, filterable by owner. AppTest tests
+   in test_app.py; check the page at a narrow and a wide window (§7 widths).
+4. If step 0 keeps it: the planted-fact search check, per language.
+Rules from CLAUDE.md apply. Ask me before new dependencies (none should be needed: sqlite3 is
+stdlib). quick needn't run unless pipeline or schema code changes; if it does, it must pass
+its gate. Don't bump the version: I'll ask for 1.1.0 separately.
+When done: tick the checklist, add new decisions to §20, update §13 where the build differs
+from the sketch, add a NOTES.md entry, make sure the gate passes, and open a PR (ask before
+pushing).
 ```
