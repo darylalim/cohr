@@ -1,7 +1,7 @@
 # Full eval set (PLAN §18, 6e-1): the release gate, before every version bump, then `long`.
 # The quick and lang items (same specs, same runs in evals/data/runs/), FLEURS (Transcribe
-# only) and, from 6e-1 step 2, AMI. long-en stays in its own set (~40 min alone).
-# Run: uv run cohr eval --set full (~1 h). One language: --item fleurs-ja; all FLEURS: --item fleurs.
+# only) and AMI (real meetings). long-en stays in its own set (~40 min alone).
+# Run: uv run cohr eval --set full (~1 h). Parts: --item fleurs | fleurs-ja | ami | ami-ES2004b.
 include: [quick, lang]
 
 # google/fleurs at a pinned revision, streamed (the test tars are 159–658 MB each): 20 clips
@@ -27,3 +27,9 @@ fleurs:
     pt: pt_br
     vi: vi_vn
     zh: cmn_hans_cn
+
+# AMI test-split meetings (6e-1 step 0): three scenario series, 30–43 min each, 3.05 h. Audio
+# is the official mirror's headset mix, summaries the official annotations zip (both CC BY
+# 4.0), kept in evals/data/ami/. ES2004c was skipped: 1 decision, 0 actions in its summary.
+ami:
+  meetings: [ES2004b, ES2004d, IS1009b, IS1009c, TS3003c]
