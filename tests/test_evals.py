@@ -197,6 +197,15 @@ def test_cross_language_matches_exact_fields_only() -> None:
     assert evals.fact_fit(claim, decision, True) == "none"  # judge only (4b-2)
 
 
+def test_owner_match_ignores_accents_and_case() -> None:
+    # 6d-2: Spanish Transcribe wrote "María" for Maria; Japanese "OMAR" for Omar.
+    f = fact(owner="Maria")
+    assert action_fit(item("Preparar la encuesta", "María", None), f, True) == "match"
+    assert action_fit(item("Prepare the survey (owner: MARIA)"), f, True) == "match"
+    assert action_fit(item("Prepare the survey", "Mario", None), f, True) == "none"
+    assert evals.fold(" Ómar ") == "omar"
+
+
 def test_cross_language_numbers_are_read_in_the_notes_language() -> None:
     # 6d-1: a German "3.550" is the planted 3,550, not 3.55 (scored as missed before).
     number = fact("number", text="New trial signups: 3,550", value=3550.0)

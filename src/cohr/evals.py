@@ -42,7 +42,7 @@ from cohr import ask, atomic, judge, pipeline, render, schemas, storage
 from cohr.config import Config, prompt_hash
 from cohr.fuse import slide_text, tokens
 from cohr.judge import CachedJudge, Generate, Label, Supported
-from cohr.mapper import clock
+from cohr.mapper import clock, source_numbers
 from cohr.numbers import digits, notes_numbers, numbers_in, written_values
 from cohr.reduce import SECTIONS, slide_label, slide_snippet
 from cohr.schemas import (
@@ -267,11 +267,17 @@ def wer_text(text: str) -> str:
 Section = Literal["summary", "key_points", "decisions", "action_items", "open_questions"]
 
 
+def fold(name: str) -> str:
+    """Casefolded, accents dropped: Spanish Transcribe writes "María" for Maria (6d-2)."""
+    decomposed = unicodedata.normalize("NFKD", name.strip().casefold())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
 def _owner_in(claim: Claim, owner: str) -> bool | None:
     """True/False when the claim states an owner (field or name in the text), None if not."""
     if isinstance(claim, ActionItem) and claim.owner:
-        return claim.owner.strip().casefold() == owner.casefold()
-    return True if re.search(rf"\b{re.escape(owner)}\b", claim.text, re.I) else None
+        return fold(claim.owner) == fold(owner)
+    return True if re.search(rf"\b{re.escape(fold(owner))}\b", fold(claim.text)) else None
 
 
 def _stated_due(claim: Claim) -> str | None:
@@ -680,13 +686,17 @@ def unsupported_numbers(
     transcript: Transcript,
     slides: Sequence[Slide],
     language: str | None = None,
+    source_language: str | None = None,
 ) -> list[str]:
     """Numbers in the notes found in no transcript or slide text: did Reduce (or Map, with the
     guard off) change digits? Values as digits, in first-seen order. Notes in another
-    `language`: a written number counts if any of its readings is in the sources (the guard's
-    keep rule), so Arabic "42,500" (also 42.5 there) isn't listed."""
-    sources = numbers_in(" ".join(i.text for i in transcript.items)).union(
-        *(numbers_in(slide_text(s)) for s in slides)
+    `language`: a written number counts if any of its readings is in the sources, so Arabic
+    "42,500" (also 42.5 there) isn't listed. The sources are read the way the meeting's
+    `source_language` writes numbers ("11.800" and "35万4000", 6d-2)."""
+    sources = source_numbers(
+        " ".join(i.text for i in transcript.items),
+        [slide_text(s) for s in slides],
+        source_language,
     )
     out: dict[float, None] = {}
     for c in claims:
@@ -729,7 +739,7 @@ def score_item(truth: Truth, run_dir: Path, since: datetime = EPOCH) -> ItemRepo
     lang = notes_language(doc, {spec.language, spec.target, "en"})
     repairs = [f"{r.original} → {r.repaired}" for n in map_notes for r in n.number_repairs]
     unverified = [u for n in map_notes for u in n.unverified_numbers]
-    unsupported = unsupported_numbers(all_claims, transcript, slides, spec.target)
+    unsupported = unsupported_numbers(all_claims, transcript, slides, spec.target, spec.language)
     heard = " ".join(i.text for i in transcript.items)
     asr_kind, asr_err = asr_error(truth.script_text, heard, spec.language)
 

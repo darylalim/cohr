@@ -22,9 +22,9 @@ from cohr.numbers import (
     Reading,
     native_readings,
     near,
-    numbers_in,
     ordinals_in,
     readings,
+    source_numbers_in,
     write_like,
 )
 from cohr.pipeline import Stage, StageContext
@@ -141,8 +141,11 @@ def make_notes(seg_id: int, obj: dict[str, Any] | None, raw: str) -> SegmentNote
 # --- number guard (pure, §5.5) -------------------------------------------------------------
 
 
-def source_numbers(transcript: str, slides: list[str]) -> set[float]:
-    return set().union(numbers_in(transcript), *(numbers_in(s) for s in slides))
+def source_numbers(transcript: str, slides: list[str], language: str | None = None) -> set[float]:
+    """The numbers said or shown, read the way the meeting's `language` writes them (6d-2)."""
+    return set().union(
+        source_numbers_in(transcript, language), *(source_numbers_in(s, language) for s in slides)
+    )
 
 
 def source_days(transcript: str, slides: list[str]) -> set[float]:
@@ -155,9 +158,10 @@ def check_numbers(
 ) -> tuple[str, list[NumberRepair], list[str]]:
     """Keep a number found in the sources; repair it when exactly one source number is near it
     (one digit edit, or a factor of 10/100/1000), in the written style; otherwise keep it as
-    written and flag it. Repair candidates come only from the readings that follow the target
-    `language`'s separators (`native_readings`), and for an ordinal ("2nd") only from `days`
-    when given ("by the 22nd", not "12 seats"); keeping a number accepts any reading. A number
+    written and flag it. Only the readings that follow the target `language`'s separators
+    (`native_readings`) are kept or repaired (6b-2 for repairs, 6d-2 for keeping: English
+    "$34,000" isn't kept as 34.0 because "34%" was said), and for an ordinal ("2nd") repair
+    candidates come only from `days` when given ("by the 22nd", not "12 seats"). A number
     with a scale suffix ("42.5k") or grouped with plain spaces ("42 500", which could also be two
     numbers) is only kept or flagged."""
     repairs: list[NumberRepair] = []
@@ -165,7 +169,7 @@ def check_numbers(
 
     def check(m: re.Match[str]) -> str:
         body, written = m.group("body"), m.group(0)
-        reads = readings(body)
+        reads = native_readings(readings(body), language)
         scale = SCALE.get(m.group("scale") or "", 1.0)
         if not reads or any(r.value * scale in sources for r in reads):
             return written
@@ -173,7 +177,7 @@ def check_numbers(
             return written
         near_by: dict[float, Reading] = {}
         if scale == 1.0 and " " not in body:
-            for r in native_readings(reads, language):
+            for r in reads:
                 for s in days if m.group("ordinal") and days is not None else sources:
                     if near(r.value, s):
                         near_by.setdefault(s, r)
@@ -250,25 +254,33 @@ def table_rows(tables_md: list[str]) -> list[list[str]]:
     return rows
 
 
-def slide_conflicts(transcript: str, tables_md: list[str]) -> list[SlideConflict]:
+def slide_conflicts(
+    transcript: str, tables_md: list[str], language: str | None = None
+) -> list[SlideConflict]:
     """Slide rows whose one value was never said, while the sentences naming the row's label
     (every label word in them) hold exactly one number that is on no slide: the spoken value
     for the same figure (the slide-conflict-en case: "approved budget … $80,000", slide row
-    "Approved budget | $18,000"). Neither side is assumed right."""
+    "Approved budget | $18,000"). Neither side is assumed right. Numbers are read the way the
+    meeting's `language` writes them (6d-2: Spanish "4.650" on a slide is the 4650 said, not a
+    conflict). Japanese text has no spaces, so its label words never match: no conflicts."""
+
+    def nums(text: str) -> set[float]:
+        return source_numbers_in(text, language)
+
     rows = table_rows(tables_md)
-    on_slides = set().union(*(numbers_in(c) for row in rows for c in row))
-    spoken = numbers_in(transcript)
+    on_slides = set().union(*(nums(c) for row in rows for c in row))
+    spoken = nums(transcript)
     sentences = _SENTENCE_END.split(transcript)
     out: list[SlideConflict] = []
     for label, *cells in rows:
         words = label_words(label)
-        values = [(c, numbers_in(c)) for c in cells if numbers_in(c)]
+        values = [(c, nums(c)) for c in cells if nums(c)]
         if not words or len(values) != 1 or len(values[0][1]) != 1:
             continue
         written, [value] = values[0]
         if value in spoken:
             continue
-        said = set().union(*(numbers_in(s) for s in sentences if words <= label_words(s)))
+        said = set().union(*(nums(s) for s in sentences if words <= label_words(s)))
         if len(said - on_slides) == 1:
             [other] = said - on_slides
             out.append(SlideConflict(label=label, spoken=other, slide=written))
@@ -309,12 +321,13 @@ SLIDE_WORD = {
 _WRITTEN_UNIT = re.compile(WRITTEN.pattern + r"(?:\s?[$€£¥₹%])?")
 
 
-def _written_like(cell: str, reading: Reading) -> str:
+def _written_like(cell: str, reading: Reading, source_language: str | None = None) -> str:
     """The slide cell's number in the separator style of the spoken value as Map wrote it:
-    "$18,000" next to German "80.000 $" → "$18.000" (read in German, "18,000" is 18.0)."""
+    "$18,000" next to German "80.000 $" → "$18.000" (read in German, "18,000" is 18.0). The
+    cell is read the way the meeting's language writes it (Spanish "18.000 $" = 18000)."""
 
     def restyle(m: re.Match[str]) -> str:
-        [value] = numbers_in(m.group("body")) or [None]
+        [value] = source_numbers_in(m.group("body"), source_language) or [None]
         if value is None:
             return m.group(0)
         return write_like(value, reading) + m.group(0)[len(m.group("body")) :]
@@ -327,6 +340,7 @@ def mark_conflicts(
     conflicts: list[SlideConflict],
     language: str | None = None,
     cross_language: bool = False,
+    source_language: str | None = None,
 ) -> tuple[str, list[SlideConflict]]:
     """After each spoken value of a conflict in a string that names its label, add the slide's
     value: "$80,000" → "$80,000 (slide: $18,000)". The spoken value is never replaced. The note
@@ -346,7 +360,8 @@ def mark_conflicts(
             scale = SCALE.get(m.group("scale") or "", 1.0)
             for r in native_readings(readings(m.group("body")), language):
                 if r.value * scale == c.spoken:
-                    return f"{m.group(0)} ({word}: {_written_like(c.slide, r)})"
+                    slide = _written_like(c.slide, r, source_language)
+                    return f"{m.group(0)} ({word}: {slide})"
             return m.group(0)
 
         marked = _WRITTEN_UNIT.sub(add, text)
@@ -361,6 +376,7 @@ def mark_slide_conflicts(
     conflicts: list[SlideConflict],
     language: str | None = None,
     cross_language: bool = False,
+    source_language: str | None = None,
 ) -> SegmentNotes:
     """`mark_conflicts` on every Map string but `terms`; raw segments are left alone."""
     if notes.raw or not conflicts:
@@ -368,7 +384,7 @@ def mark_slide_conflicts(
     used: list[SlideConflict] = []
 
     def mark(text: str) -> str:
-        marked, u = mark_conflicts(text, conflicts, language, cross_language)
+        marked, u = mark_conflicts(text, conflicts, language, cross_language, source_language)
         used.extend(c for c in u if c not in used)
         return marked
 
@@ -460,7 +476,9 @@ def run_stage(ctx: StageContext) -> None:
                     ctx.log.warning("map: segment %d kept as raw text: %r", k, raw[:200])
                 seg_notes = make_notes(seg.seg_id, obj, raw)
                 if cfg.number_guard:
-                    sources = source_numbers(seg.transcript_text, seg_slides)
+                    sources = source_numbers(
+                        seg.transcript_text, seg_slides, ctx.config.source_language
+                    )
                     days = source_days(seg.transcript_text, seg_slides)
                     seg_notes = guard_numbers(seg_notes, sources, ctx.config.notes_language, days)
                     for fix in seg_notes.number_repairs:
@@ -472,12 +490,15 @@ def run_stage(ctx: StageContext) -> None:
                             ", ".join(seg_notes.unverified_numbers),
                         )
                     tables = [t for i in seg.slide_ids for t in slides[i].tables_md]
-                    conflicts = slide_conflicts(seg.transcript_text, tables)
+                    conflicts = slide_conflicts(
+                        seg.transcript_text, tables, ctx.config.source_language
+                    )
                     seg_notes = mark_slide_conflicts(
                         seg_notes,
                         conflicts,
                         ctx.config.notes_language,
                         ctx.config.notes_language != ctx.config.source_language,
+                        ctx.config.source_language,
                     )
                     for c in seg_notes.slide_conflicts:
                         ctx.log.info(
