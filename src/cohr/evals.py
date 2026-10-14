@@ -1605,6 +1605,7 @@ class AmiReport(_Model):
     metrics: dict[str, float | int | None]
     sentences: list[SentenceResult]
     uncited: list[str]
+    unsupported_numbers: list[str] = []  # in the notes, in no transcript or slide (6e-2)
     support: list[ClaimSupport] = []
     stages: dict[str, StageCost]
 
@@ -1625,6 +1626,13 @@ def score_ami(
     doc = render.shown_notes(run_dir)
     claims = [c for name in SECTIONS for c in getattr(doc.sections, name)]
     uncited = [c.text for c in claims if not c.citations]
+    numbers = unsupported_numbers(
+        claims,
+        schemas.load(run_dir, Transcript),
+        schemas.load(run_dir, SlidesFile).slides,
+        "en",
+        "en",
+    )
     return AmiReport(
         id=f"ami-{meeting}",
         run_id=run_dir.name,
@@ -1635,9 +1643,11 @@ def score_ami(
             **{f"claims_{name}": len(getattr(doc.sections, name)) for name in SECTIONS},
             "output_language_ok": int(notes_language(doc, {"en"}) == "en"),
             "truncated": schemas.load(run_dir, NotesDoc).truncated,  # Reduce cut (6e-2)
+            "unsupported_numbers": len(numbers),
         },
         sentences=[SentenceResult(part=part, text=t) for part, ts in refs.items() for t in ts],
         uncited=uncited,
+        unsupported_numbers=numbers,
         stages=stage_costs(schemas.load(run_dir, Manifest), duration_s, since),
     )
 
@@ -1722,6 +1732,9 @@ def ami_summary(reports: Sequence[AmiReport]) -> dict[str, float | int | None]:
         ),
         "ami_uncited_claims": sum(int(r.metrics.get("uncited_claims") or 0) for r in reports),
         "ami_truncated": sum(int(r.metrics.get("truncated") or 0) for r in reports),
+        "ami_unsupported_numbers": sum(
+            int(r.metrics.get("unsupported_numbers") or 0) for r in reports
+        ),
         "ami_s_per_audio_hour": stages["total"]["s_per_audio_hour"],
         "ami_peak_mem_gb": stages["total"]["peak_mem_gb"],
     }
@@ -2048,6 +2061,8 @@ def render_markdown(report: Report) -> str:
                 f"{_num(m.metrics.get('uncited_claims'))} | {_num(m.metrics.get('truncated'))} | "
                 f"{total / m.duration_s * 3600:.0f} |"
             )
+        for m in report.ami:
+            lines += [f"- {m.id} number in no source: {n}" for n in m.unsupported_numbers]
         lines += ["", "AMI cost (s per audio hour, peak GB):", "", "| Stage | s/h | GB |"]
         lines.append("|---|---|---|")
         for name, c in report.ami_stages.items():

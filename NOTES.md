@@ -2155,3 +2155,18 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
   no token with the English transcript, so `refine_time` falls back to the segment start
   (seg 0 @ 0.002 s, 46–246 s early). Arabic notes escape it only because their task text
   keeps the Latin names. Not caused by step 3; hidden until the facts matched.
+
+### 4. Numbers (carry-over 4)
+- **AMI report** (eval only): `unsupported_numbers` per meeting (count, list in the .md,
+  `ami_unsupported_numbers`), read as English. Measured with the next AMI run.
+- **万 in Map's input: tried, not kept.** `numbers.ja_grouped` gave Map "354,000ドル" for
+  "35万4000ドル" when the notes aren't Japanese (digits + 万/億 only: kanji-only runs can be
+  words, "十分", "万一"). xling-ja `--no-ask --no-judge`, seeds 1–3, before → after: recall
+  76.9/53.8/76.9 → 84.6/53.8/76.9% (mean 69.2 → 71.8), but **354,000 missed on every seed
+  either way**: given the grouped digits, Tiny Aya still wrote "3,400,000" (seed 3; before,
+  "345,000"). The one fact gained is 11,800, said in digits all along (a different Map sample
+  from a changed input). So the 万 misread is Map's digit copying, not its reading of 万; the
+  guard flags the result (no unique repair), as before. The patch is kept out of the tree.
+  The xling-ja runs on disk hold the trial's Map output for seeds 1–3: re-run Map
+  (`--rerun map`) when xling-ja is next measured at those seeds.
+- Transcribe's own number errors (FLEURS ar, nl): recorded in 6e-1, not fixed.
