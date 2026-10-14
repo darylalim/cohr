@@ -1109,6 +1109,12 @@ def sample(facts: list[TruthFact], n: int) -> list[TruthFact]:
     return [facts[i * len(facts) // n] for i in range(n)]
 
 
+def asks(spec: ItemSpec) -> bool:
+    """Whether the Ask eval has questions for the item: its templates are keyed by the English
+    script's fact labels (NUMBER_LABELS), so meetings in other languages (xling-*) get none."""
+    return spec.language == "en"
+
+
 def ask_questions(truth: Truth) -> list[AskQuestion]:
     """The item's Ask questions, deterministic from truth.json."""
     numbers = sample([f for f in truth.facts if f.kind == "number"], ASK_SAMPLE["number"])
@@ -2249,7 +2255,9 @@ def run_set(
         pipeline.run(run_dir, config=config, models=models, progress=progress)
         log(f"{spec.id}: pipeline {time.perf_counter() - t0:.1f} s")
         report = score_item(truth, run_dir, since)
-        if ask_:
+        if ask_ and not asks(spec):
+            log(f"{spec.id}: ask skipped ({spec.language} meeting: questions are English-only)")
+        elif ask_:
             t0 = time.perf_counter()
             asker.open(ask_cache(root, spec.id))
             try:
