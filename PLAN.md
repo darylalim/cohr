@@ -1668,6 +1668,9 @@ Claude doesn't bump the version unless asked.
           PRE=""; case "$V" in *a*|*b*|*rc*|*dev*) PRE="--prerelease";; esac
           gh release create "v$V" dist/* --target "$GITHUB_SHA" --title "v$V" --generate-notes $PRE
 ```
+As built (6e-2, after 1.0.0 merged without it): actions pinned by commit SHA like `check`,
+the version passed to the shell through `env`, and `dist/*.whl dist/*.tar.gz` (uv build also
+writes `dist/.gitignore`).
 
 **Behavior**
 - **Idempotent:** re-runs and later pushes skip when the tag exists.

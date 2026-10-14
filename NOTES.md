@@ -2222,4 +2222,7 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
 8. Carry-overs 5–7 from 6e-1: Japanese chunk-start and dense-segment drops, eval-only gaps,
    Ask near-miss (55.6% on full).
 9. ~~The 1.0.0 bump~~: done on request (`uv version --bump major`, pyproject + uv.lock;
-   README status). Merging PR #42 to main releases v1.0.0 once CI passes (§16).
+   README status), merged as 32576c1. **No release followed:** the §16 `release` job was
+   left out in Phase 1 ("Not in Phase 1 (by plan)") and never added, so main's CI ran only
+   `check` and the repo had no tags. Added on `ci-release-job` (user's choice over a hand
+   release); its merge to main tags v1.0.0 and attaches the wheel and sdist.
