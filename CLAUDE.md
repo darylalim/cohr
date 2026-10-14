@@ -50,6 +50,9 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
   35 and 4000) let the guard keep wrong values (6d-2). Run an es/ja meeting before guessing.
 - A model override that scores exactly like the default on every seed didn't apply: check the
   run log's "loading <model> from" line (eval overrides loaded the defaults until 6d-2).
+- Before building on an external dataset, check its real layout and file sizes (Hub tree API,
+  HEAD requests), not just its name and card: `edinburghcstr/ami` is per-utterance clips, not
+  meetings, and FLEURS needs 5.9 GB of test tars for 280 clips (6e-1, §18).
 - Changing any Reduce prompt moves REDUCE_HASH in tests/test_ask.py; update it only on purpose.
 - The guard hook blocks Bash commands containing the full-eval or models-marker text (heredocs
   too): write such text with the Edit/Write tools. It also blocks `rm -rf`: copy scratch
