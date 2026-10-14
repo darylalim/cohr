@@ -1163,7 +1163,8 @@ compared with a committed baseline:
     Carry-overs ranked in NOTES.md (6e-1 "Carry-overs ranked").
   - **6e-2: carry-over fixes + v1.** The carry-overs from 6b-2, 6c, 6d-1 and 6d-2 that the
     `full` run ranks highest, then the `full` release gate and the bump to `1.0.0` (§16, only
-    when asked). Kickoff prompt written after 6e-1, from its findings.
+    when asked). Kickoff prompt in §21, from the 6e-1 ranking (carry-overs 1–4; 5–7 after
+    v1 unless step 0 argues otherwise).
 Kickoff prompts for 6b–6e are written after the previous sub-phase, using its findings.
 **Phase 7 (after v1): cross-meeting search:** SQLite + FTS5 index and Search page per §13.
 
@@ -2615,4 +2616,47 @@ before pushing). Stop there; 6e-2 is separate.
 Step 0 is done (PR #36, 40cb426 on main; NOTES.md "6e-1 · 0. Proposal"): start at step 1
 on a new phase-6e-1-full branch from main. Approved downloads: AMI audio (5 meetings, official mirror) and FLEURS (streamed);
 the AMI annotations zip is already in evals/data/ami/.
+```
+
+### Kickoff prompt for Phase 6e-2 (carry-over fixes + v1)
+```text
+Continue cohr: Phase 6e-2 (carry-over fixes, then the v1 release gate). Read CLAUDE.md, then
+PLAN.md §5.5–5.6 (Map, Reduce), §9 (the 6e bullets and the definition of done), §16
+(releases), §18 (eval sets, the release gate, AMI scoring), §20 (D16, D20, D24, D25, D31) and
+the latest NOTES.md entry (Phase 6e-1), above all "Carry-overs ranked by the full run".
+Work on branch phase-6e-2-v1 from main (6e-1 is PR #39, 80002bd).
+Every v1 target is met on the quick items; 6e-2 fixes what the first full run showed on real
+meetings, in the ranked order, and measures each fix on every set it can reach (CLAUDE.md:
+quick results don't carry over). Commit each step separately; record each in NOTES.md.
+0. Proposal before code (ask me): for carry-overs 1–4, the fix you'd make, where (prompt or
+   Python, by CLAUDE.md's rule), the sets that measure it, and the runs it costs. Say which
+   of 5–7 (Japanese, eval gaps, Ask near-miss) you'd leave for after v1, and why.
+1. Reduce's output cap (carry-over 1). Detect a reply that stops at max_tokens (mlx-lm's
+   finish reason or the reply's token count; today the notes look complete), then retry with
+   a larger budget or flag the notes (a warning in the run log and the UI, never invented
+   text). Set the single-pass default from measurement: 4096 was measured on AMI (coverage
+   44.9 → 52.8%, longest reply 3470 tokens at 42.8 min), so check the margin for a 60 min
+   meeting. Tests for the detection, including one where it must not fire (a reply that ends
+   with <|END_RESPONSE|> just under the cap). Changing the default moves REDUCE_HASH.
+2. Tasks and considerations filed as decisions (carry-over 2): AMI ES2004b's 15 "decisions"
+   ("The project will explore/consider…"), long-en since 6c, quick decision recall 75%.
+   6b-2 points to Map (a "tasks aren't decisions" rule in Reduce's long-meeting prompts was
+   ignored); trace a few facts first (scripts/trace_facts.py). A Map prompt change is judged
+   on the mean of seeds 1–3 (CLAUDE.md), then on long-en and AMI.
+3. Owners (carry-over 3): R7B writes owners in Devanagari/Arabic script (clean-hi recall
+   53.8%, made-up 5). First find how much is the eval's owner match and how much the notes;
+   fix the notes in Python if the names should stay in Latin script, the eval if not. AMI's
+   role owners ("The Marketing Expert") are measured, not fixed, unless step 0 argues it.
+4. Numbers (carry-over 4): run `unsupported_numbers` on AMI notes (report-only), and the
+   Map 万 misreads ("35万4000" → "$34,000") in the number guard (Python, D20's rule).
+   Transcribe's own number errors (FLEURS ar, nl) are recorded, not fixed.
+5. Release gate (§16, §18): full against evals/baseline-full.json (D31: the quick items gate)
+   and long against evals/baseline-long.json. Rewrite each baseline a fix moves on purpose,
+   with the reason in the commit (quick, lang, long, full). Attach the full report summary to
+   the PR. Don't bump the version: I'll ask for 1.0.0 separately.
+Rules from CLAUDE.md apply. Ask me before every full or long run, the opt-in model tests and
+new dependencies. quick and lang runs are fine; quick must pass its gate at each step.
+When done: tick the checklist, add new decisions to §20, add a NOTES.md entry with the
+post-v1 list (what stayed open and why), make sure the gate passes, and open a PR (ask
+before pushing).
 ```
