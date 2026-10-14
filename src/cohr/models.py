@@ -10,6 +10,8 @@ MLX and the model packages are imported inside functions only; unit tests run wi
 import contextlib
 import gc
 import logging
+import os
+import shutil
 import sys
 import threading
 from collections.abc import Callable, Generator, Iterable, Mapping
@@ -60,8 +62,25 @@ def _effective_cache_dir() -> Path:
     return cache_dir() or Path(constants.HF_HUB_CACHE)
 
 
+def converted_path(spec: ModelSpec, cache: Path | None = None) -> Path:
+    """Where `cohr models download` writes a spec's local quantized copy (D18)."""
+    root = cache if cache is not None else _effective_cache_dir()
+    name = f"{spec.repo.replace('/', '--')}@{spec.revision}-q{spec.quantize_bits}"
+    return root / "cohr-converted" / name
+
+
 def local_path(spec: ModelSpec, cache: Path | None = None) -> Path:
-    """Local snapshot dir for a pinned revision (+ subfolder). Never downloads."""
+    """Local snapshot dir for a pinned revision (+ subfolder), or its converted copy for a
+    spec with `quantize_bits`. Never downloads or converts."""
+    if spec.quantize_bits:
+        path = converted_path(spec, cache)
+        if not (path / "config.json").is_file():
+            raise FileNotFoundError(f"{spec.repo}@{spec.revision} is not converted ({path})")
+        return path
+    return _snapshot_path(spec, cache)
+
+
+def _snapshot_path(spec: ModelSpec, cache: Path | None = None) -> Path:
     from huggingface_hub import snapshot_download
     from huggingface_hub.errors import LocalEntryNotFoundError
 
@@ -99,9 +118,11 @@ def download(
     cache: Path | None = None,
     size_of: Callable[[ModelSpec], int] = repo_bytes,
     fetch: Callable[[ModelSpec, Path | None], None] | None = None,
+    convert: Callable[[ModelSpec, Path | None], None] | None = None,
 ) -> list[str]:
-    """Download the specs that aren't cached yet. Refuses (DiskSpaceError) before downloading
-    anything if free space is below their total size + 2 GB (§12). Returns the names fetched."""
+    """Download the specs that aren't cached yet, and convert those with `quantize_bits`.
+    Refuses (DiskSpaceError) before downloading anything if free space is below their total
+    size + 2 GB (§12). Returns the names fetched."""
     cache = cache if cache is not None else cache_dir()
     missing = {}
     for name, spec in specs.items():
@@ -115,9 +136,13 @@ def download(
     target = cache if cache is not None else _effective_cache_dir()
     storage.check_free_space(target, needed, margin=DOWNLOAD_MARGIN_BYTES)
     fetch = fetch or _snapshot_download
+    convert = convert or _convert
     for name, spec in missing.items():
         log.info("downloading %s (%s@%s)", name, spec.repo, spec.revision)
         fetch(spec, cache)
+        if spec.quantize_bits:
+            log.info("converting %s to %d-bit", name, spec.quantize_bits)
+            convert(spec, cache)
     return list(missing)
 
 
@@ -125,6 +150,28 @@ def _snapshot_download(spec: ModelSpec, cache: Path | None) -> None:
     from huggingface_hub import snapshot_download
 
     snapshot_download(spec.repo, revision=spec.revision, cache_dir=cache)
+
+
+QUANT_GROUP_SIZE = 64  # as in the default Map model's 8-bit repo (tiny-aya-global-8bit-mlx)
+
+
+def _convert(spec: ModelSpec, cache: Path | None) -> None:
+    """mlx_lm.convert the cached snapshot into converted_path, via a temp dir (atomic)."""
+    from mlx_lm import convert
+
+    dest = converted_path(spec, cache)
+    tmp = dest.with_name(dest.name + ".partial")
+    if tmp.exists():
+        shutil.rmtree(tmp)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    convert(
+        hf_path=str(_snapshot_path(spec, cache)),
+        mlx_path=str(tmp),
+        quantize=True,
+        q_bits=spec.quantize_bits,
+        q_group_size=QUANT_GROUP_SIZE,
+    )
+    os.replace(tmp, dest)
 
 
 # --- memory --------------------------------------------------------------------------------

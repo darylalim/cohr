@@ -12,6 +12,7 @@ from cohr.numbers import (
     one_edit,
     ordinals_in,
     readings,
+    source_numbers_in,
     write_like,
     written_values,
 )
@@ -109,3 +110,39 @@ def test_notes_numbers_read_the_notes_language() -> None:
     assert notes_numbers("الميزانية 42,500 دولار", "ar") == {42500, 42.5}
     assert written_values("42,500 دولار و 34%", "ar") == [{42500, 42.5}, {34}]
     assert written_values("Q3: 42.5k", "de") == [{42500}]  # "Q3" is a name; scale applied
+
+
+@pytest.mark.parametrize(
+    ("text", "values"),
+    [  # the forms Transcribe wrote in 6d-2's step 0 (say → Transcribe)
+        ("es de 42.500 dólares", {42500}),  # es_ES voice
+        ("es de 42,500 dólares", {42500}),  # es_MX voice
+        ("354 mil dólares, 1,5 millones", {354000, 1500000}),
+        ("frente a 7.700 dólares y 34%, 3,5 puntos, 1.250.000", {7700, 34, 3.5, 1250000}),
+    ],
+)
+def test_source_numbers_in_spanish(text: str, values: set[float]) -> None:
+    assert source_numbers_in(text, "es") == values
+
+
+@pytest.mark.parametrize(
+    ("text", "values"),
+    [
+        ("予算は42,500ドルです", {42500}),
+        ("予算は4万2500ドルです", {42500}),
+        ("予算は四万二千五百ドルです", {42500}),
+        ("月間経常収益は35万4000ドル、先月は13万4000ドル", {354000, 134000}),
+        ("1万1800ドル、三百二十件、10月20日", {11800, 320, 10, 20}),
+    ],
+)
+def test_source_numbers_in_japanese(text: str, values: set[float]) -> None:
+    assert source_numbers_in(text, "ja") == values
+
+
+def test_source_numbers_in_english_and_other_languages() -> None:
+    from cohr.numbers import numbers_in
+
+    text = "$42,500 and fourteen thousand five hundred on the 22nd"
+    assert source_numbers_in(text, "en") == source_numbers_in(text, None) == numbers_in(text)
+    # German digits get their own reading as well as the English one
+    assert {42500.0, 42.5} <= source_numbers_in("Budget 42.500 €", "de")

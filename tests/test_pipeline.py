@@ -297,6 +297,21 @@ def test_preflight_requires_models_only_for_stages_that_will_run(
         pipeline.run(run_dir, stages=[a, dataclasses.replace(b, format_version=2)])
 
 
+def test_run_switches_a_shared_manager_to_the_runs_models(run_dir: Path, tmp_path: Path) -> None:
+    # 6d-2: the eval's manager is built with Config(); a run with another Map model (D18's
+    # map_model_by_lang) loaded the default one, so "Fire" scored exactly like Global.
+    from cohr.config import ModelSpec
+    from cohr.models import ModelManager
+
+    rec = Recorder()
+    stage = dataclasses.replace(rec.stage("a"), models=("map",))
+    fire = ModelSpec(repo="mlx-community/tiny-aya-fire", revision="abc", quantize_bits=8)
+    config = Config(target_language="hi", map_model_by_lang={"hi": fire})
+    shared = ModelManager(Config(), loaders={}, resolve=lambda _s: tmp_path)
+    pipeline.run(run_dir, stages=[stage], config=config, models=shared)
+    assert shared.spec("map") == fire
+
+
 def test_default_stages_order() -> None:
     names = [s.name for s in pipeline.default_stages()]
     assert names == [

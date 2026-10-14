@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-13T10:37:14.061030-10:00",
+  "created_at": "2026-10-13T15:33:06.283480-10:00",
   "set": "lang",
-  "git_sha": "defdf0b-dirty",
+  "git_sha": "767c07f-dirty",
   "overrides": {
     "seed": 1
   },
@@ -25,7 +25,7 @@
   "items": [
     {
       "id": "conflict-de",
-      "run_id": "20261013-103200-conflict-de",
+      "run_id": "20261013-151350-conflict-de",
       "seed": 4,
       "duration_s": 350.12,
       "metrics": {
@@ -44,6 +44,7 @@
         "gap_minutes": 0.2,
         "gap_words_per_min": 0.0,
         "wer": 0.0123,
+        "cer": null,
         "slides_found": 1.0,
         "slide_title_exact": 0.875,
         "slide_cell_accuracy": 1.0,
@@ -549,26 +550,26 @@
       "ask": [],
       "stages": {
         "ingest": {
-          "seconds": 1.6,
-          "s_per_audio_hour": 16.4,
+          "seconds": 1.63,
+          "s_per_audio_hour": 16.8,
           "peak_mem_gb": null,
           "reused": true
         },
         "vad": {
-          "seconds": 2.75,
-          "s_per_audio_hour": 28.2,
+          "seconds": 2.78,
+          "s_per_audio_hour": 28.6,
           "peak_mem_gb": 0.05,
           "reused": true
         },
         "transcribe": {
-          "seconds": 11.33,
-          "s_per_audio_hour": 116.5,
+          "seconds": 11.55,
+          "s_per_audio_hour": 118.8,
           "peak_mem_gb": 5.61,
           "reused": true
         },
         "vision": {
-          "seconds": 33.89,
-          "s_per_audio_hour": 348.5,
+          "seconds": 34.13,
+          "s_per_audio_hour": 350.9,
           "peak_mem_gb": 8.59,
           "reused": true
         },
@@ -579,14 +580,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 15.51,
-          "s_per_audio_hour": 159.5,
+          "seconds": 15.63,
+          "s_per_audio_hour": 160.7,
           "peak_mem_gb": 11.68,
           "reused": true
         },
         "reduce": {
-          "seconds": 29.23,
-          "s_per_audio_hour": 300.6,
+          "seconds": 29.42,
+          "s_per_audio_hour": 302.5,
           "peak_mem_gb": 16.76,
           "reused": true
         },
@@ -606,7 +607,7 @@
     },
     {
       "id": "clean-ar",
-      "run_id": "20261013-103334-clean-ar",
+      "run_id": "20261013-151526-clean-ar",
       "seed": 1,
       "duration_s": 357.88,
       "metrics": {
@@ -625,6 +626,7 @@
         "gap_minutes": 0.2,
         "gap_words_per_min": 0.0,
         "wer": 0.0077,
+        "cer": null,
         "slides_found": 1.0,
         "slide_title_exact": 0.875,
         "slide_cell_accuracy": 1.0,
@@ -1064,26 +1066,26 @@
       "ask": [],
       "stages": {
         "ingest": {
-          "seconds": 1.47,
-          "s_per_audio_hour": 14.8,
+          "seconds": 1.42,
+          "s_per_audio_hour": 14.2,
           "peak_mem_gb": 0.0,
           "reused": true
         },
         "vad": {
-          "seconds": 1.98,
-          "s_per_audio_hour": 19.9,
+          "seconds": 2.1,
+          "s_per_audio_hour": 21.1,
           "peak_mem_gb": 15.41,
           "reused": true
         },
         "transcribe": {
-          "seconds": 10.36,
-          "s_per_audio_hour": 104.2,
+          "seconds": 11.71,
+          "s_per_audio_hour": 117.7,
           "peak_mem_gb": 16.85,
           "reused": true
         },
         "vision": {
-          "seconds": 40.14,
-          "s_per_audio_hour": 403.8,
+          "seconds": 36.74,
+          "s_per_audio_hour": 369.6,
           "peak_mem_gb": 16.66,
           "reused": true
         },
@@ -1100,8 +1102,8 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 26.08,
-          "s_per_audio_hour": 262.4,
+          "seconds": 26.24,
+          "s_per_audio_hour": 264.0,
           "peak_mem_gb": 16.78,
           "reused": true
         },
@@ -1121,7 +1123,7 @@
     },
     {
       "id": "clean-sw",
-      "run_id": "20261013-103509-clean-sw",
+      "run_id": "20261013-151659-clean-sw",
       "seed": 1,
       "duration_s": 357.88,
       "metrics": {
@@ -1140,6 +1142,7 @@
         "gap_minutes": 0.2,
         "gap_words_per_min": 0.0,
         "wer": 0.0077,
+        "cer": null,
         "slides_found": 1.0,
         "slide_title_exact": 0.875,
         "slide_cell_accuracy": 1.0,
@@ -1629,26 +1632,26 @@
       "ask": [],
       "stages": {
         "ingest": {
-          "seconds": 1.49,
-          "s_per_audio_hour": 15.0,
+          "seconds": 1.5,
+          "s_per_audio_hour": 15.1,
           "peak_mem_gb": 0.0,
           "reused": true
         },
         "vad": {
-          "seconds": 2.11,
-          "s_per_audio_hour": 21.2,
+          "seconds": 2.12,
+          "s_per_audio_hour": 21.3,
           "peak_mem_gb": 15.41,
           "reused": true
         },
         "transcribe": {
-          "seconds": 10.71,
-          "s_per_audio_hour": 107.8,
+          "seconds": 11.46,
+          "s_per_audio_hour": 115.3,
           "peak_mem_gb": 16.85,
           "reused": true
         },
         "vision": {
-          "seconds": 40.14,
-          "s_per_audio_hour": 403.7,
+          "seconds": 38.64,
+          "s_per_audio_hour": 388.7,
           "peak_mem_gb": 16.66,
           "reused": true
         },
@@ -1659,21 +1662,2249 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.9,
-          "s_per_audio_hour": 119.7,
+          "seconds": 11.93,
+          "s_per_audio_hour": 120.0,
           "peak_mem_gb": 16.19,
           "reused": true
         },
         "reduce": {
-          "seconds": 24.39,
-          "s_per_audio_hour": 245.3,
+          "seconds": 24.45,
+          "s_per_audio_hour": 245.9,
           "peak_mem_gb": 16.76,
           "reused": true
         },
         "translate": {
-          "seconds": 14.96,
-          "s_per_audio_hour": 150.5,
+          "seconds": 14.99,
+          "s_per_audio_hour": 150.8,
           "peak_mem_gb": 16.03,
+          "reused": true
+        },
+        "render": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        }
+      }
+    },
+    {
+      "id": "clean-hi",
+      "run_id": "20261013-151844-clean-hi",
+      "seed": 1,
+      "duration_s": 357.88,
+      "metrics": {
+        "facts": 13,
+        "facts_found": 7,
+        "fact_recall": 0.5385,
+        "citation_accuracy": 1.0,
+        "claims": 21,
+        "uncited_claims": 0,
+        "made_up_items": 5,
+        "made_up_open_questions": null,
+        "wrong_owner_or_due": 0,
+        "judge_only_facts": 5,
+        "vad_speech_f1": 0.9335,
+        "gap_words": 0,
+        "gap_minutes": 0.2,
+        "gap_words_per_min": 0.0,
+        "wer": 0.0077,
+        "cer": null,
+        "slides_found": 1.0,
+        "slide_title_exact": 0.875,
+        "slide_cell_accuracy": 1.0,
+        "slide_number_recall": 1.0,
+        "output_language_ok": 1,
+        "map_numbers_repaired": 6,
+        "map_numbers_unverified": 0,
+        "unsupported_numbers": 0,
+        "reduce_groups": 0,
+        "pass2_marker": 0,
+        "pass2_claim": 0,
+        "pass2_group": 0,
+        "pass2_uncited": 0,
+        "translation_citations_same": null,
+        "untranslated_claims": null,
+        "recall_decision": null,
+        "recall_action": 0.0,
+        "recall_number": 0.875,
+        "recall_open_question": null,
+        "cited_claims": 21,
+        "support_rate": 0.9048,
+        "support_partial": 0,
+        "support_no": 2,
+        "support_unjudged": 0,
+        "judge_covered": 5,
+        "judge_recall": 1.0
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "kind": "number",
+          "text": "Open tickets: 390",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "सपोर्ट क्यू में खुले टिकटों की संख्या 390 है, जो पिछले सप्ताह के 233 से अधिक है।",
+          "citation_ok": true,
+          "t_error": 0.21,
+          "slide_cited": false
+        },
+        {
+          "id": "f2",
+          "kind": "decision",
+          "text": "use the new logo on the website",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f3",
+          "kind": "action",
+          "text": "send the contract to legal",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f4",
+          "kind": "number",
+          "text": "Page load (ms): 950",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "साइट स्पीड में औसत पेज लोड समय 950 मिलीसेकंड है, जो पिछले रिलीज़ के 820 मिलीसेकंड से बेहतर है।",
+          "citation_ok": true,
+          "t_error": -0.33,
+          "slide_cited": false
+        },
+        {
+          "id": "f5",
+          "kind": "action",
+          "text": "draft the hiring plan",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f6",
+          "kind": "number",
+          "text": "Approved budget: $42,500",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "तिमाही बजट के लिए अनुमोदित बजट $42,500 है, जो पिछले तिमाही के $59,500 से कम है।",
+          "citation_ok": true,
+          "t_error": 0.92,
+          "slide_cited": false
+        },
+        {
+          "id": "f7",
+          "kind": "number",
+          "text": "Monthly cloud bill: $11,800",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "क्लाउड लागत में मासिक बिल $11800 है, जो पिछले महीने के $7700 से अधिक है।",
+          "citation_ok": true,
+          "t_error": 1.99,
+          "slide_cited": false
+        },
+        {
+          "id": "f8",
+          "kind": "action",
+          "text": "write the release notes",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f9",
+          "kind": "number",
+          "text": "Monthly recurring revenue: $354,000",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "मासिक पुनरावर्ती राजस्व $354,000 है, जो पिछले महीने के $134,000 से अधिक है।",
+          "citation_ok": true,
+          "t_error": -0.45,
+          "slide_cited": false
+        },
+        {
+          "id": "f10",
+          "kind": "number",
+          "text": "Week-2 return rate: 34%",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "साप्ताहिक रिटर्न रेट 34% है, जो पिछले महीने के 82% से बेहतर है।",
+          "citation_ok": true,
+          "t_error": 0.22,
+          "slide_cited": false
+        },
+        {
+          "id": "f11",
+          "kind": "action",
+          "text": "prepare the customer survey",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f12",
+          "kind": "decision",
+          "text": "keep the onboarding checklist",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f13",
+          "kind": "number",
+          "text": "Candidates in pipeline: 75",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "कैंडिडेट्स इन पाइपलाइन की संख्या 75 है, जो पिछले महीने के 85 से कम है।",
+          "citation_ok": true,
+          "t_error": -0.03,
+          "slide_cited": false
+        },
+        {
+          "id": "f14",
+          "kind": "open_question",
+          "text": "offer a tablet version",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f15",
+          "kind": "decision",
+          "text": "move the weekly sync to Thursdays",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f16",
+          "kind": "number",
+          "text": "New trial signups: 4,650",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f17",
+          "kind": "action",
+          "text": "record the onboarding video",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f18",
+          "kind": "decision",
+          "text": "publish the roadmap to customers",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        }
+      ],
+      "made_up": [
+        "अनुबंध को कानूनी टीम को शुक्रवार तक भेजें",
+        "हायरिंग प्लान को अगले सप्ताह के अंत तक तैयार करें",
+        "रिलीज़ नोट्स को अगले सप्ताह के अंत तक तैयार करें",
+        "ग्राहक सर्वेक्षण को अगले सप्ताह के अंत तक तैयार करें",
+        "सोमवार तक ऑनबोर्डिंग वीडियो रिकॉर्ड करें"
+      ],
+      "made_up_questions": [],
+      "wrong_fields": [],
+      "uncited": [],
+      "gap_texts": [],
+      "conflict": {},
+      "number_repairs": [
+        "3900 → 390",
+        "2333 → 233",
+        "425,000 → 42,500",
+        "595,000 → 59,500",
+        "1180 → 11800",
+        "770 → 7700"
+      ],
+      "unverified_numbers": [],
+      "unsupported_numbers": [],
+      "support": [
+        {
+          "section": "summary",
+          "claim": "Summary: हार्बोर प्रोजेक्ट के लिए साप्ताहिक सिंक्र में सपोर्ट क्यू, साइट स्पीड, तिमाही बजट, क्लाउड लागत, राजस्व और रिटेंशन जैसे विषयों पर चर्चा की गई।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting discussed Support Queue, site speed, quarterly budget, cloud costs, revenue, and retention as topics."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: सपोर्ट क्यू में खुले टिकटों की संख्या 390 है, जो पिछले सप्ताह के 233 से अधिक है।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of open support tickets is 390, compared with 233 last week, and confirms it is higher."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: साइट स्पीड में औसत पेज लोड समय 950 मिलीसेकंड है, जो पिछले रिलीज़ के 820 मिलीसेकंड से बेहतर है।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The claimed improvement is incorrect as the transcript states the average page load time is 950 milliseconds, compared with 820 milliseconds last release, indicating it is not better but the same as the previous value."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: तिमाही बजट के लिए अनुमोदित बजट $42,500 है, जो पिछले तिमाही के $59,500 से कम है।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The approved quarterly budget is $42,500 compared with $59,500 last quarter."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: क्लाउड लागत में मासिक बिल $11800 है, जो पिछले महीने के $7700 से अधिक है।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the monthly cloud bill is $11,800 compared with $7,700 last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: मासिक पुनरावर्ती राजस्व $354,000 है, जो पिछले महीने के $134,000 से अधिक है।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The claim is a translation of the cited text which states the monthly recurring revenue is $354,000 compared with $134,000 last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: साप्ताहिक रिटर्न रेट 34% है, जो पिछले महीने के 82% से बेहतर है।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The claim misstates the metric as 'weekly return rate' when the cited text reports 'week 2 return rate for trial users' and incorrectly claims it is better than 82%, when it is actually 34% compared to 82%."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: कैंडिडेट्स इन पाइपलाइन की संख्या 75 है, जो पिछले महीने के 85 से कम है।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The number of candidates in the pipeline is 75, compared with 85 last month."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: नया लोगो वेबसाइट पर उपयोग किया जाएगा।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting agreed to use the new logo on the website."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: लॉरा को अनुबंध को कानूनी टीम को शुक्रवार तक भेजने का कार्य सौंपा जाएगा।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The action item assigns Laura to send the contract to legal by Friday."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: ओमर को हायरिंग प्लान को अगले सप्ताह के अंत तक तैयार करने का कार्य सौंपा जाएगा।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "Omar will draft the hiring plan by the end of next week."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: विक्टर को रिलीज़ नोट्स को अगले सप्ताह के अंत तक तैयार करने का कार्य सौंपा जाएगा।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "Victor is assigned to write the release notes by the end of next week."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: ऑनबोर्डिंग चेकलिस्ट को बनाए रखा जाएगा।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting explicitly states the decision to keep the onboarding checklist."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: साप्ताहिक सिंक्रोनाइज़ेशन को गुरुवार को स्थानांतरित करने का निर्णय लिया गया।",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The decision to move weekly sync to Thursdays is explicitly stated in the transcript."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: रोडमैप को ग्राहकों के साथ साझा करने का निर्णय लिया गया।",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The decision to publish the roadmap to customers is explicitly stated in the transcript."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: अनुबंध को कानूनी टीम को शुक्रवार तक भेजें (owner: लॉरा; due: शुक्रवार)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The action item is explicitly stated in the transcript with the owner and due date."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: हायरिंग प्लान को अगले सप्ताह के अंत तक तैयार करें (owner: ओमर; due: अगले सप्ताह का अंत)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states Omar will draft the hiring plan by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: रिलीज़ नोट्स को अगले सप्ताह के अंत तक तैयार करें (owner: विक्टर; due: अगले सप्ताह का अंत)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states Victor will write the release notes by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: ग्राहक सर्वेक्षण को अगले सप्ताह के अंत तक तैयार करें (owner: मारिया; due: अगले सप्ताह का अंत)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The action item is explicitly assigned to Maria with a due date at the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: सोमवार तक ऑनबोर्डिंग वीडियो रिकॉर्ड करें (owner: टॉम; due: सोमवार)",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states Tom is to record the onboarding video by Monday."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: क्या हम टैबलेट संस्करण प्रदान करेंगे?",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The open question about offering a tablet version is directly stated in the transcript."
+        }
+      ],
+      "ask": [],
+      "stages": {
+        "ingest": {
+          "seconds": 1.37,
+          "s_per_audio_hour": 13.8,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "vad": {
+          "seconds": 2.03,
+          "s_per_audio_hour": 20.5,
+          "peak_mem_gb": 15.41,
+          "reused": true
+        },
+        "transcribe": {
+          "seconds": 11.09,
+          "s_per_audio_hour": 111.5,
+          "peak_mem_gb": 16.85,
+          "reused": true
+        },
+        "vision": {
+          "seconds": 39.42,
+          "s_per_audio_hour": 396.6,
+          "peak_mem_gb": 16.66,
+          "reused": true
+        },
+        "fuse": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "map": {
+          "seconds": 15.17,
+          "s_per_audio_hour": 152.6,
+          "peak_mem_gb": 16.19,
+          "reused": true
+        },
+        "reduce": {
+          "seconds": 41.71,
+          "s_per_audio_hour": 419.6,
+          "peak_mem_gb": 16.9,
+          "reused": true
+        },
+        "translate": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "render": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        }
+      }
+    },
+    {
+      "id": "clean-bn",
+      "run_id": "20261013-152035-clean-bn",
+      "seed": 1,
+      "duration_s": 357.88,
+      "metrics": {
+        "facts": 13,
+        "facts_found": 12,
+        "fact_recall": 0.9231,
+        "citation_accuracy": 1.0,
+        "claims": 23,
+        "uncited_claims": 0,
+        "made_up_items": 0,
+        "made_up_open_questions": null,
+        "wrong_owner_or_due": 0,
+        "judge_only_facts": 5,
+        "vad_speech_f1": 0.9335,
+        "gap_words": 0,
+        "gap_minutes": 0.2,
+        "gap_words_per_min": 0.0,
+        "wer": 0.0077,
+        "cer": null,
+        "slides_found": 1.0,
+        "slide_title_exact": 0.875,
+        "slide_cell_accuracy": 1.0,
+        "slide_number_recall": 1.0,
+        "output_language_ok": 1,
+        "map_numbers_repaired": 3,
+        "map_numbers_unverified": 0,
+        "unsupported_numbers": 0,
+        "reduce_groups": 0,
+        "pass2_marker": 0,
+        "pass2_claim": 0,
+        "pass2_group": 0,
+        "pass2_uncited": 0,
+        "translation_citations_same": 1,
+        "untranslated_claims": 2,
+        "recall_decision": null,
+        "recall_action": 0.8,
+        "recall_number": 1.0,
+        "recall_open_question": null,
+        "cited_claims": 23,
+        "support_rate": 0.9565,
+        "support_partial": 1,
+        "support_no": 0,
+        "support_unjudged": 0,
+        "judge_covered": 4,
+        "judge_recall": 0.8
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "kind": "number",
+          "text": "Open tickets: 390",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Support Queue: 390 open tickets (up from 233 last week), stable performance, seasonality noted.",
+          "citation_ok": true,
+          "t_error": 0.21,
+          "slide_cited": false
+        },
+        {
+          "id": "f2",
+          "kind": "decision",
+          "text": "use the new logo on the website",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f3",
+          "kind": "action",
+          "text": "send the contract to legal",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "শুক্রবার পর্যন্ত আইনি বিভাগে চুক্তি পাঠান।",
+          "citation_ok": true,
+          "t_error": 0.84,
+          "slide_cited": false
+        },
+        {
+          "id": "f4",
+          "kind": "number",
+          "text": "Page load (ms): 950",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "সাইটের গতি: ৯৫০ মিলিসেকেন্ড পৃষ্ঠা লোড সময় (গত রিলিজের ৮২০ মিলিসেকেন্ড থেকে বৃদ্ধি), ড্যাশবোর্ড আপডেট, ঋতুগততা স্বীকার করা হয়েছে।",
+          "citation_ok": true,
+          "t_error": -0.33,
+          "slide_cited": false
+        },
+        {
+          "id": "f5",
+          "kind": "action",
+          "text": "draft the hiring plan",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "পরবর্তী সপ্তাহের শেষের মধ্যে নিয়োগ পরিকল্পনা তৈরি করুন।",
+          "citation_ok": true,
+          "t_error": 0.35,
+          "slide_cited": false
+        },
+        {
+          "id": "f6",
+          "kind": "number",
+          "text": "Approved budget: $42,500",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "ত্রৈমাসিক বাজেট: $৪২,৫০০ অনুমোদিত (গত ত্রৈমাসিকের $৫৯,৫০০ থেকে হ্রাস), প্রবণতা প্রত্যাশার সাথে সামঞ্জস্যপূর্ণ।",
+          "citation_ok": true,
+          "t_error": 0.92,
+          "slide_cited": false
+        },
+        {
+          "id": "f7",
+          "kind": "number",
+          "text": "Monthly cloud bill: $11,800",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "ক্লাউড খরচ: $১১,৮০০ মাসিক বিল (গত মাসের $৭,৭০০ থেকে হ্রাস), ঋতুগততা লক্ষ্য করা হয়েছে।",
+          "citation_ok": true,
+          "t_error": 1.99,
+          "slide_cited": false
+        },
+        {
+          "id": "f8",
+          "kind": "action",
+          "text": "write the release notes",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "পরবর্তী সপ্তাহের শেষের মধ্যে মুক্তি নোট লিখুন।",
+          "citation_ok": true,
+          "t_error": 0.74,
+          "slide_cited": false
+        },
+        {
+          "id": "f9",
+          "kind": "number",
+          "text": "Monthly recurring revenue: $354,000",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Revenue: $354,000 monthly (up from $134,000 last month), trend aligns with expectations.",
+          "citation_ok": true,
+          "t_error": -0.45,
+          "slide_cited": false
+        },
+        {
+          "id": "f10",
+          "kind": "number",
+          "text": "Week-2 return rate: 34%",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "রক্ষণাবেক্ষণ: ৩৪% সপ্তাহ-২ রিটার্ন রেট (গত মাসের ৮২% থেকে হ্রাস), প্রবণতা প্রত্যাশার চেয়ে বেশি স্থিতিশীল।",
+          "citation_ok": true,
+          "t_error": 0.22,
+          "slide_cited": false
+        },
+        {
+          "id": "f11",
+          "kind": "action",
+          "text": "prepare the customer survey",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f12",
+          "kind": "decision",
+          "text": "keep the onboarding checklist",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f13",
+          "kind": "number",
+          "text": "Candidates in pipeline: 75",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "নিয়োগ: ৭৫ জন প্রার্থী পাইপলাইনে (গত মাসের ৮৫ জন থেকে হ্রাস), প্রবণতা প্রত্যাশার সাথে সামঞ্জস্যপূর্ণ।",
+          "citation_ok": true,
+          "t_error": -0.03,
+          "slide_cited": false
+        },
+        {
+          "id": "f14",
+          "kind": "open_question",
+          "text": "offer a tablet version",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f15",
+          "kind": "decision",
+          "text": "move the weekly sync to Thursdays",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": false,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f16",
+          "kind": "number",
+          "text": "New trial signups: 4,650",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "নতুন ট্রায়াল সাইনআপ গত মাসের ২,৬০০ থেকে এই মাসের ৪,৬৫০ এ বৃদ্ধি পেয়েছে।",
+          "citation_ok": true,
+          "t_error": 0.84,
+          "slide_cited": false
+        },
+        {
+          "id": "f17",
+          "kind": "action",
+          "text": "record the onboarding video",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "সোমবারের মধ্যে অনবোর্ডিং ভিডিও রেকর্ড করুন।",
+          "citation_ok": true,
+          "t_error": 0.58,
+          "slide_cited": false
+        },
+        {
+          "id": "f18",
+          "kind": "decision",
+          "text": "publish the roadmap to customers",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        }
+      ],
+      "made_up": [],
+      "made_up_questions": [],
+      "wrong_fields": [],
+      "uncited": [],
+      "gap_texts": [],
+      "conflict": {},
+      "number_repairs": [
+        "425,000 → 42,500",
+        "595,000 → 59,500",
+        "1,180 → 11,800"
+      ],
+      "unverified_numbers": [],
+      "unsupported_numbers": [],
+      "support": [
+        {
+          "section": "summary",
+          "claim": "Summary: সাপ্তাহিক হার্বর প্রকল্প সিঙ্ক সমর্থন কিউ, সাইট গতি, ত্রৈমাসিক বাজেট, ক্লাউড খরচ, আয়, ধারণ এবং নিয়োগ কভার করেছে।",
+          "citations": [
+            "seg 0",
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The meeting covered all the mentioned topics with specific details and decisions."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Support Queue: 390 open tickets (up from 233 last week), stable performance, seasonality noted.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of open support tickets is 390, compared with 233 last week, and notes that Support Queue has been more stable than expected with seasonality acknowledged."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: সাইটের গতি: ৯৫০ মিলিসেকেন্ড পৃষ্ঠা লোড সময় (গত রিলিজের ৮২০ মিলিসেকেন্ড থেকে বৃদ্ধি), ড্যাশবোর্ড আপডেট, ঋতুগততা স্বীকার করা হয়েছে।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the average page load time is 950 milliseconds compared to 820 milliseconds last release, the dashboard for site speed was updated on Monday, and seasonality in site speed is acknowledged."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: ত্রৈমাসিক বাজেট: $৪২,৫০০ অনুমোদিত (গত ত্রৈমাসিকের $৫৯,৫০০ থেকে হ্রাস), প্রবণতা প্রত্যাশার সাথে সামঞ্জস্যপূর্ণ।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The approved quarterly budget is $42,500 compared to $59,500 last quarter, and the trend is roughly what was expected."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: ক্লাউড খরচ: $১১,৮০০ মাসিক বিল (গত মাসের $৭,৭০০ থেকে হ্রাস), ঋতুগততা লক্ষ্য করা হয়েছে।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the monthly cloud bill is $11,800 compared with $7,700 last month, and acknowledges seasonality in cloud costs."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Revenue: $354,000 monthly (up from $134,000 last month), trend aligns with expectations.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the monthly recurring revenue is $354,000 compared with $134,000 last month, and that the trend is roughly what was expected."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: রক্ষণাবেক্ষণ: ৩৪% সপ্তাহ-২ রিটার্ন রেট (গত মাসের ৮২% থেকে হ্রাস), প্রবণতা প্রত্যাশার চেয়ে বেশি স্থিতিশীল।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the week 2 return rate is 34% compared to 82% last month, and retention has been more stable than expected."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: নিয়োগ: ৭৫ জন প্রার্থী পাইপলাইনে (গত মাসের ৮৫ জন থেকে হ্রাস), প্রবণতা প্রত্যাশার সাথে সামঞ্জস্যপূর্ণ।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of candidates in the pipeline is 75, compared with 85 last month, and that hiring has been more stable than expected, which aligns with the claim's detail on stability and numbers."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: সাপ্তাহিক সিঙ্ক गुरुवारে স্থানান্তরিত হয়েছে।",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The meeting decided to move the weekly sync to Thursdays."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: নতুন ট্রায়াল সাইনআপ গত মাসের ২,৬০০ থেকে এই মাসের ৪,৬৫০ এ বৃদ্ধি পেয়েছে।",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of new trial signups this month is 4,650 compared with 2,600 last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: ট্রায়াল সাইনআপ ঋতুগততা দেখিয়েছে, কিন্তু প্রবণতা প্রত্যাশার সাথে সামঞ্জস্যপূর্ণ।",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "partial",
+          "reason": "The cited text states there is seasonality in trial signups and the trend is roughly what was expected."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: ট্রায়াল সাইনআপের জন্য ড্যাশবোর্ড সোমবারে আপডেট করা হয়েছে।",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the dashboard for trial signups was updated on Monday."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: ওয়েবসাইটে নতুন লোগো ব্যবহার করুন।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting agreed to use the new logo on the website."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: লরা শুক্রবার পর্যন্ত চুক্তি আইনের কাছে পাঠাতে হবে।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "Laura is assigned to send the contract to legal by Friday."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: ভিক্টর পরবর্তী সপ্তাহের শেষের দিকে রিলিজ নোট লিখতে হবে।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "Victor is assigned to write the release notes by the end of next week."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: অনবোর্ডিং চেকলিস্ট বজায় রাখুন।",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting agreed to keep the onboarding checklist."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: গ্রাহকদের জন্য রোডম্যাপ প্রকাশ করুন।",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The decision to publish the roadmap to customers is explicitly stated in the transcript."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: শুক্রবার পর্যন্ত আইনি বিভাগে চুক্তি পাঠান। (owner: Laura; due: শুক্রবার)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The action item is explicitly stated as Laura sending the contract to legal by Friday."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: পরবর্তী সপ্তাহের শেষের মধ্যে নিয়োগ পরিকল্পনা তৈরি করুন। (owner: Omar; due: পরবর্তী সপ্তাহের শেষ)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states Omar will draft the hiring plan by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: পরবর্তী সপ্তাহের শেষের মধ্যে মুক্তি নোট লিখুন। (owner: Victor; due: পরবর্তী সপ্তাহের শেষ)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "Victor is assigned to write the release notes by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: পরবর্তী সপ্তাহের শেষের মধ্যে গ্রাহক সার্ভে প্রস্তুত করুন। (due: পরবর্তী সপ্তাহের শেষ)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The action item for the customer survey is assigned to Maria to prepare it by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: সোমবারের মধ্যে অনবোর্ডিং ভিডিও রেকর্ড করুন। (owner: Tom; due: সোমবার)",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states Tom is to record the onboarding video by Monday."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: আমরা কি একটি ট্যাবলেট সংস্করণ অফার করি?",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The open question about offering a tablet version is directly stated in the transcript."
+        }
+      ],
+      "ask": [],
+      "stages": {
+        "ingest": {
+          "seconds": 1.5,
+          "s_per_audio_hour": 15.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "vad": {
+          "seconds": 2.16,
+          "s_per_audio_hour": 21.7,
+          "peak_mem_gb": 15.41,
+          "reused": true
+        },
+        "transcribe": {
+          "seconds": 11.42,
+          "s_per_audio_hour": 114.9,
+          "peak_mem_gb": 16.85,
+          "reused": true
+        },
+        "vision": {
+          "seconds": 37.67,
+          "s_per_audio_hour": 378.9,
+          "peak_mem_gb": 16.66,
+          "reused": true
+        },
+        "fuse": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "map": {
+          "seconds": 11.95,
+          "s_per_audio_hour": 120.2,
+          "peak_mem_gb": 16.19,
+          "reused": true
+        },
+        "reduce": {
+          "seconds": 24.45,
+          "s_per_audio_hour": 246.0,
+          "peak_mem_gb": 16.76,
+          "reused": true
+        },
+        "translate": {
+          "seconds": 13.45,
+          "s_per_audio_hour": 135.3,
+          "peak_mem_gb": 16.03,
+          "reused": true
+        },
+        "render": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        }
+      }
+    },
+    {
+      "id": "xling-es",
+      "run_id": "20261013-152218-xling-es",
+      "seed": 1,
+      "duration_s": 380.9,
+      "metrics": {
+        "facts": 13,
+        "facts_found": 12,
+        "fact_recall": 0.9231,
+        "citation_accuracy": 1.0,
+        "claims": 20,
+        "uncited_claims": 0,
+        "made_up_items": 0,
+        "made_up_open_questions": null,
+        "wrong_owner_or_due": 0,
+        "judge_only_facts": 5,
+        "vad_speech_f1": 0.9367,
+        "gap_words": 0,
+        "gap_minutes": 0.2,
+        "gap_words_per_min": 0.0,
+        "wer": 0.0214,
+        "cer": null,
+        "slides_found": 1.0,
+        "slide_title_exact": 1.0,
+        "slide_cell_accuracy": 0.875,
+        "slide_number_recall": 1.0,
+        "output_language_ok": 1,
+        "map_numbers_repaired": 4,
+        "map_numbers_unverified": 0,
+        "unsupported_numbers": 0,
+        "reduce_groups": 0,
+        "pass2_marker": 0,
+        "pass2_claim": 0,
+        "pass2_group": 0,
+        "pass2_uncited": 0,
+        "translation_citations_same": null,
+        "untranslated_claims": null,
+        "recall_decision": null,
+        "recall_action": 0.8,
+        "recall_number": 1.0,
+        "recall_open_question": null,
+        "cited_claims": 20,
+        "support_rate": 0.95,
+        "support_partial": 1,
+        "support_no": 0,
+        "support_unjudged": 0,
+        "judge_covered": 5,
+        "judge_recall": 1.0
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "kind": "number",
+          "text": "Tickets abiertos: 390",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Support queue tickets open: 390 (up from 233 last week)",
+          "citation_ok": true,
+          "t_error": 0.78,
+          "slide_cited": true
+        },
+        {
+          "id": "f2",
+          "kind": "decision",
+          "text": "usar el logotipo nuevo en la web",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f3",
+          "kind": "action",
+          "text": "enviar el contrato al departamento legal",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Send the contract to the legal department by Friday",
+          "citation_ok": true,
+          "t_error": 0.02,
+          "slide_cited": false
+        },
+        {
+          "id": "f4",
+          "kind": "number",
+          "text": "Carga de página (ms): 950",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Site speed page load time: 950 ms (up from 820 ms in previous version)",
+          "citation_ok": true,
+          "t_error": -0.69,
+          "slide_cited": true
+        },
+        {
+          "id": "f5",
+          "kind": "action",
+          "text": "redactar el plan de contratación",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Redact the recruitment plan by the end of next week",
+          "citation_ok": true,
+          "t_error": 0.89,
+          "slide_cited": false
+        },
+        {
+          "id": "f6",
+          "kind": "number",
+          "text": "Presupuesto aprobado: 42.500 $",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Quarterly budget approved: $42,500 (down from $59,500 last quarter)",
+          "citation_ok": true,
+          "t_error": -22.96,
+          "slide_cited": true
+        },
+        {
+          "id": "f7",
+          "kind": "number",
+          "text": "Factura mensual de nube: 11.800 $",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Monthly cloud costs: $11,800 (down from $7,700 last month)",
+          "citation_ok": true,
+          "t_error": -2.71,
+          "slide_cited": true
+        },
+        {
+          "id": "f8",
+          "kind": "action",
+          "text": "escribir las notas de la versión",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f9",
+          "kind": "number",
+          "text": "Ingreso recurrente mensual: 354.000 $",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Monthly recurring revenue: $354,000 (up from $134,000 last month)",
+          "citation_ok": true,
+          "t_error": -197.87,
+          "slide_cited": true
+        },
+        {
+          "id": "f10",
+          "kind": "number",
+          "text": "Retorno semana 2: 34 %",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Retention rate: 34% (down from 82% last month)",
+          "citation_ok": true,
+          "t_error": 0.79,
+          "slide_cited": true
+        },
+        {
+          "id": "f11",
+          "kind": "action",
+          "text": "preparar la encuesta a clientes",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Prepare the customer survey by the end of next week",
+          "citation_ok": true,
+          "t_error": 1.07,
+          "slide_cited": false
+        },
+        {
+          "id": "f12",
+          "kind": "decision",
+          "text": "mantener la lista de bienvenida",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f13",
+          "kind": "number",
+          "text": "Candidatos en proceso: 75",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Recruitment is stable at 75 candidates, compared to 85 the previous month",
+          "citation_ok": true,
+          "t_error": -0.02,
+          "slide_cited": true
+        },
+        {
+          "id": "f14",
+          "kind": "open_question",
+          "text": "ofrecer una versión para tabletas",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f15",
+          "kind": "decision",
+          "text": "pasar la reunión semanal a los jueves",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f16",
+          "kind": "number",
+          "text": "Registros de prueba nuevos: 4.650",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Lead generation metrics show new leads at 4,650, compared to 2,600 last month",
+          "citation_ok": true,
+          "t_error": -47.81,
+          "slide_cited": true
+        },
+        {
+          "id": "f17",
+          "kind": "action",
+          "text": "grabar el vídeo de bienvenida",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Record the welcome video for Monday",
+          "citation_ok": true,
+          "t_error": -0.01,
+          "slide_cited": false
+        },
+        {
+          "id": "f18",
+          "kind": "decision",
+          "text": "publicar la hoja de ruta para los clientes",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        }
+      ],
+      "made_up": [],
+      "made_up_questions": [],
+      "wrong_fields": [],
+      "uncited": [],
+      "gap_texts": [],
+      "conflict": {},
+      "number_repairs": [
+        "11.80 → 11800",
+        "7.70 → 7700",
+        "465 → 4650",
+        "260 → 2600"
+      ],
+      "unverified_numbers": [],
+      "unsupported_numbers": [],
+      "support": [
+        {
+          "section": "summary",
+          "claim": "Summary: This weekly Hardware project meeting covers support queue, site speed, quarterly budget, cloud costs, revenue, retention, and recruitment.",
+          "citations": [
+            "seg 0",
+            "seg 1",
+            "slide 0",
+            "slide 1",
+            "slide 2",
+            "slide 3",
+            "slide 4",
+            "slide 5",
+            "slide 6"
+          ],
+          "supported": "yes",
+          "reason": "The meeting covers all the listed topics with specific metrics and discussions."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Support queue tickets open: 390 (up from 233 last week)",
+          "citations": [
+            "seg 0",
+            "slide 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of open support tickets is 390, compared to 233 the previous week."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Site speed page load time: 950 ms (up from 820 ms in previous version)",
+          "citations": [
+            "seg 0",
+            "slide 1"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the median page load time is 950 ms compared to 820 ms in the previous version."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Quarterly budget approved: $42,500 (down from $59,500 last quarter)",
+          "citations": [
+            "seg 0",
+            "slide 2"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the approved quarterly budget is $42,500 compared to $59,500 the previous quarter."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Monthly cloud costs: $11,800 (down from $7,700 last month)",
+          "citations": [
+            "seg 0",
+            "slide 3"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the monthly cloud cost is 11,800 dollars, comparing it to 7,700 dollars the previous month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Monthly recurring revenue: $354,000 (up from $134,000 last month)",
+          "citations": [
+            "seg 0",
+            "slide 4"
+          ],
+          "supported": "partial",
+          "reason": "The transcript states the monthly recurring revenue is 354 thousand dollars, comparing to 134 thousand dollars last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Retention rate: 34% (down from 82% last month)",
+          "citations": [
+            "seg 0",
+            "slide 5"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the week-2 retention rate is 34% and compares it to 82% last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Recruitment is stable at 75 candidates, compared to 85 the previous month",
+          "citations": [
+            "seg 1",
+            "slide 6"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of candidates in process is 75, compared to 85 the previous month, and confirms recruitment has been more stable than expected."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Lead generation metrics show new leads at 4,650, compared to 2,600 last month",
+          "citations": [
+            "seg 1",
+            "slide 7"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of new test registrations is 4,650 this month compared to 2,600 last month."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Use the new logo on the web",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting agreed to use the new logo on the web."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Move the weekly meeting to Thursdays",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The meeting decided to move the weekly meeting to Thursdays."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Publish the client roadmap",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The decision to publish the client roadmap is explicitly stated in the transcript."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Laura will send the contract to the legal department by Friday",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "Laura was assigned the task to send the contract to the legal department by Friday"
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Victor will write the notes for the next version",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "Víctor was asked to write the notes for the version"
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Maintain the welcome list",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting explicitly states that the decision is to maintain the welcome list."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Send the contract to the legal department by Friday (owner: Laura; due: Friday)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states Laura is tasked with sending the contract to legal by Friday."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Redact the recruitment plan by the end of next week (owner: Omar; due: End of next week)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "Omar is assigned to redact the recruitment plan by the end of the next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Prepare the customer survey by the end of next week (owner: María; due: End of next week)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "María is assigned to prepare the customer survey for the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Record the welcome video for Monday (owner: Tom; due: Monday)",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The transcript assigns the task of recording the welcome video to Tom with a due date of Monday."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Will we offer a tablet version?",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states '¿Vamos a ofrecer una versión para tabletas? Nadie tiene la respuesta aún.'"
+        }
+      ],
+      "ask": [],
+      "stages": {
+        "ingest": {
+          "seconds": 1.57,
+          "s_per_audio_hour": 14.9,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "vad": {
+          "seconds": 2.28,
+          "s_per_audio_hour": 21.5,
+          "peak_mem_gb": 15.41,
+          "reused": true
+        },
+        "transcribe": {
+          "seconds": 12.81,
+          "s_per_audio_hour": 121.1,
+          "peak_mem_gb": 16.84,
+          "reused": true
+        },
+        "vision": {
+          "seconds": 44.36,
+          "s_per_audio_hour": 419.3,
+          "peak_mem_gb": 16.66,
+          "reused": true
+        },
+        "fuse": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "map": {
+          "seconds": 12.09,
+          "s_per_audio_hour": 114.2,
+          "peak_mem_gb": 16.19,
+          "reused": true
+        },
+        "reduce": {
+          "seconds": 24.65,
+          "s_per_audio_hour": 233.0,
+          "peak_mem_gb": 16.76,
+          "reused": true
+        },
+        "translate": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "render": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        }
+      }
+    },
+    {
+      "id": "xling-ja",
+      "run_id": "20261013-152355-xling-ja",
+      "seed": 1,
+      "duration_s": 464.27,
+      "metrics": {
+        "facts": 13,
+        "facts_found": 10,
+        "fact_recall": 0.7692,
+        "citation_accuracy": 0.7,
+        "claims": 21,
+        "uncited_claims": 0,
+        "made_up_items": 0,
+        "made_up_open_questions": null,
+        "wrong_owner_or_due": 0,
+        "judge_only_facts": 5,
+        "vad_speech_f1": 0.9407,
+        "gap_words": 0,
+        "gap_minutes": 0.2,
+        "gap_words_per_min": 0.0,
+        "wer": null,
+        "cer": 0.071,
+        "slides_found": 1.0,
+        "slide_title_exact": 0.875,
+        "slide_cell_accuracy": 0.9375,
+        "slide_number_recall": 0.8824,
+        "output_language_ok": 1,
+        "map_numbers_repaired": 3,
+        "map_numbers_unverified": 1,
+        "unsupported_numbers": 1,
+        "reduce_groups": 0,
+        "pass2_marker": 0,
+        "pass2_claim": 0,
+        "pass2_group": 0,
+        "pass2_uncited": 0,
+        "translation_citations_same": null,
+        "untranslated_claims": null,
+        "recall_decision": null,
+        "recall_action": 1.0,
+        "recall_number": 0.625,
+        "recall_open_question": null,
+        "cited_claims": 21,
+        "support_rate": 0.6667,
+        "support_partial": 2,
+        "support_no": 5,
+        "support_unjudged": 0,
+        "judge_covered": 4,
+        "judge_recall": 0.8
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "kind": "number",
+          "text": "未対応チケット: 390",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Support ticket backlog is 390, down from 233 last week.",
+          "citation_ok": true,
+          "t_error": 1.17,
+          "slide_cited": false
+        },
+        {
+          "id": "f2",
+          "kind": "decision",
+          "text": "ウェブサイトに新しいロゴを使う",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f3",
+          "kind": "action",
+          "text": "契約書を法務部に送る",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Send the contract to the Home team by Friday.",
+          "citation_ok": true,
+          "t_error": -0.5,
+          "slide_cited": false
+        },
+        {
+          "id": "f4",
+          "kind": "number",
+          "text": "ページ読み込み (ms): 950",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Website page load time improved to 950ms from 820ms in the previous release.",
+          "citation_ok": true,
+          "t_error": -0.36,
+          "slide_cited": false
+        },
+        {
+          "id": "f5",
+          "kind": "action",
+          "text": "採用計画の案を作る",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Create an adoption plan draft by next week.",
+          "citation_ok": true,
+          "t_error": 1.09,
+          "slide_cited": false
+        },
+        {
+          "id": "f6",
+          "kind": "number",
+          "text": "承認済み予算: 42,500ドル",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f7",
+          "kind": "number",
+          "text": "クラウド月額請求: 11,800ドル",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f8",
+          "kind": "action",
+          "text": "リリース時の変更点をまとめる",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Summarize release changes by next week.",
+          "citation_ok": true,
+          "t_error": 0.76,
+          "slide_cited": false
+        },
+        {
+          "id": "f9",
+          "kind": "number",
+          "text": "月間経常収益: 354,000ドル",
+          "found": false,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f10",
+          "kind": "number",
+          "text": "2週目の再訪率: 34%",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Two-week trial user retention rate is 34%, down from 82% last month.",
+          "citation_ok": true,
+          "t_error": 5.63,
+          "slide_cited": false
+        },
+        {
+          "id": "f11",
+          "kind": "action",
+          "text": "顧客アンケートを準備する",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Prepare customer survey by end of next week.",
+          "citation_ok": false,
+          "t_error": -21.81,
+          "slide_cited": false
+        },
+        {
+          "id": "f12",
+          "kind": "decision",
+          "text": "オンボーディングのチェックリストを残す",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f13",
+          "kind": "number",
+          "text": "選考中の候補者: 75",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Recruitment numbers are stable, with 75 candidates under consideration this week compared to 85 last month.",
+          "citation_ok": true,
+          "t_error": 3.76,
+          "slide_cited": false
+        },
+        {
+          "id": "f14",
+          "kind": "open_question",
+          "text": "タブレット版を出す",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": false,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f15",
+          "kind": "decision",
+          "text": "週次定例を木曜日に移す",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        },
+        {
+          "id": "f16",
+          "kind": "number",
+          "text": "新規トライアル登録: 4,650",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "key_points",
+          "claim": "Trial registration numbers are higher this month (4,650) compared to last month (2,600), with seasonal factors to consider.",
+          "citation_ok": false,
+          "t_error": -103.58,
+          "slide_cited": false
+        },
+        {
+          "id": "f17",
+          "kind": "action",
+          "text": "新人向けの紹介動画を撮影する",
+          "found": true,
+          "judge_only": false,
+          "judge_covered": null,
+          "section": "action_items",
+          "claim": "Create new employee onboarding video by Monday.",
+          "citation_ok": false,
+          "t_error": -143.23,
+          "slide_cited": false
+        },
+        {
+          "id": "f18",
+          "kind": "decision",
+          "text": "ロードマップを顧客に公開する",
+          "found": false,
+          "judge_only": true,
+          "judge_covered": true,
+          "section": null,
+          "claim": null,
+          "citation_ok": null,
+          "t_error": null,
+          "slide_cited": false
+        }
+      ],
+      "made_up": [],
+      "made_up_questions": [],
+      "wrong_fields": [],
+      "uncited": [],
+      "gap_texts": [],
+      "conflict": {},
+      "number_repairs": [
+        "13,000 → 134,000",
+        "46,500 → 4,650",
+        "26,000 → 2,600"
+      ],
+      "unverified_numbers": [
+        "34,000"
+      ],
+      "unsupported_numbers": [
+        "34000"
+      ],
+      "support": [
+        {
+          "section": "summary",
+          "claim": "Summary: The meeting focused on support ticket management, website performance, quarterly budget, sales, and retention.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting discussed support tickets, website performance, quarterly budget, sales, and retention as stated in the transcript."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Support ticket backlog is 390, down from 233 last week.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the current support ticket number is 390 and that last week it was 233."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Website page load time improved to 950ms from 820ms in the previous release.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The claim states an improvement to 950ms, but the transcript states the average load time is 950ms, which is a current value, not an improvement from 820ms."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Quarterly budget allocations for team spending, user testing, and onboarding were discussed.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The cited text does not mention team spending, user testing, or onboarding budgets."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Monthly recurring revenue is $34,000, up from $134,000 last month.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The claim misstates the monthly recurring revenue; the transcript states monthly revenue is $354,000, not $34,000."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Two-week trial user retention rate is 34%, down from 82% last month.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "no",
+          "reason": "The claim mentions a two-week trial user retention rate, but the cited text refers to 'trial user's second week adoption rate' as 34%, not two-week."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Retention trends were largely as expected, with some customers asking about retention during the meeting.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states that retention trends were largely as expected and that customers asked about retention during the meeting."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Recruitment numbers are stable, with 75 candidates under consideration this week compared to 85 last month.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states there are 75 current candidates and that last month there were 85, and that recruitment trends are stable."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Trial registration numbers are higher this month (4,650) compared to last month (2,600), with seasonal factors to consider.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "partial",
+          "reason": "The cited text states the current month's trial registration number is 4,650, but does not provide last month's number as 2,600."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: The trial registration dashboard was updated on Monday, and an action item was assigned to Tom to create a new employee onboarding video by Monday.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states the trial registration dashboard was updated on Monday and assigns an action item to Tom to create a new employee onboarding video by Monday."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Agree to use the new logo on the website.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The meeting agreed to use a new logo on the website."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Laura will send the contract to the Home team by Friday.",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states LAURA has an action item to send the contract to the Home team by Friday."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Onboarding checklist will be retained.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The meeting explicitly decided to retain the onboarding checklist."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Recruitment timeline will be adjusted to a Thursday.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The meeting decided to move the next meeting to Thursday, but the claim mentions adjusting the recruitment timeline, which is not mentioned in the text."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Roadmap to be published to customers.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The meeting explicitly decided to publish the roadmap to customers."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Send the contract to the Home team by Friday. (owner: Laura; due: Friday)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states Laura has an action item to send the contract to the Home team by Friday."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Create an adoption plan draft by next week. (owner: OMAR; due: End of next week)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "partial",
+          "reason": "OMARさんは来週の終わりまでに採用計画の案を作る予定です。"
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Summarize release changes by next week. (owner: VICTOR; due: End of next week)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states VICTOR will summarize release changes by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Prepare customer survey by end of next week. (owner: MARIA; due: end of next week)",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states MARIA will prepare the customer survey by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Create new employee onboarding video by Monday. (owner: Tom; due: Monday)",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The transcript assigns the action item to Tom with a due date of Monday, as stated in the meeting."
+        },
+        {
+          "section": "open_questions",
+          "claim": "Open question: Tablet rollout decision is still pending.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The transcript states that no one has an answer regarding the tablet rollout."
+        }
+      ],
+      "ask": [],
+      "stages": {
+        "ingest": {
+          "seconds": 1.8,
+          "s_per_audio_hour": 14.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "vad": {
+          "seconds": 2.92,
+          "s_per_audio_hour": 22.6,
+          "peak_mem_gb": 15.42,
+          "reused": true
+        },
+        "transcribe": {
+          "seconds": 15.16,
+          "s_per_audio_hour": 117.6,
+          "peak_mem_gb": 16.88,
+          "reused": true
+        },
+        "vision": {
+          "seconds": 46.1,
+          "s_per_audio_hour": 357.5,
+          "peak_mem_gb": 16.66,
+          "reused": true
+        },
+        "fuse": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
+          "reused": true
+        },
+        "map": {
+          "seconds": 12.02,
+          "s_per_audio_hour": 93.2,
+          "peak_mem_gb": 16.18,
+          "reused": true
+        },
+        "reduce": {
+          "seconds": 23.27,
+          "s_per_audio_hour": 180.4,
+          "peak_mem_gb": 16.76,
+          "reused": true
+        },
+        "translate": {
+          "seconds": 0.0,
+          "s_per_audio_hour": 0.0,
+          "peak_mem_gb": 0.0,
           "reused": true
         },
         "render": {
@@ -1686,59 +3917,60 @@
     }
   ],
   "summary": {
-    "items": 3,
-    "facts": 39,
-    "fact_recall": 0.8462,
-    "citation_accuracy": 1.0,
+    "items": 7,
+    "facts": 91,
+    "fact_recall": 0.8132,
+    "citation_accuracy": 0.9595,
     "uncited_claims": 0,
-    "made_up_items": 0,
+    "made_up_items": 5,
     "made_up_open_questions": 0,
     "wrong_owner_or_due": 0,
     "gap_words": 0,
     "gap_words_per_min": 0.0,
-    "vad_speech_f1": 0.9329,
-    "wer": 0.0092,
-    "slide_title_exact": 0.875,
-    "slide_cell_accuracy": 1.0,
-    "slide_number_recall": 1.0,
+    "vad_speech_f1": 0.9347,
+    "wer": 0.0108,
+    "cer": 0.071,
+    "slide_title_exact": 0.8929,
+    "slide_cell_accuracy": 0.9732,
+    "slide_number_recall": 0.9832,
     "slide_alignment": null,
     "output_language_ok": 1.0,
     "translation_citations_same": 1.0,
-    "untranslated_claims": 4,
+    "untranslated_claims": 6,
     "recall_decision": null,
-    "recall_action": 0.6667,
-    "recall_number": 0.9583,
+    "recall_action": 0.6571,
+    "recall_number": 0.9107,
     "recall_open_question": null,
-    "map_numbers_repaired": 5,
-    "map_numbers_unverified": 2,
-    "unsupported_numbers": 0,
+    "map_numbers_repaired": 21,
+    "map_numbers_unverified": 3,
+    "unsupported_numbers": 1,
     "reduce_groups": 0,
     "pass2_marker": 0,
     "pass2_claim": 0,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.6349,
-    "support_partial": 6,
-    "support_no": 17,
+    "support_rate": 0.7703,
+    "support_partial": 10,
+    "support_no": 24,
     "support_unjudged": 0,
-    "judge_recall": 0.5625,
-    "audio_s": 1065.9
+    "judge_recall": 0.75,
+    "audio_s": 2626.8
   },
   "stages": {
     "ingest": {
-      "s_per_audio_hour": 15.4,
+      "s_per_audio_hour": 14.8,
       "peak_mem_gb": 0.0
     },
     "vad": {
-      "s_per_audio_hour": 23.1,
-      "peak_mem_gb": 15.41
+      "s_per_audio_hour": 22.5,
+      "peak_mem_gb": 15.42
     },
     "transcribe": {
-      "s_per_audio_hour": 109.4,
-      "peak_mem_gb": 16.85
+      "s_per_audio_hour": 116.8,
+      "peak_mem_gb": 16.88
     },
     "vision": {
-      "s_per_audio_hour": 385.6,
+      "s_per_audio_hour": 379.7,
       "peak_mem_gb": 16.66
     },
     "fuse": {
@@ -1746,15 +3978,15 @@
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 143.2,
+      "s_per_audio_hour": 128.5,
       "peak_mem_gb": 16.19
     },
     "reduce": {
-      "s_per_audio_hour": 269.2,
-      "peak_mem_gb": 16.78
+      "s_per_audio_hour": 266.1,
+      "peak_mem_gb": 16.9
     },
     "translate": {
-      "s_per_audio_hour": 50.5,
+      "s_per_audio_hour": 39.0,
       "peak_mem_gb": 16.03
     },
     "render": {
@@ -1762,50 +3994,91 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 996.4,
-      "peak_mem_gb": 16.85
+      "s_per_audio_hour": 967.4,
+      "peak_mem_gb": 16.9
     }
   },
   "citation_errors": [
+    -197.87,
+    -143.23,
     -114.93,
+    -103.58,
+    -47.81,
+    -22.96,
+    -21.81,
+    -2.71,
     -1.58,
+    -0.69,
     -0.52,
+    -0.5,
+    -0.45,
+    -0.45,
     -0.45,
     -0.45,
     -0.42,
     -0.4,
+    -0.36,
+    -0.33,
+    -0.33,
     -0.33,
     -0.33,
     -0.32,
     -0.03,
     -0.03,
+    -0.03,
+    -0.03,
     -0.02,
+    -0.02,
+    -0.01,
+    0.02,
+    0.21,
+    0.21,
     0.21,
     0.21,
     0.22,
     0.22,
+    0.22,
+    0.22,
+    0.35,
     0.35,
     0.35,
     0.39,
     0.39,
     0.58,
+    0.58,
     0.74,
     0.74,
+    0.74,
+    0.76,
+    0.78,
+    0.79,
+    0.84,
+    0.84,
     0.84,
     0.84,
     0.84,
     0.87,
+    0.89,
+    0.92,
+    0.92,
     0.92,
     0.92,
     0.94,
+    1.07,
+    1.09,
+    1.17,
     1.99,
-    1.99
+    1.99,
+    1.99,
+    1.99,
+    3.76,
+    5.63
   ],
   "judge": {
     "loaded": false,
     "calls": 0,
-    "cached": 79,
-    "seconds": 0.01,
+    "cached": 184,
+    "seconds": 0.02,
     "s_per_audio_hour": 0.0,
     "peak_mem_gb": null
   },

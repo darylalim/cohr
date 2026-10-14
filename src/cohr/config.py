@@ -8,9 +8,16 @@ import hashlib
 import os
 from importlib import resources
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 
 class _Section(BaseModel):
@@ -21,6 +28,17 @@ class ModelSpec(_Section):
     repo: str
     revision: str  # pinned commit sha (PLAN §12, D6)
     subfolder: str | None = None
+    # Convert the snapshot to this many bits locally (mlx_lm.convert, group size 64, during
+    # `cohr models download`), for a repo with no quantized MLX copy (6d-2, D18).
+    quantize_bits: int | None = None
+
+    @model_serializer(mode="wrap")
+    def _dump(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        # Left out when unset, so adding the field moved no stage's config hash.
+        out = handler(self)
+        if out.get("quantize_bits") is None:
+            out.pop("quantize_bits", None)
+        return out
 
 
 # Pinned in Phase 0 (NOTES.md 2026-10-10, D6).
@@ -208,6 +226,24 @@ class Config(_Section):
     reduce: ReduceConfig = ReduceConfig()
     translate: TranslateConfig = TranslateConfig()
     models: dict[str, ModelSpec] = Field(default_factory=lambda: dict(DEFAULT_MODELS))
+    # Regional Tiny Aya per target language (§5.5, D18): replaces models["map"] for that
+    # target, for Map and "Other (beta)" translation. Empty: Global for every language.
+    map_model_by_lang: dict[str, ModelSpec] = {}
+
+    @model_validator(mode="before")
+    @classmethod
+    def _regional_map_model(cls, data: Any) -> Any:
+        """The target's regional model becomes models["map"], so Map's and translate's
+        "models.map" hash moves for that language only."""
+        if not isinstance(data, dict):
+            return data
+        by_lang = data.get("map_model_by_lang") or {}
+        target = data.get("target_language", "en")
+        if target in by_lang:
+            models = dict(data.get("models") or DEFAULT_MODELS)
+            models["map"] = by_lang[target]
+            data = {**data, "models": models}
+        return data
 
     @property
     def notes_language(self) -> str:

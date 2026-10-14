@@ -28,6 +28,13 @@ SLIDE_SIZE = (1600, 900)
 # A different header colour per slide, so a screen recording has a clear scene change.
 HEADER_COLORS = ("#1f4e79", "#7a2e2e", "#2e6b3a", "#6b4c9a", "#9a6b1f", "#2e6b6b", "#4a4a4a")
 FPS = 5
+# PIL's default font has no CJK glyphs and no "é" (6d-2: Japanese slides came out as boxes,
+# "Métrica" as "M□trica"). These ship with macOS, which the generator needs anyway for `say`.
+# English keeps the default font, so its slides are unchanged.
+FONTS = {
+    "es": Path("/System/Library/Fonts/Helvetica.ttc"),
+    "ja": Path("/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc"),
+}
 
 Synth = Callable[[str, str], np.ndarray]  # (voice, text) → mono float32 at SR
 
@@ -93,12 +100,18 @@ def gap_audio(kind: GapKind, seconds: float, rng: np.random.Generator) -> np.nda
 # --- slides --------------------------------------------------------------------------------
 
 
-def draw_slide(slide: SlideSpec, index: int) -> Image.Image:
+def font(language: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    if language in FONTS:
+        return ImageFont.truetype(FONTS[language], size)
+    return ImageFont.load_default(size=size)
+
+
+def draw_slide(slide: SlideSpec, index: int, language: str = "en") -> Image.Image:
     img = Image.new("RGB", SLIDE_SIZE, "white")
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, SLIDE_SIZE[0], 150], fill=HEADER_COLORS[index % len(HEADER_COLORS)])
-    d.text((80, 40), slide.title, fill="white", font=ImageFont.load_default(size=72))
-    body = ImageFont.load_default(size=44)
+    d.text((80, 40), slide.title, fill="white", font=font(language, 72))
+    body = font(language, 44)
     y = 200
     for b in slide.bullets:
         d.text((100, y), f"- {b}", fill="black", font=body)
@@ -163,6 +176,7 @@ def variant(spec: ItemSpec) -> Variant:
         regions=tuple(spec.regions),
         discussion=spec.discussion,
         open_questions=spec.open_questions,
+        language=spec.language,
     )
 
 
@@ -258,7 +272,7 @@ def build(spec: ItemSpec, out: Path, synth: Synth = say, root: Path = Path()) ->
 
     with atomic.atomic_dir(out) as tmp:
         sf.write(tmp / "meeting.wav", meeting, SR, subtype="PCM_16")
-        images = [draw_slide(s, k) for k, s in enumerate(script.slides)]
+        images = [draw_slide(s, k, spec.language) for k, s in enumerate(script.slides)]
         pngs = []
         for k, img in enumerate(images):
             pngs.append(tmp / f"slide_{k + 1}.png")

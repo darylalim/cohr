@@ -1,6 +1,7 @@
 """Number normalization (PLAN §5.5, §18): number words, separators, `k`/`thousand` and ordinal
-suffixes → plain digits. English only. Shared by the Map number guard and the evals, so both
-agree on what a number is."""
+suffixes → plain digits. Shared by the Map number guard and the evals, so both agree on what a
+number is. English number words; the meeting's own text in Spanish and Japanese is read with
+`source_numbers_in` (6d-2: "11.800", "354 mil", "35万4000", "四万二千五百")."""
 
 import math
 import re
@@ -140,6 +141,75 @@ def ordinals_in(text: str) -> set[float]:
 
 def numbers_in(text: str) -> set[float]:
     return {float(m) for m in _NUMBER.findall(digits(text))}
+
+
+# --- the meeting's own language (6d-2) ------------------------------------------------------
+
+_KANJI_DIGITS = {"〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5}
+_KANJI_DIGITS |= {"六": 6, "七": 7, "八": 8, "九": 9}
+_KANJI_UNITS = {"十": 10, "百": 100, "千": 1_000}
+_KANJI_SCALES = {"万": 10_000, "億": 100_000_000}
+# A number in Japanese text: Arabic digits (with "," grouping) and kanji numerals, mixed as
+# Transcribe writes them ("35万4000", "4万2500", "四万二千五百"). 万/億 alone are no number.
+_JA_NUMBER = re.compile(
+    r"(?:\d[\d,]*|[〇零一二三四五六七八九十百千])(?:\d[\d,]*|[〇零一二三四五六七八九十百千万億])*"
+)
+
+
+def _ja_value(run: str) -> int:
+    """'35万4000' → 354000, '四万二千五百' → 42500, '1万1800' → 11800."""
+    total = section = 0  # section: the part below the current 万/億
+    number = 0  # digits read so far, waiting for a unit
+    have = False
+    for m in re.finditer(r"\d[\d,]*|.", run):
+        tok = m.group(0)
+        if tok[0].isdigit() or tok in _KANJI_DIGITS:
+            number = int(tok.replace(",", "")) if tok[0].isdigit() else _KANJI_DIGITS[tok]
+            have = True
+        elif tok in _KANJI_UNITS:
+            section += (number if have else 1) * _KANJI_UNITS[tok]
+            number, have = 0, False
+        else:  # 万, 億
+            total += (section + number) * _KANJI_SCALES[tok]
+            section, number, have = 0, 0, False
+    return total + section + number
+
+
+def _ja_digits(text: str) -> str:
+    return _JA_NUMBER.sub(lambda m: str(_ja_value(m.group(0))), text)
+
+
+# Spanish: Transcribe groups thousands with "." (es_ES voices) or "," (es_MX) and says "mil";
+# a separator followed by exactly three digits is grouping, one or two digits is a decimal.
+_ES_GROUPED = re.compile(r"(?<![\d.,])\d{1,3}(?:([.,])\d{3})(?:\1\d{3})*(?![\d.,]\d)")
+_ES_DECIMAL = re.compile(r"(?<![\d.,])(\d+),(\d{1,2})(?![\d.,]\d)")
+_ES_SCALE = re.compile(r"(\d+(?:\.\d+)?)\s+(mil|millón|millones)\b", re.I)
+
+
+def _es_digits(text: str) -> str:
+    text = _ES_GROUPED.sub(lambda m: re.sub(r"[.,]", "", m.group(0)), text)
+    text = _ES_DECIMAL.sub(r"\1.\2", text)
+    return _ES_SCALE.sub(
+        lambda m: _fmt(float(m.group(1)) * (1e3 if m.group(2).lower() == "mil" else 1e6)), text
+    )
+
+
+SOURCE_READERS = {"es": _es_digits, "ja": _ja_digits}
+
+
+def source_numbers_in(text: str, language: str | None) -> set[float]:
+    """The numbers in the meeting's own text (transcript, slides) in its `language`: Spanish
+    grouping read as grouping ("11.800 dólares" = 11800, not 11.8) and "mil"; Japanese 万 and
+    kanji numerals ("35万4000" = 354000, not 35 and 4000). Other languages: `numbers_in`
+    plus, for a language other than English, its own digit readings (German "42.500" = 42500
+    as well). Number words other than these aren't read: Transcribe wrote digits in step 0's
+    es/ja meetings."""
+    reader = SOURCE_READERS.get(language or "")
+    if reader is not None:
+        return {float(m) for m in _NUMBER.findall(reader(text).replace(",", ""))}
+    if language in (None, "en"):
+        return numbers_in(text)
+    return numbers_in(text).union(*written_values(text, language))
 
 
 # --- numbers as written (Map number guard, §5.5) -------------------------------------------

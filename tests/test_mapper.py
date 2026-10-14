@@ -230,6 +230,53 @@ def test_guard_repairs_only_from_the_target_languages_reading() -> None:
     assert mapper.check_numbers("$770,000", sources, "es")[0] == "$740"
 
 
+def test_guard_reads_the_sources_in_the_meetings_language() -> None:
+    # 6d-2 step 0, xling-es: "11.800 dólares" was read as 11.8, so Map's "$11.80" was kept;
+    # "4.650" on the slide gave 4.65, a second candidate for Map's "465".
+    es = mapper.source_numbers("La factura es de 11.800 dólares.", ["4.650", "354.000 $"], "es")
+    assert {11800.0, 4650.0, 354000.0} <= es and not {11.8, 4.65, 354.0} & es
+    assert mapper.check_numbers("Cloud: $11.80", es, "en")[0] == "Cloud: $11800"
+    assert mapper.check_numbers("465 signups", es, "en")[0] == "4650 signups"
+    # xling-ja: "35万4000ドル" / "13万4000ドル" were read as 35, 4000 and 13; Map's "$13,000"
+    # and "$34,000" were kept through their decimal-comma readings (13 and 34 from "34%").
+    ja = mapper.source_numbers(
+        "月間経常収益は35万4000ドル。先月は13万4000ドル。再訪率は34%。", [], "ja"
+    )
+    assert {354000.0, 134000.0, 34.0} <= ja and 35.0 not in ja
+    assert mapper.check_numbers("$13,000 last month", ja, "en")[0] == "$134,000 last month"
+    # two candidates (354000, 134000): flagged, not guessed
+    assert mapper.check_numbers("$34,000", ja, "en") == ("$34,000", [], ["34,000"])
+
+
+def test_slide_conflicts_read_the_meetings_language() -> None:
+    # 6d-2 step 1, xling-es: slide "4.650" read the English way (4.65) wasn't the 4650 said,
+    # so the notes got "4,650 (slide: 4.65)".
+    said = "El número de registros de prueba nuevos este mes es de 4650."
+    rows = ["| Métrica | Valor |\n|---|---|\n| Registros de prueba nuevos | 4.650 |"]
+    assert mapper.slide_conflicts(said, rows) != []  # the English reading: a false conflict
+    assert mapper.slide_conflicts(said, rows, "es") == []
+    # a real Spanish conflict keeps the slide value whole in the note
+    conflict = said.replace("4650", "4050")
+    [c] = mapper.slide_conflicts(conflict, rows, "es")
+    text, _ = mapper.mark_conflicts("New signups: 4,050", [c], "en", True, "es")
+    assert text == "New signups: 4,050 (slide: 4,650)"
+
+
+def test_guard_keeps_only_the_target_languages_reading() -> None:
+    # 6d-2: keeping follows the same reading as repairing. "$34,000" in English is 34000, not
+    # the 34 of "34%"; a language not in DECIMAL_MARK still keeps either reading.
+    sources = {34.0, 354000.0, 134000.0}  # xling-ja's segment: "34%", 35万4000, 13万4000
+    assert mapper.check_numbers("$34,000", sources, "en") == ("$34,000", [], ["34,000"])
+    # Before, any reading kept it (34.0). Alone, 34 is a factor-1000 candidate (D20's rule),
+    # so "$34,000" with only "34%" said would now be repaired to "$34": watch the eval's repairs.
+    assert mapper.check_numbers("$42,500", {42500.0}, "en") == ("$42,500", [], [])
+    assert mapper.check_numbers("42.500 $", {42500.0}, "de") == ("42.500 $", [], [])
+    assert mapper.check_numbers("42,500", {42.5}, "ar") == ("42,500", [], [])
+    # an English meeting's sources are read as before
+    text = "the 22nd, $42,500 and fourteen thousand"
+    assert mapper.source_numbers(text, [], "en") == mapper.source_numbers(text, [])
+
+
 def test_guard_falls_back_to_every_reading_when_none_is_native() -> None:
     # "3,36" isn't an English number; only the decimal-comma 3.36 reads it (×100 → 336)
     assert mapper.check_numbers("3,36 open tickets", {336.0}, "en")[0] == "336 open tickets"
