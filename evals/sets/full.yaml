@@ -3,7 +3,7 @@
 # only) and AMI (real meetings). long-en stays in its own set (~40 min alone).
 # Run: uv run cohr eval --set full (~1 h). Parts: --item fleurs | fleurs-ja | ami | ami-ES2004b.
 include: [quick, lang]
-# D31 (proposed): only the quick items' metrics and stage speeds gate, against
+# D31 (decided 2026-10-14): only the quick items' metrics and stage speeds gate, against
 # evals/baseline-full.json; the lang items, FLEURS and AMI are report-only until their
 # run-to-run noise is measured.
 gate: [quick]

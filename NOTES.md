@@ -2054,4 +2054,5 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
 
 ### Next
 6e-2 (separate session, kickoff written from the ranking above): carry-over fixes, then the
-full release gate and the 1.0.0 bump only when asked. D31 awaits the user's confirmation.
+full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user (2026-10-14):
+`full` gates on its quick items' metrics and stage speeds; memory stays ungated.
