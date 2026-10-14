@@ -213,3 +213,10 @@ def test_ingest_missing_source(tmp_path: Path, tone: Path) -> None:
     tone.unlink()
     with pytest.raises(pipeline.StageFailed, match="source missing"):
         pipeline.run(run_dir, stages=INGEST)
+
+
+def test_missing_tools_are_named(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(shutil, "which", lambda tool: None if tool == "ffprobe" else "/x")
+    assert ingest.missing_tools() == ["ffprobe"]
+    with pytest.raises(ingest.ToolMissing, match="ffprobe not found"):
+        ingest.require("ffprobe")

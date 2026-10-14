@@ -351,3 +351,19 @@ def test_ask_input_is_disabled_while_a_job_runs(
     finally:
         release.set()
         job.wait(5)
+
+
+def test_new_run_without_ffmpeg_warns_and_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    wav = tmp_path / "talk.wav"
+    sf.write(wav, np.zeros(1600, dtype=np.int16), 16000)
+    monkeypatch.setattr("shutil.which", lambda _tool: None)
+    at = app("app_pages/new_run.py")
+    assert any("ffmpeg and ffprobe not found" in w.value for w in at.warning)
+    at.text_input(key="nr_media_path").set_value(str(wav))
+    at.button[0].click().run()
+    assert not at.exception
+    # the install hint, not "Could not read the recording" (the file is fine)
+    assert at.error[0].value.startswith("ffprobe not found on PATH")
+    assert storage.list_runs(runs_dir()) == []

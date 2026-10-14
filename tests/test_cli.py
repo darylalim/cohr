@@ -78,3 +78,46 @@ def test_models_lists_missing(capsys: pytest.CaptureFixture[str]) -> None:
 def test_run_rejects_unsupported_language(tone: Path) -> None:
     with pytest.raises(SystemExit):
         main(["run", str(tone), "--lang", "fi"])
+
+
+def test_run_without_ffmpeg_says_how_to_install_it(
+    tone: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("shutil.which", lambda _tool: None)
+    with pytest.raises(SystemExit, match="ffprobe not found on PATH.*brew install ffmpeg"):
+        main(["run", str(tone)])
+    assert storage.list_runs(runs_dir()) == []
+
+
+def test_eval_without_ffmpeg_stops_before_generating(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("shutil.which", lambda _tool: None)
+    root = Path(__file__).resolve().parents[1]
+    with pytest.raises(SystemExit, match="ffmpeg not found on PATH"):
+        main(["eval", "--set", "quick", "--item", "clean-en", "--root", str(root)])
+
+
+def test_models_download_offline_is_one_line(monkeypatch: pytest.MonkeyPatch) -> None:
+    def offline(_spec: object) -> int:
+        raise ConnectionError("[Errno 8] nodename nor servname provided")
+
+    monkeypatch.setattr("huggingface_hub.HfApi.model_info", lambda *a, **k: offline(None))
+    with pytest.raises(SystemExit, match="error: can't reach the Hugging Face Hub"):
+        main(["models", "download", "vad"])
+
+
+@needs_ffmpeg
+def test_a_model_deleted_after_a_run_stops_the_resume_cleanly(
+    tone: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The run's ingest finished earlier; its models are gone now (conftest: empty model cache).
+    every_stage = pipeline.default_stages
+    monkeypatch.setattr(pipeline, "default_stages", lambda: [ingest.STAGE])
+    assert main(["run", str(tone)]) == 0
+    (run_dir,) = storage.list_runs(runs_dir())
+    monkeypatch.setattr(pipeline, "default_stages", every_stage)
+    capsys.readouterr()
+    assert main(["resume", run_dir.name]) == 1
+    err = capsys.readouterr().err
+    assert "not downloaded or incomplete" in err and "cohr models download" in err
+    stages = schemas.load(run_dir, Manifest).stages
+    assert stages["ingest"].status == "done" and set(stages) == {"ingest"}  # nothing else ran

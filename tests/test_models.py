@@ -1,5 +1,6 @@
 """PLAN §4, §12: lazy loading, memory policy, one lock, missing models, download disk check."""
 
+import json
 import threading
 from collections import namedtuple
 from pathlib import Path
@@ -175,6 +176,7 @@ def test_download_converts_a_quantized_spec(
         out = models.converted_path(s, c)
         out.mkdir(parents=True)
         (out / "config.json").write_text("{}")
+        (out / "model.safetensors").write_bytes(b"w")
 
     names = models.download(
         {"map": spec}, cache=cache, size_of=lambda _s: GB, fetch=lambda s, c: None, convert=convert
@@ -222,3 +224,91 @@ def test_memory_stats_without_mlx_are_none(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.delitem(sys.modules, "mlx.core", raising=False)
     mem = models.MlxMemory()
     assert mem.active() is None and mem.limit() is None and mem.peak() is None
+
+
+def snapshot(root: Path, files: dict[str, str]) -> Path:
+    for name, text in files.items():
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / name).write_text(text)
+    return root
+
+
+SHARDS = ["model-00001-of-00002.safetensors", "model-00002-of-00002.safetensors"]
+INDEX = json.dumps({"weight_map": {"a.w": SHARDS[0], "b.w": SHARDS[1]}})
+
+
+def test_check_complete_finds_an_interrupted_download(tmp_path: Path) -> None:
+    whole = snapshot(
+        tmp_path / "whole",
+        {
+            "config.json": "{}",
+            "model.safetensors.index.json": INDEX,
+            "model-00001-of-00002.safetensors": "w",
+            "model-00002-of-00002.safetensors": "w",
+        },
+    )
+    assert models.check_complete(whole) == whole
+    single = snapshot(tmp_path / "single", {"config.json": "{}", "model.safetensors": "w"})
+    assert models.check_complete(single) == single
+
+    half = snapshot(
+        tmp_path / "half",
+        {
+            "config.json": "{}",
+            "model.safetensors.index.json": INDEX,
+            "model-00001-of-00002.safetensors": "w",
+        },
+    )
+    with pytest.raises(FileNotFoundError, match="incomplete: no model-00002-of-00002.safetensors"):
+        models.check_complete(half)
+    with pytest.raises(FileNotFoundError, match=r"no config.json, \*.safetensors"):
+        models.check_complete(snapshot(tmp_path / "bare", {"README.md": ""}))
+
+
+def test_an_incomplete_model_counts_as_missing_and_is_downloaded_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("shutil.disk_usage", lambda _p: Usage(100 * GB, 10 * GB, 90 * GB))
+    folder = snapshot(tmp_path / "snap", {"config.json": "{}"})  # weights never arrived
+    monkeypatch.setattr(models, "_snapshot_path", lambda spec, cache=None: folder)
+    spec = ModelSpec(repo="org/m", revision="abc")
+    m = ModelManager(Config(models={"map": spec}))
+    with pytest.raises(ModelsMissing, match="not downloaded or incomplete: map"):
+        m.require(["map"])
+
+    fetched: list[str] = []
+
+    def fetch(s: ModelSpec, c: Path | None) -> None:
+        fetched.append(s.repo)
+        (folder / "model.safetensors").write_text("w")
+
+    assert models.download({"map": spec}, size_of=lambda _s: GB, fetch=fetch) == ["map"]
+    assert fetched == ["org/m"]
+    m.require(["map"])  # complete now
+
+
+def test_download_offline_is_a_clear_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("shutil.disk_usage", lambda _p: Usage(100 * GB, 10 * GB, 90 * GB))
+    spec = ModelSpec(repo="org/m", revision="abc")
+
+    def offline(_s: ModelSpec) -> int:
+        raise ConnectionError("Name or service not known")
+
+    with pytest.raises(models.DownloadError, match="can't reach the Hugging Face Hub"):
+        models.download({"map": spec}, cache=tmp_path, size_of=offline)
+
+    def cut(_s: ModelSpec, _c: Path | None) -> None:
+        raise OSError("connection reset")
+
+    with pytest.raises(models.DownloadError, match=r"downloading map \(org/m\) failed.*resume"):
+        models.download({"map": spec}, cache=tmp_path, size_of=lambda _s: GB, fetch=cut)
+
+
+def test_a_damaged_model_says_how_to_replace_it(tmp_path: Path) -> None:
+    def broken(_path: Path) -> object:
+        raise ValueError("header too large")
+
+    m = ModelManager(Config(), loaders={"map": broken}, resolve=lambda spec: tmp_path)
+    damaged = pytest.raises(models.ModelLoadError, match="hf cache rm model/.*models download")
+    with damaged, m.use("map"):
+        pass

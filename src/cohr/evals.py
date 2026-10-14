@@ -38,7 +38,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from cohr import ami, ask, asr, atomic, fleurs, judge, pipeline, render, schemas, storage
+from cohr import ami, ask, asr, atomic, fleurs, ingest, judge, pipeline, render, schemas, storage
 from cohr.ami import AmiSpec
 from cohr.config import Config, prompt_hash
 from cohr.fleurs import FleursSpec
@@ -2225,6 +2225,8 @@ def run_set(
     meetings = ami_meetings(eval_set.ami, items)
     if not specs and not fleurs_langs and not meetings:
         raise ValueError(f"no items {list(items)} in set {name!r}")
+    if specs or meetings:  # the generator and ingest need it; FLEURS doesn't
+        ingest.require()
     overrides = dict(overrides or {})
     reports: list[ItemReport] = []
     run_dirs: list[Path] = []
