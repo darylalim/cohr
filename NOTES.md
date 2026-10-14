@@ -1907,3 +1907,26 @@ writes "OMAR", "VICTOR", "MARIA" (casefold matches), "Laura" and "Tom" as is.
   licence page and `LICENCE.txt` in `ami_public_manual_1.6.2.zip` (downloaded, 22.9 MB, 143
   `abstractive/*.abssumm.xml`): "released under the Creative Commons Attribution 4.0
   International Public License agreement (CC BY 4.0)".
+
+### 1. FLEURS (Transcribe only; report 20261014-060444-full, d1d5bbc)
+- `evals/sets/full.yaml`: `include: [quick, lang]` + a `fleurs:` block (pinned revision, seed 1,
+  20 clips from the first 100 tar members, Transcribe's 14 languages → FLEURS configs).
+  `src/cohr/fleurs.py` streams the tar start through `HfFileSystem`; `evals.run_fleurs`
+  transcribes each clip whole (no VAD); error is over a language's 20 clips together
+  (`asr_corpus_error`). `--item fleurs` / `--item fleurs-ja` run FLEURS alone.
+- Kept: 205 MB, not ~10 MB (step 0's estimate): the clips are 32-bit float WAVs, ~15 MB per
+  language. Streaming a language took ~10 s; the whole FLEURS run ~4 min.
+- Error (WER; CER for ja/ko/zh): pl 3.8, it 3.9, ja 4.0, fr 4.2, pt 4.2, en 5.3, es 6.0,
+  nl 6.5, ko 7.1, vi 7.1, de 7.6, el 8.1, zh 12.5, ar 16.1%. Means: WER 6.6%, CER 7.9%.
+  Transcribe alone: 149 s per audio hour (116–189 by language).
+- Worst clips, two kinds:
+  - Scoring form, not errors: de "10.000" → "zehntausend", fr "22 h 00" → "vingt-deux
+    heures", pl "p.n.e." spelled out, ko a parenthetical "(Rossby number)" not spoken. The
+    reverse of the expected direction: FLEURS writes digits, Transcribe writes words. Only
+    English number words are read as digits (`wer_text`).
+  - Real errors, numbers among them: ar "06:30 و 07:30" → "36 و37" (clock times lost), nl
+    "5 en 100 dollar" → "$5.000 en $100", zh "World Wargate" made up twice, pt names
+    (Goethe, Fichte, Schlegel → "Goth, Fish e Skeleton"). The Map number guard checks
+    against the transcript, so a value wrong there passes it.
+- Carry-overs (6e-2 ranking): Transcribe number errors in ar/nl (feeds the guard); number
+  words → digits in the FLEURS scoring for every language (eval fairness; report-only now).
