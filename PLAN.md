@@ -182,8 +182,9 @@ run-to-run noise (D16) comes from real differences, not sampling luck.
   aligned slides; a group's prompt fills up to 40% of the cap, D26) with `prompts/reduce_part.md`,
   and its citations are written into the group summary as inline markers `[seg-N]` /
   `[slide-N]` after every claim. Both long-meeting prompts list decisions, action items and open
-  questions before key points, and key points are figures only; both passes may write up to 4096
-  tokens (6c: with 2048 and ~23K-token groups, the notes stopped inside KEY_POINTS).
+  questions before key points, and key points are figures only; both passes, like a single
+  pass, may write up to `reduce.max_tokens` = 8192 tokens (6c raised two-pass to 4096 when
+  2048 stopped notes inside KEY_POINTS; 6e-2 raised every pass to 8192, D32).
   Pass 2 (`prompts/reduce_pass2.md`) cites group summaries and the slides aligned to no segment;
   each pass-2 citation of a group resolves, in order, to the markers inside the cited span
   (R7B copied them in 38 of 108 spans with the first prompt, none with the final one), else the citations of the best-matching
@@ -405,6 +406,17 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   text against `map.json` action items from the cited segments (token overlap ≥ 0.6) and copy their
   owner and due date; otherwise leave them null. Phase 0 got `Priya: screenshots by 20 October`
   without an example, so `reduce.md` shows two example lines.
+- **Tasks filed as decisions (6e-2, D33):** a decision that matches a cited segment's `map.json`
+  action item (≥ 0.6) better than any of its Map decisions, or as well when that action item
+  names an owner, moves to Action items with its citations; when an action item already
+  states it, its citations are added there instead.
+- **Owners in the meeting's spelling (6e-2, D34):** an owner in a non-Latin script that the
+  transcript doesn't contain as written is replaced by the name said in the meeting with the
+  same consonants after transliteration (`names.py`, `anyascii`); kept as written otherwise.
+- **Cut replies (6e-2, D32):** a reply that stopped at `reduce.max_tokens` without
+  `<|END_RESPONSE|>` (mlx-lm's finish reason) is counted in `NotesDoc.truncated`, logged and
+  shown on the Notes page. It is never retried (temperature 0 would write the same start) or
+  completed.
 - Citation parsing: regex `<co>(.*?)</co:\s*([^>]+)>` → list of document indices → `citations[]`.
 - **Citation rules (every claim cites):**
   - A document index outside the documents sent is dropped and logged. It never becomes a link.
@@ -1165,6 +1177,14 @@ compared with a committed baseline:
     `full` run ranks highest, then the `full` release gate and the bump to `1.0.0` (§16, only
     when asked). Kickoff prompt in §21, from the 6e-1 ranking (carry-overs 1–4; 5–7 after
     v1 unless step 0 argues otherwise).
+    Done 2026-10-14 (NOTES.md), the 1.0.0 bump still to ask. Results: Reduce writes up to
+    8192 tokens and flags a cut reply (D32; AMI coverage 44.9 → 52.8%, decisions 52.2,
+    actions 36.4%, 0 cut); decisions that are Map's tasks move to Action items (D33; AMI
+    ES2004b 15 → 9 decisions); owners back in the meeting's spelling (D34; clean-hi recall
+    54 → 92%); numbers in no source counted on AMI (0); 万 normalization tried, not kept
+    (D35); `cohr eval --rerun STAGE`. Release gate: `full` **pass** (recall 88.7%, made-up
+    items 1, action recall 94.5%, Ask 98.3%); `long` report-only on regenerated long-en
+    audio (recall 67.5%, made-up items 12, Ask 77.8%). Post-v1 list in NOTES.md.
 Kickoff prompts for 6b–6e are written after the previous sub-phase, using its findings.
 **Phase 7 (after v1): cross-meeting search:** SQLite + FTS5 index and Search page per §13.
 
@@ -1981,6 +2001,10 @@ section.
 | D29 | Right-to-left notes on the Notes page and in `notes.md` (§5.6, §7) | Plain Markdown, no direction marks | Browser check of `clean-ar` (6d-1, Claude in Chrome) within the no-CSS rule | Phase 6d-1 | **Unicode isolates per line**: Arabic-only lines read right (one RTL run, citation at the end), but a line with Latin names or dates ("(المسؤول: Tom; الموعد: Monday)") was reordered, citation on the far side. `render.isolate` wraps each claim line, the summary paragraph and Ask answers in RLI … PDI for ar/fa/he/ur (`notes.md` format v2): reading order right, citation links still jump to Sources. Bullets and alignment stay on the left (that needs `dir`/CSS, not allowed) |
 | D30 | Where "Other (beta)" translation runs (§5.6) | — | Proposal before coding (6d-1 kickoff) | Phase 6d-1 | **Own `translate` stage** (user): between reduce and render, new `notes_translated.json` (TranslatedNotes v1), NotesDoc unchanged; a translate-prompt change re-runs only translate + render, and the English notes stay for the eval's citations-identical check. Rejected: inside reduce (two models in one stage, a prompt change re-runs R7B). `clean-sw` seeds 1–3: Swahili 3/3, citations identical 3/3, exact recall 92.3% = the English notes' on each seed, 4 claims kept English per run |
 | D31 | What `full` gates on (§18) | — | Proposal before code (6e-1 kickoff) | Phase 6e-1 | **Decided 2026-10-14 (user, after the first full run)**: the `quick` items' metrics at the D16/D24/D25 thresholds and the speed/memory rows gate; FLEURS WER/CER, AMI coverage and the `lang` items are report-only until their run-to-run noise is measured (D16's rule). Built in 6e-1 step 3: `gate: [quick]` in full.yaml, the report's `gate_summary`/`gate_stages`. The gate never compared memory (quick neither: no threshold exists), so only the speed rows gate |
+| D32 | Reduce output cap (§4, §5.6) | 2048 (two-pass 4096) | Token counts of existing replies, AMI run (6e-2 step 0) | Phase 6e-2 | **8192 for every pass, a cut reply flagged, no retry** (user): `mlx_lm.stream_generate` keeps `finish_reason`; a reply that stops at the cap without `<|END_RESPONSE|>` counts in `NotesDoc.truncated` (v5), the run log and a Notes page warning, and its claim is kept uncited. AMI coverage 44.9 → 52.8%, 0 cut; quick notes byte-identical; Reduce 139 s per audio hour. Not retried: at temperature 0 a retry writes the same start again |
+| D33 | Tasks Map wrote as tasks but Reduce filed as decisions (§5.6) | Prompt rule | Rule on `map.json`, replay on AMI and quick | Phase 6e-2 | **Pure-Python move** (user): a decision whose cited segment has a Map action item scoring ≥ 0.6 that beats every Map decision there (or ties with them and names an owner) moves to Action items, merged into a matching one. AMI ES2004b 15 → 9 decisions; full action recall 85 → 95%; long-en +3 tasks found, +4 made-up (pass 2 sees the moved items). Map's own task-as-decision writing (Victor-style) after v1 |
+| D34 | Owners written in the notes' script (§5.6) | As written | User's choice (6e-2 step 0): fix the notes | Phase 6e-2 | **anyascii** (user): a one-word non-Latin owner absent from the cited text becomes the Latin name said there with the same consonants, the closest spelling winning and a tie keeping the owner. clean-hi recall 54 → 92%; lang seed 1 81.3 → 86.8% |
+| D35 | 万 numbers in ja notes (§5.5) | Read as written | User's choice (6e-2 step 0: non-ja notes only), xling-ja seeds 1–3 | Phase 6e-2 | **Not kept**: grouping 35万4000 and telling Map the source language left 354,000 missed on every seed (Map wrote 3,400,000). Patch kept out of the tree; Map digit miscopying for ja after v1 |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

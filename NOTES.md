@@ -2170,3 +2170,55 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
   The xling-ja runs on disk hold the trial's Map output for seeds 1–3: re-run Map
   (`--rerun map`) when xling-ja is next measured at those seeds.
 - Transcribe's own number errors (FLEURS ar, nl): recorded in 6e-1, not fixed.
+
+### 5. Release gate (full, then long; user-approved; `--rerun reduce`)
+- **full** (20261014-113730, `baseline-full.json`): **gate pass**. Against 6e-1's run:
+  recall 85.5 → **88.7%**, made-up items 6 → 1, action recall 85.5 → 94.5%, citation accuracy
+  94.1 → 90.8% (clean-hi 100 → 58.3%: cross-language jump times, step 3), support
+  85.1 → 85.3%, Ask 98.3%. AMI: coverage 44.9 → **52.8%** (abstract 62.8, decisions 52.2,
+  actions 36.4, problems 33.3%), support 80.2 → 76.6%, uncited 2 → 0, cut 0, numbers in no
+  source 0, 5.8 min per audio hour, peak 17.3 GB. xling-ja's Map re-ran from clean code
+  (config stale after the step 4b trial). Baseline rewritten (b6ddfaf).
+- **long** (20261014-123008, report-only): "FAIL" against a baseline from 6b-2. long-en was
+  regenerated (evals/gen changed in 6d-2 and long hadn't run since), so every stage ran on
+  new audio: recall 70.0 → 67.5%, made-up items 8 → 12, made-up open questions 1 → 4, Ask
+  94.4 → 77.8%, support 80.5 → 75.7%. Attribution, Reduce replayed with main's code on the
+  same run (no model change, 2048 cap):
+  - main: recall 63.75%, made-up items 8, open questions 4, action recall 40%.
+  - branch: recall 67.5%, made-up items 12, open questions 4, action recall 55%.
+  - The four pass-1 replies are byte-identical (each closed with `<|END_RESPONSE|>`), so
+    the 8192 cap changes nothing here. The difference is step 2: pass 1's moved decisions
+    reach pass 2's input as action items, and pass 2 then keeps more tasks: 3 planted ones
+    found (migrate the staging database, write the release notes, prepare the customer
+    survey), 3 vague Map tasks ("Continue monitoring retention metrics…", "Review and
+    clarify the reporting of cloud costs", "Address the support queue backlog…") and one
+    with a wrong date (competitor research "1 November", said "11 November").
+  - Ask reads map.json, not the notes: its drop is the new audio's Map, not this branch.
+  `baseline-long.json` rewritten from this run (b6ddfaf).
+- **lang** seed 1 (20261014-124855, `--no-ask`, report-only): recall 81.3 → **86.8%**
+  (clean-hi 53.8 → 92.3%, every other item equal; xling-ja 76.9% with Map re-run from clean
+  code), made-up items 5 → 0, citation accuracy 95.9 → 89.9% (clean-hi 58.3%, jump times),
+  support 77.0 → 76.8%. `baseline-lang.json` rewritten.
+- quick: `baseline.json` rewritten from step 2's run (20261014-094845; step 3 doesn't reach
+  Latin owners, step 4 is eval-only). Gate green: ruff, ty, pytest 526 passed.
+
+### After v1 (post-v1 list)
+1. **Long-en made-up tasks (new):** with step 2, pass 2 keeps Map's vague tasks ("Continue
+   monitoring…", "Review and clarify…") along with the real ones (+3 found, +4 made up). A
+   filter for task-shaped claims with no owner, no due and no planted verb is the candidate;
+   judge it on long-en and AMI together.
+2. **Cross-language jump times:** non-English notes whose text shares no token with the
+   transcript cite the segment start (clean-hi 58.3%). Candidate: refine on the claim's
+   citation-bearing Map item text (English) instead of the translated claim.
+3. **Map files a task only as a decision** (step 2b, xling-es "Victor will write the notes
+   for the next version"): a Map prompt rule, judged on seeds 1–3.
+4. **Map miscopies digits in ja meetings** (D35): 354,000 written 3,400,000 / 345,000 even
+   from grouped digits. The guard flags it; no repair.
+5. **Japanese ビクター** isn't matched to Victor (no final r); Japanese owners in Japanese
+   notes aren't in any set.
+6. **Map's ownerless "End of next week" dues** on AMI tasks (step 2 trace).
+7. **Ask on the regenerated long-en**: 77.8% (was 94.4% on the old audio); the 4 misses
+   are actions answered from the wrong part. Not caused by 6e-2; check with Ask ranking.
+8. Carry-overs 5–7 from 6e-1: Japanese chunk-start and dense-segment drops, eval-only gaps,
+   Ask near-miss (55.6% on full).
+9. The 1.0.0 bump (§16): asked separately.
