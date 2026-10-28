@@ -2360,3 +2360,4 @@ Branch `phase-8a-jump-times`. No prompt change (REDUCE_HASH unchanged), no FORMA
 - Claims with no number and no owner (summaries, decisions in Hindi or Arabic) still cite
   the segment start, by design.
 
+- 1.2.0 bump: done 2026-10-28 on request (release-1.2.0).

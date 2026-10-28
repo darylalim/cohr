@@ -5,10 +5,11 @@ Local, offline meeting notes for Apple Silicon. A recording plus slides (or a sc
 video) becomes notes in which every claim cites its timestamp `[mm:ss]` or `[slide N]`. All
 models run on MLX; nothing leaves your machine.
 
-Status: v1.1.0. The pipeline, the app and the evals meet the v1 targets (Phase 6e); 1.1 adds
-cross-meeting search (Phase 7). Recordings in 14 languages (Transcribe's), notes in Command
-R7B's 23 languages plus "Other (beta)" languages translated by Tiny Aya. See `PLAN.md` and
-`NOTES.md`.
+Status: v1.2.0. The pipeline, the app and the evals meet the v1 targets (Phase 6e); 1.1 adds
+cross-meeting search (Phase 7); 1.2 places citations at their moment when the notes and the
+meeting are in different languages (Phase 8a). Recordings in 14 languages (Transcribe's),
+notes in Command R7B's 23 languages plus "Other (beta)" languages translated by Tiny Aya. See
+`PLAN.md` and `NOTES.md`.
 
 ## Requirements
 - Apple Silicon Mac, Python 3.13, [uv](https://docs.astral.sh/uv/), `ffmpeg` on `PATH`
