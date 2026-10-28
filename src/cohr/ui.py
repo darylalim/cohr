@@ -48,6 +48,7 @@ STAGE_MODELS = {
     "reduce": "Command R7B",
 }
 RUN_KEY = "run_id"  # the sidebar's current run, read by Notes and Ask
+FOCUS_KEY = "focus"  # a Focus: the moment Search opened Notes at
 POLL_S = 1.0
 MEM_GB = 1e9  # memory in decimal GB, like the evals and PLAN §4 (26.8 GB limit)
 GPU_WARN_FRACTION = 0.9
@@ -227,6 +228,22 @@ def ask_sources(run_dir: str, stamp: float) -> ask.Sources:
 
 
 # --- source blocks (Notes' Sources panel and the Ask drawer) -------------------------------
+
+
+@dataclass(frozen=True)
+class Focus:
+    """A moment in a run that Search opens: a segment at `t`, or a slide."""
+
+    run_id: str
+    seg_id: int | None
+    slide_id: int | None
+    t: float | None
+
+    def anchor(self) -> str | None:
+        """The Notes page anchor for it (#seg-N or #slide-N), if any."""
+        if self.seg_id is not None:
+            return f"seg-{self.seg_id}"
+        return f"slide-{self.slide_id}" if self.slide_id is not None else None
 
 
 @dataclass(frozen=True)

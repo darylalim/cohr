@@ -104,16 +104,6 @@ def topic_sources() -> Sources:
     return Sources(segments=segs, notes={}, slides=[_slide(0, "Hiring plan")], items=items)
 
 
-def test_query_terms() -> None:
-    assert ask.query_terms("What is the monthly cloud bill?") == (
-        ["monthly", "cloud", "bill"],
-        False,
-    )
-    assert ask.query_terms("Who owns item 7?") == (["owns", "item", "7"], False)
-    assert ask.query_terms("予算は いくら？") == (["予算は", "いくら"], True)
-    assert ask.query_terms("予算") == ([], True)  # under 3 characters: trigram can't match
-
-
 def test_rank_by_bm25_then_meeting_order() -> None:
     docs, _ = reduce.documents(topic_sources().segments, {}, topic_sources().slides)
     assert ask.rank("How many candidates are in the hiring pipeline?", docs)[:2] == [2, 3]

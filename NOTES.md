@@ -2234,3 +2234,61 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
   opens Notes at its moment, and an optional model-free search check on the eval runs. Then
   index.py, sync + `cohr index rebuild`, the Search page. No models, no eval runs; the 6e-2
   post-v1 list stays open. The 1.1.0 bump is asked separately.
+
+## 2026-10-27 · Phase 7: cross-meeting search
+Branch `phase-7-search`. No models, no eval runs; the 6e-2 post-v1 list stays open.
+
+### 0. Proposal (approved as proposed)
+- Index transcript items per chunk (≤ 30 s, not 300 s segments), slides, `shown_notes`
+  claims with citations, action items in their own table. Sync on read, keyed by file stats
+  (D36). Two FTS5 tables, query picks (D37). Ask's term code moved to `fts.py`. Hits open in
+  Ask's drawer or in Notes with a banner link (anchors only work within a page). Plain SQL
+  with `schema_version`, rebuilt atomically. `cohr index rebuild` and `cohr search`. A
+  report-only search check on the eval runs, narrowed to what English truth can test.
+
+### 1–3. Built
+- `src/cohr/index.py`, `src/cohr/fts.py`, `app_pages/search.py` (+ nav, Notes banner,
+  `ui.Focus`), CLI. Ask's ranking is unchanged (its tests pass as they were; the
+  `query_terms` test moved to `test_fts.py`).
+- **Found by a test (D37):** unicode61 reads a Japanese run with digits in it
+  ("チケットは390件") as one token, so "390" never matched the xling-ja transcript. Latin
+  queries now search ja/zh/ko rows through the trigram table (3+ character terms).
+- Browser check (Claude in Chrome, eval runs through a scratch `COHR_RUNS_DIR` of symlinks):
+  at 1512 px, "42,500" lists each meeting's key point; Listen opens the drawer at 1:33 with
+  the segment's slides; Open notes switches the run, shows "From Search: 1:33" and cues
+  that segment's player; "採用計画" finds the xling-ja transcript at 2:11; the Action items
+  tab lists long-en's tasks with owner, due and time. **Not checked: the narrow window.**
+  `resize_window` reported success but the viewport stayed 1568 px (the window was likely
+  maximized); the page uses only stacking-safe layout (one column of bordered results, a
+  wrapping horizontal filter row), but nobody has looked at it below 640 px.
+
+### 4. Search check (`scripts/search_check.py`, report-only)
+Index of all 17 eval runs (AMI included as noise), each planted fact of the 12 gen items
+queried by its number (as typed: "14,500"), its owner and its text, across every run;
+scored on the fact's run: a transcript hit / a note within ±15 s among its top 5.
+
+| query | transcript | notes |
+|---|---|---|
+| number | 119/126 | 100/126 |
+| owner | 67/75 | 53/75 |
+| words | 252/288 | 109/288 |
+
+- **Transcript hits at the chunk start were up to 25 s early** (first run: clean-en words
+  10/18 in the transcript). Search now places a transcript hit at the chunk's sentence that
+  best matches the query (`reduce.sentence_offset`, D19's even speaking rate): 17/18.
+- **Bengali digits (D38):** Tiny Aya writes "৯৫০", "$৪২,৫০০"; numbers in clean-bn notes
+  2/8 → 8/8 after folding every script's digits to ASCII (index and query).
+- Notes in another language than the query find only names and numbers (words: ar, hi, de
+  0/18–19), as expected of keyword search; the same meeting's English transcript is found.
+- clean-hi owners in the notes 0/5: found, but every action item cites t = 0.002 / 291 s, the
+  segment start: post-v1 item 2 (cross-language jump times), not search.
+- Spoken number forms: es "354 mil", ja "35万4000" don't match "354,000" (3 of 126; one more
+  ja miss is a fact said in the chunk before its span). Candidate below.
+- long-en owners 14/20 in the transcript: names said often push the fact's chunk out of the
+  top 5 (ranking, not matching).
+
+### Follow-ups (not done)
+1. Spoken number forms in the index: a second FTS column with `numbers.source_numbers_in`
+   readings of each row (es "354 mil" → 354000), searched, not shown.
+2. The narrow-window browser check of the Search page (420 and 800 px).
+3. The 1.1.0 bump: ask.

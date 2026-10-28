@@ -5,7 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from cohr import render, schemas, ui
+from cohr import index, render, schemas, ui
 from cohr.jobs import JobBusy
 from cohr.schemas import Manifest, NotesDoc, SegmentsFile, SlidesFile
 
@@ -85,6 +85,13 @@ with st.container(horizontal=True, vertical_alignment="bottom"):
         persist_state="session",
         help="Below suits medium windows, where the Sources column gets narrow.",
     )
+focus = st.session_state.get(ui.FOCUS_KEY)
+if focus is not None and focus.run_id == run_dir.name and (anchor := focus.anchor()):
+    # Anchors only scroll within the page they're on, so Search links here, not to the block.
+    where = index.where(focus.t, focus.slide_id)
+    st.info(f"From Search: [{where}](#{anchor})", icon=":material/search:")
+else:
+    focus = None
 if uncited := ui.uncited_count(notes):
     st.caption(f"{uncited} claim{'s' if uncited != 1 else ''} without a citation (shown in gray).")
 
@@ -94,7 +101,8 @@ def sources() -> None:
     if media.pruned:
         st.caption("Media pruned: audio and slide images are gone; notes still work.")
     for seg in segs.segments:
-        ui.segment_block(seg, media, cited=cited.get(seg.seg_id, []))
+        start = focus.t if focus is not None and focus.seg_id == seg.seg_id else None
+        ui.segment_block(seg, media, cited=cited.get(seg.seg_id, []), start=start)
     if segs.unaligned_slide_ids:
         st.divider()
         st.caption("Slides not matched to a moment in the recording")

@@ -732,7 +732,7 @@ app_pages/
   notes.py                   layout="wide"
   ask.py                     layout="centered"
   runs.py                    layout="wide"
-  search.py                  layout="wide"      (Phase 7)
+  search.py                  layout="wide"      (Phase 7, §13)
 ```
 
 **Per page**
@@ -1188,6 +1188,13 @@ compared with a committed baseline:
 Kickoff prompts for 6b–6e are written after the previous sub-phase, using its findings.
 **Phase 7 (after v1): cross-meeting search:** SQLite + FTS5 index and Search page per §13.
 Kickoff prompt in §21.
+Done 2026-10-27 (NOTES.md), the 1.1.0 bump still to ask. `src/cohr/index.py` (synced on
+read, D36), `src/cohr/fts.py` (Ask's term code, shared), `cohr index rebuild`, `cohr search`,
+the Search page (results with a source drawer and Open notes at the moment; action items of
+every meeting by owner). Two-table tokenizing (D37), transcript hits at the matched sentence,
+digits folded across scripts (D38). Search check on the 12 planted-fact eval items
+(`scripts/search_check.py`, report-only): within ±15 s in the fact's top 5, numbers
+119/126 transcript · 100/126 notes, owners 67/75 · 53/75, fact words 252/288 · 109/288.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -1351,49 +1358,87 @@ truth, and nothing is written to it that isn't on disk first.
 from uv-managed Python; confirm with `PRAGMA compile_options`), needs no server, and adds
 full-text search across meetings, which files alone can't do quickly.
 
-**Location:** `runs/index.db` (gitignored with `runs/`).
+**Location:** `<runs_dir>/index.db` (gitignored with `runs/`). Plain SQL with
+`meta.schema_version` (`index.SCHEMA_VERSION`), not a §19 run file: it isn't a run file, and it
+reads the run files only through `schemas.load`. Only `runs_dir()` is indexed, so eval runs
+under `evals/data/runs/` never are.
 
-**Schema (sketch)**
+**What's indexed (as built, Phase 7)**
+| kind | from | one row per | a hit opens at |
+|---|---|---|---|
+| `transcript` | `transcript.json` items, segment via `segments.chunk_ids` | chunk (≤ 30 s) | the chunk's sentence best matching the query (D19's character-position offset), not the chunk start |
+| `slide` | `slides.json`: title, `text_md`, `tables_md`, `chart_notes` (not Vision's `visual_notes`) | slide | its aligned `t` / `#slide-N` |
+| `note` | `render.shown_notes` (an "Other (beta)" run is searched in the language people read), citations stored as JSON | claim | its first seg citation's refined `t`, else its first slide |
+
+Action items also go in `action_items` (owner, due, task, citations); a note row of an action
+item holds "task · owner · due", so a name finds that person's tasks. A run with no notes yet
+is indexed by the files it has; an unreadable file is skipped and the rest indexed; a run whose
+manifest can't be read is left out and retried on the next sync.
+
+**Schema (as built)**
 ```sql
-CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);          -- schema_version
-CREATE TABLE runs (
-  run_id TEXT PRIMARY KEY, title TEXT, created_at TEXT, duration_s REAL,
-  source_lang TEXT, target_lang TEXT, status TEXT,             -- complete | partial | pruned
-  size_bytes INTEGER, manifest_hash TEXT
-);
-CREATE TABLE segments (
-  run_id TEXT REFERENCES runs ON DELETE CASCADE, seg_id INTEGER,
-  t0 REAL, t1 REAL, PRIMARY KEY (run_id, seg_id)
-);
-CREATE TABLE action_items (
-  run_id TEXT REFERENCES runs ON DELETE CASCADE, seg_id INTEGER,
-  owner TEXT, task TEXT, due TEXT
-);
-CREATE VIRTUAL TABLE docs USING fts5(
-  run_id UNINDEXED, seg_id UNINDEXED, kind UNINDEXED,          -- transcript | slide | note
-  text, tokenize = 'unicode61 remove_diacritics 2'
-);
+CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);   -- schema_version
+CREATE TABLE runs (run_id TEXT PRIMARY KEY, key TEXT NOT NULL, created_at TEXT NOT NULL,
+  source_lang TEXT, notes_lang TEXT, status TEXT NOT NULL,        -- done | partial
+  pruned INTEGER NOT NULL);
+CREATE TABLE items (id INTEGER PRIMARY KEY, run_id TEXT NOT NULL, kind TEXT NOT NULL,
+  lang TEXT, section TEXT, seg_id INTEGER, slide_id INTEGER, t REAL, t1 REAL,
+  citations TEXT, text TEXT NOT NULL);                            -- digits folded (D38)
+CREATE TABLE action_items (run_id TEXT NOT NULL, owner TEXT, due TEXT, text TEXT NOT NULL,
+  lang TEXT, seg_id INTEGER, slide_id INTEGER, t REAL, citations TEXT NOT NULL);
+-- Two FTS5 tables over items (external content, text stored once; triggers keep them in step):
+CREATE VIRTUAL TABLE fts_words USING fts5(text, content='items', content_rowid='id',
+  tokenize='unicode61 remove_diacritics 2');
+CREATE VIRTUAL TABLE fts_tri USING fts5(text, content='items', content_rowid='id',
+  tokenize='trigram');
 ```
 
-**Sync rules**
-- `cohr index rebuild` drops and rebuilds everything from disk.
-- After any stage finishes, Delete, or Prune media: re-index that run inside one transaction
-  (delete its rows, insert fresh). A run is re-indexed only if its `manifest_hash` changed.
-- On app start: if `schema_version` differs or the file is missing or corrupt, rebuild silently.
+**Sync (D36: on read, not hooks)**
+- `index.open_index` (Search page, `cohr search`) lists the runs in `runs_dir` and re-indexes
+  each run whose key changed, one transaction per run (`BEGIN IMMEDIATE`: delete its rows,
+  insert fresh), and drops runs no longer on disk. The key is the mtime and size of
+  `manifest.json` and every indexed file, not a hash of the manifest (which changes on every
+  heartbeat and misses a hand-edited notes file). So stage finishes, Delete, Prune media, CLI
+  runs and hand edits all reach the index with no code in `pipeline`, `jobs` or `storage`.
+- A missing, corrupt or other-`schema_version` file is rebuilt into a temp file and swapped
+  in (`atomic.atomic_path`). `cohr index rebuild` does the same on request.
 - Deleting `index.db` is always safe.
 
-**UI:** a **Search** page (`app_pages/search.py`, §7) with a query box and filters (date range, language, kind). Results show
-the snippet (FTS5 `snippet()`), the run, and a link to `[mm:ss]` in that run's Notes page.
-Action items get a cross-meeting table filterable by owner.
+**Queries (D37)**
+- Terms come from `fts.query_terms` (Ask's code, moved to `src/cohr/fts.py`): words without
+  English stopwords, or 3-character windows when the query has Chinese, Japanese or Korean.
+- A CJK query searches every row through `fts_tri`. Any other query searches rows in other
+  languages through `fts_words`, and ja/zh/ko rows through `fts_tri` with its 3+ character terms:
+  unicode61 reads "チケットは390件" as one token, so "390" would never match it.
+- Every term first (AND); if no row has them all, any term (OR), and the page says so.
+  BM25 order, `snippet()` with control-character marks the page turns into bold after escaping.
+- Digits are folded to ASCII in the stored text and in the query (D38).
+
+**UI:** the **Search** page (`app_pages/search.py`, `layout="wide"`, between Ask and Runs): a
+query box, filters (kind as pills, language, run date range), results with run, section or
+kind, time and language, the snippet, **Listen** (Ask's right-side drawer: the segment's
+audio from the hit's time, its slides) and **Open notes** (sets the current run and a
+`ui.Focus`; Notes shows "From Search: [mm:ss](#seg-N)", because anchors only scroll within one
+page, and starts that segment's player at the hit). An **Action items** tab lists every run's
+tasks (run, date, owner, due, task, time), filterable by owner; selecting one offers the same
+two buttons.
 
 **Limits (accepted):**
-- FTS5 `unicode61` doesn't segment Chinese or Japanese (no spaces between words), so search in
-  those languages is weak. Option later: the `trigram` tokenizer for those docs.
-- Keyword search only. Semantic search across meetings would need an embedding model and a
-  vector store (sqlite-vec); out of scope until there's a clear need.
+- Keyword search only, in the language of the text: an English query doesn't find Arabic
+  notes (it finds the English transcript of the same meeting). Semantic search across meetings
+  would need an embedding model and a vector store (sqlite-vec); out of scope until there's a
+  clear need.
+- CJK terms under 3 characters can't match (D17), and Latin terms under 3 characters inside
+  CJK runs ("Q3予算") neither.
+- Spoken number forms aren't read: "354 mil", "35万4000" don't match "354,000" (search check:
+  3 of 126 facts). Candidate: a second FTS column with `numbers.source_numbers_in` readings.
 
-**Tests:** `test_index.py`: rebuild from fixture runs matches incremental updates; delete/prune
-updates rows; corrupt or old-schema DB triggers a rebuild.
+**Tests:** `test_index.py` (rebuild equals incremental updates; Delete and Prune update rows;
+missing, garbage, old-schema and missing-table files rebuild; partial runs; unchanged runs
+not re-indexed; AND then OR with a case where the fallback must not fire; trigram for CJK and
+Latin-in-CJK; translated notes; digits across scripts; filters; sentence jump), `test_fts.py`,
+`test_cli.py` (index rebuild, search), `test_app.py` (Search page: results, no matches,
+drawer, Open notes banner, action items by owner).
 
 ---
 
@@ -2009,6 +2054,9 @@ section.
 | D33 | Tasks Map wrote as tasks but Reduce filed as decisions (§5.6) | Prompt rule | Rule on `map.json`, replay on AMI and quick | Phase 6e-2 | **Pure-Python move** (user): a decision whose cited segment has a Map action item scoring ≥ 0.6 that beats every Map decision there (or ties with them and names an owner) moves to Action items, merged into a matching one. AMI ES2004b 15 → 9 decisions; full action recall 85 → 95%; long-en +3 tasks found, +4 made-up (pass 2 sees the moved items). Map's own task-as-decision writing (Victor-style) after v1 |
 | D34 | Owners written in the notes' script (§5.6) | As written | User's choice (6e-2 step 0): fix the notes | Phase 6e-2 | **anyascii** (user): a one-word non-Latin owner absent from the cited text becomes the Latin name said there with the same consonants, the closest spelling winning and a tie keeping the owner. clean-hi recall 54 → 92%; lang seed 1 81.3 → 86.8% |
 | D35 | 万 numbers in ja notes (§5.5) | Read as written | User's choice (6e-2 step 0: non-ja notes only), xling-ja seeds 1–3 | Phase 6e-2 | **Not kept**: grouping 35万4000 and telling Map the source language left 354,000 missed on every seed (Map wrote 3,400,000). Patch kept out of the tree; Map digit miscopying for ja after v1 |
+| D36 | Who keeps the search index in step with the runs (§13) | Hooks after each stage, Delete and Prune, keyed by `manifest_hash` | Proposal before code (Phase 7 step 0) | Phase 7 | **Sync on read** (user): opening the index re-indexes each run whose key (mtime + size of the manifest and every indexed file) changed and drops deleted runs; no hooks in pipeline, jobs or storage. A manifest hash changes on every heartbeat and misses a hand-edited notes file |
+| D37 | Tokenizer for zh/ja/ko text in the index (§13) | unicode61 for everything | Proposal (step 0), then `test_index.py` and the search check | Phase 7 | **Two FTS5 tables (unicode61, trigram) over the same rows**; a CJK query uses trigram for all rows, any other query trigram for ja/zh/ko rows only. Found while testing: unicode61 kept "チケットは390件" as one token, so "390" missed it |
+| D38 | Digits in other scripts (§13) | As written | Search check (Phase 7 step 4) | Phase 7 | **Folded to ASCII** in the index and the query: Tiny Aya writes Bengali notes with Bengali digits ("$৪২,৫০০"); clean-bn numbers found in the notes 2/8 → 8/8. Snippets show ASCII digits |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).
