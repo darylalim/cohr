@@ -2419,3 +2419,5 @@ Branch `phase-8b-made-up-tasks`. Post-v1 items 1 and 6; D40.
   PostGIS" (a decision). No source signal separates them from real owner-less tasks yet.
 - "Summarise competitor research by 1 November": the text still says 1 (said 11). A digit
   repair in task text, like Map's number guard, is the candidate.
+
+- 1.3.0 bump: done 2026-10-28 on request (release-1.3.0).
