@@ -44,7 +44,11 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
   translated the section markers in de/ar until Reduce prefilled `## SUMMARY` (6d-1).
 - Tiny Aya translates example lines in a translation prompt along with the real ones: keep
   translate.md example-free. It also changes digits when translating: check values in Python.
-- Example lines in prompts must not overlap evals/gen/script.py's task or topic wording.
+- Example lines in prompts must not overlap evals/gen/script.py's task or topic wording, and
+  that includes example values. Tiny Aya copies them into fields the meeting leaves empty:
+  map.md's example due "end of next week" is on 22 AMI map.json lines (AMI says "next week"
+  once) and on 6 made-up long-en tasks, and script.py plants the same phrase, so the eval can
+  reward the copy (8b kickoff). Check a field's values against its cited segment.
 - A fallback needs a test where it must not fire (a too-strict filter hid behind one in 6b-2).
 - Read a meeting's numbers in its own language (`numbers.source_numbers_in`), notes in the
   notes language: Transcribe writes es "11.800", ja "35万4000", and the English reading (11.8;
