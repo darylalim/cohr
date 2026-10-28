@@ -1212,6 +1212,10 @@ Done 2026-10-28 (NOTES.md). Anchors in `reduce.refine_time` when word overlap fa
 numbers and the action item's owner; Reduce and Ask pass the notes' and the meeting's
 languages. lang seed 1: citation accuracy 89.9 → 98.7% (clean-hi 58.3 → 100%, xling-ja 70 →
 90%), recall and made-up items unchanged; quick identical (no citation fell back there).
+**Phase 8b (after v1): made-up action items on long meetings** (post-v1 items 1 and 6): long-en
+lists 12 made-up decisions and action items (`baseline-long.json`), 11 of them action items. 9 of
+those 11 have no owner, and 6 of the 9 carry Map's due "end of next week", which their cited
+segment doesn't say (AMI: 18 owner-less dues, none said in a cited segment). Kickoff prompt in §21.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2857,4 +2861,71 @@ bump the version: I'll ask separately.
 When done: tick the checklist, add new decisions to §20 (the anchor rule as a D-number), update
 §5.6's jump-time paragraph, add a NOTES.md entry, make sure the gate passes, and open a PR
 (ask before pushing).
+```
+
+### Kickoff prompt for Phase 8b (made-up action items on long meetings)
+```text
+Continue cohr: Phase 8b (made-up action items on long meetings, post-v1 items 1 and 6). Read
+CLAUDE.md, then PLAN.md §5.5–5.6 (Map, Reduce, two-pass), §18 (made-up items, the long set,
+AMI), §19, D33 and D34 in §20, and NOTES.md: the 6e-2 entry (step 2 and step 5 "long", the
+post-v1 list) and the 8b kickoff entry. Work on branch phase-8b-made-up-tasks from main
+(v1.2.0 is released: #51, #53).
+The problem: on the 6e-2 release gate, long-en listed 12 made-up items (`baseline-long.json`;
+6b-2 had 8). Replaying pass 2 with main's code showed the cause: step 2 (D33) gives pass 2
+more action items, and pass 2 keeps Map's vague tasks along with the real ones ("Continue
+monitoring retention metrics…", "Review and clarify the reporting of cloud costs").
+Correction to the post-v1 candidate ("a filter for task-shaped claims with no owner and no
+due"), from the stored run evals/data/runs/long-en/20261014-115732-long-en and report
+20261014-123008-long.json: 9 of the 11 made-up action items have no owner, but 6 of those 9
+*do* have a due, "end of next week", and only 1 of long-en's 7 owner-less dues is said in a
+cited segment. AMI is the same (post-v1 item 6): 18 owner-less dues in the 5 meetings, none
+said in a cited segment; map.json has "end of next week" on 22 lines, the AMI transcripts say
+"next week" once. That phrase is map.md's own example due (line 12), and
+evals/gen/script.py plants it too (RELATIVE_DUES), so long-en also rewards copying the example
+(CLAUDE.md: example lines must not overlap the script's wording). quick and lang have no
+owner-less action items in their stored runs except one in conflict-de, so neither set
+tests this code. The other 2 made-up items have owners ("Read marketing emails by Monday",
+Omar Crews; "Summarise competitor research by 1 November", said "11 November"): that wrong
+date is a separate value error, kept separate here.
+0. Proposal before code (ask me). First measure, without models: on the stored long-en and
+   AMI runs, list every action item with its owner and due, whether each value is said in a
+   cited segment (read in the meeting's language: dates through `numbers`, digits folded),
+   and, for long-en, whether `evals.made_up` counts it. Then propose the fix in Python
+   (CLAUDE.md: values are fixed in Python). Candidates, not choices:
+   - A due guard: a due its cited segments don't say is dropped, like the number guard
+     (never replaced by a guessed one). Must not fire on cross-language notes (a Hindi due on
+     an English meeting) unless it can read the due in the meeting's language.
+   - Then, for the action items left with no owner and no due: a task-shape filter ("continue
+     …", "ensure …", "review and clarify …"), moving them to Key points rather than deleting
+     them (§5.6: claims are kept; say why if you argue for dropping). Show its must-not-fire
+     cases: "Run the user conference online" (long-en, no owner, real) and the AMI tasks D33
+     found to be decided designs.
+   - Where it runs: on the final notes only (as `restore_owners` does) keeps the stored
+     replies replayable and leaves pass 2's input as it is; on pass-1 claims it changes what
+     pass 2 writes (CLAUDE.md), so it needs a long-en run to measure. In Map (map.json) it
+     would also reach Ask, but changes Map's stage output: say what that costs.
+   - Removing "end of next week" from map.md's example is a Map prompt change (Map reshuffles
+     at temp 0.3, judged on seeds 1–3, and reaches every set): say whether the Python fix
+     makes it unnecessary, and pick an example due that isn't in evals/gen/script.py if not.
+1. The fix, with tests: the guard drops an unsaid due and keeps a said one ("by the 17th of
+   November" for "17 November", "Friday" for "Friday"); the filter moves a vague owner-less
+   task; and must-not-fire tests (CLAUDE.md: a fallback needs one): an owner-less task that's
+   real, a due said in the cited segment but in other words, a due in another language. No
+   prompt change unless step 0 argues for it (then REDUCE_HASH or Map's hash moves on
+   purpose).
+2. Measure: replay on the stored runs first (`build_notes` + `restore_owners` on notes.json
+   `raw`, then `evals.score_item` on a copy of each run, CLAUDE.md: copy, don't delete);
+   long-en made-up items and recall before/after, AMI action items moved or changed. AMI
+   coverage needs the judge, so its run is an AMI-only run: ask first. Then quick (the gate
+   must pass, unchanged) and lang -c seed=1 --no-ask (conflict-de's owner-less task, and dues
+   in other languages). long-en (~40 min) only if the change reaches pass 1 or Map, or to
+   confirm the replay: ask first.
+3. Rewrite the baselines the fix moves on purpose, with the reason in the commit.
+Rules from CLAUDE.md apply. Ask me before every full or long run, AMI runs, the opt-in model
+tests and new dependencies (none should be needed). quick and lang runs are fine. The rest of
+the post-v1 list stays open (the "1 November" date and Ask on long-en, items 7 and 10,
+included) unless step 0 shows it shares this cause. Don't bump the version: I'll ask separately.
+When done: tick the checklist, add new decisions to §20 as D-numbers, update §5.6 (owner and
+due rules), add a NOTES.md entry and update the post-v1 list, make sure the gate passes, and
+open a PR (ask before pushing).
 ```
