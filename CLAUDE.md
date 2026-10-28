@@ -77,6 +77,11 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
 - A NOTES "candidate" fix is a guess: open the run files it assumes before building on it.
   Post-v1 item 2 said to refine on "the English Map item", but Map writes in the notes
   language (clean-hi `map.json` is Hindi), so there was none (8a kickoff).
+- A code-only change after Map: replay it on the stored runs through the stage's own parse
+  path (`build_notes` + `restore_owners` on notes.json `raw`) before any model run. In 8a it
+  matched `--rerun reduce` item for item and caught two bugs in seconds.
+- Consonant name matching (D34) is safe only on text known to be a name (`[owner: …]`): in
+  free claim text Arabic تم ("was done") matched Tom and مللي ("milli") Maria (8a).
 - The guard hook blocks Bash commands containing the full-eval or models-marker text (heredocs
   too): write such text with the Edit/Write tools. It also blocks `rm -rf`: copy scratch
   output to new folder names instead of deleting.
