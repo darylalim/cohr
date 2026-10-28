@@ -2292,3 +2292,14 @@ scored on the fact's run: a transcript hit / a note within ±15 s among its top 
    readings of each row (es "354 mil" → 354000), searched, not shown.
 2. The narrow-window browser check of the Search page (420 and 800 px).
 3. The 1.1.0 bump: done 2026-10-27 (release-1.1.0).
+
+## 2026-10-28 · Phase 8a kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 8a" and a §9 line: cross-language citation times
+  (post-v1 item 2). Picked over item 1 (long-en made-up tasks) because it's pure Python with no
+  prompt change, users see it (and Search's Open notes since 1.1.0), and lang + quick measure it.
+- Found while writing it: **Map writes in the notes language** (clean-hi `map.json` is Hindi),
+  so the post-v1 candidate "refine on the English Map item" has no English text to use. The
+  prompt asks step 0 to replay `refine_time` offline on the stored lang runs first, then pick
+  language-neutral anchors (numbers read per language, owners through anyascii) or argue for more.
+- Baseline-lang citation accuracy: clean-hi 58.3%, **xling-ja 70%** (English notes, Japanese
+  transcript: same cause the other way round), the other five 100%.
