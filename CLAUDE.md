@@ -49,6 +49,10 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
 - Read a meeting's numbers in its own language (`numbers.source_numbers_in`), notes in the
   notes language: Transcribe writes es "11.800", ja "35万4000", and the English reading (11.8;
   35 and 4000) let the guard keep wrong values (6d-2). Run an es/ja meeting before guessing.
+- Tiny Aya writes some notes in the script's own digits (bn "৯৫০", "$৪২,৫০০"): fold them
+  (`fts.fold_digits`) before Python compares or matches numbers in its output (Phase 7, D38).
+- FTS5 `unicode61` splits only at spaces and punctuation: "チケットは390件" is one token, so
+  "390" never matches it. zh/ja/ko rows need trigram for every query, Latin too (Phase 7, D37).
 - A model override that scores exactly like the default on every seed didn't apply: check the
   run log's "loading <model> from" line (eval overrides loaded the defaults until 6d-2).
 - Before building on an external dataset, check its real layout and file sizes (Hub tree API,
