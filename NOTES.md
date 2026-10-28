@@ -2291,4 +2291,4 @@ scored on the fact's run: a transcript hit / a note within ±15 s among its top 
 1. Spoken number forms in the index: a second FTS column with `numbers.source_numbers_in`
    readings of each row (es "354 mil" → 354000), searched, not shown.
 2. The narrow-window browser check of the Search page (420 and 800 px).
-3. The 1.1.0 bump: ask.
+3. The 1.1.0 bump: done 2026-10-27 (release-1.1.0).
