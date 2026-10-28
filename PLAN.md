@@ -2993,8 +2993,13 @@ to citation placement. Read the run files yourself before building on this (CLAU
      check (like Map's number guard: "November 1" vs said "11 November") to the Map lines
      `segment_snippet` writes, or to map.json itself. The snippet side reaches Ask and
      Reduce's input (REDUCE_HASH doesn't move, but Reduce's output can: a long-en run); the
-     map.json side changes Map's stage output (say what that costs). Show must-not-fire
-     cases: a due said in other words, a cross-language due (8b's digits-only rule).
+     map.json side changes Map's stage output (say what that costs). Preferred (user): fix
+     the value on Map's items, so map.json holds it once for every reader (Ask's snippets,
+     Reduce, search, 8b's "Summarise competitor research by 1 November" task); the
+     snippet-only side leaves the wrong value in map.json. Say where it runs so a
+     `--rerun reduce` run picks it up without re-running Map, and propose the snippet side
+     only if step 0 shows a reason. Show must-not-fire cases: a due said in other words, a
+     cross-language due (8b's digits-only rule).
    - Removing "end of next week" from map.md's example: a Map prompt change (seeds 1–3,
      every set, example not in evals/gen/script.py). Say whether the Python fix makes it
      unnecessary.

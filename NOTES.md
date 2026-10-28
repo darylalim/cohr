@@ -2438,3 +2438,6 @@ Branch `phase-8b-made-up-tasks`. Post-v1 items 1 and 6; D40.
 - So the prompt asks step 0 to measure name-only spans across the stored notes too (the same
   `resolve` path places Reduce's citations), and to weigh a due/date check on the Map lines in
   Ask's documents against changing map.md's example.
+- Steer added after review: the Map-values fix goes on Map's items (map.json) rather than only
+  on Ask's snippets, so every reader sees one value and 8b's "1 November" task is reached too
+  (user).
