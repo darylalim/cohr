@@ -427,9 +427,18 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   of up to 5 minutes, which is too coarse to play from. For each segment citation, score the cited
   span against every transcript chunk in that segment (the token overlap from §5.4) and store the
   best chunk; then place `t` inside it at the start of its best-matching sentence, by character
-  position (assumes an even speaking rate). If no chunk scores ≥ 0.1 (D19), use the segment's
-  `t0`. With the chunk's `t0` alone, `t` was a median 12.5 s early (chunks run up to 30 s) and
-  only 61% of citations landed within ±15 s; with the sentence offset, 98% (D19, 4b-1).
+  position (assumes an even speaking rate). If no chunk scores ≥ 0.1 (D19), which is what
+  happens when the notes and the meeting are in different languages (Hindi notes of an English
+  meeting, English notes of a Japanese one), the span's **anchors** pick the chunk (8a, D39):
+  its numbers, read in the notes' language with other scripts' digits folded and in each chunk
+  in the meeting's language (`numbers.source_numbers_in`: "35万4000" = 354000), and an action
+  item's `[owner: …]`, in the meeting's spelling for the segment (D34) and said as a whole word
+  or, in Japanese, as katakana with the same consonants (トム = Tom). The chunk with the most
+  anchors wins (ties: word overlap, then earliest), and `t` goes to the start of its sentence
+  with the most anchors. Names elsewhere in a claim aren't anchors (Arabic تم "was done" has
+  Tom's consonants). No anchor in any chunk: the segment's `t0`, never a guess. With the
+  chunk's `t0` alone, `t` was a median 12.5 s early (chunks run up to 30 s) and only 61% of
+  citations landed within ±15 s; with the sentence offset, 98% (D19, 4b-1).
   Slide citations need no refinement. Two-pass citations (§4) are refined after marker resolution,
   against the resolved segments.
 - **Rendering**, two modes from the same `notes.json`:
@@ -1199,6 +1208,10 @@ digits folded across scripts (D38). Search check on the 12 planted-fact eval ite
 share no token with the transcript (Hindi notes of an English meeting, English notes of a
 Japanese one) cites its segment's start, not its moment. lang baseline: citation accuracy
 clean-hi 58.3%, xling-ja 70%, every other item 100%. Kickoff prompt in §21.
+Done 2026-10-28 (NOTES.md). Anchors in `reduce.refine_time` when word overlap fails (D39):
+numbers and the action item's owner; Reduce and Ask pass the notes' and the meeting's
+languages. lang seed 1: citation accuracy 89.9 → 98.7% (clean-hi 58.3 → 100%, xling-ja 70 →
+90%), recall and made-up items unchanged; quick identical (no citation fell back there).
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2061,6 +2074,7 @@ section.
 | D36 | Who keeps the search index in step with the runs (§13) | Hooks after each stage, Delete and Prune, keyed by `manifest_hash` | Proposal before code (Phase 7 step 0) | Phase 7 | **Sync on read** (user): opening the index re-indexes each run whose key (mtime + size of the manifest and every indexed file) changed and drops deleted runs; no hooks in pipeline, jobs or storage. A manifest hash changes on every heartbeat and misses a hand-edited notes file |
 | D37 | Tokenizer for zh/ja/ko text in the index (§13) | unicode61 for everything | Proposal (step 0), then `test_index.py` and the search check | Phase 7 | **Two FTS5 tables (unicode61, trigram) over the same rows**; a CJK query uses trigram for all rows, any other query trigram for ja/zh/ko rows only. Found while testing: unicode61 kept "チケットは390件" as one token, so "390" missed it |
 | D38 | Digits in other scripts (§13) | As written | Search check (Phase 7 step 4) | Phase 7 | **Folded to ASCII** in the index and the query: Tiny Aya writes Bengali notes with Bengali digits ("$৪২,৫০০"); clean-bn numbers found in the notes 2/8 → 8/8. Snippets show ASCII digits |
+| D39 | Jump time when the notes and the meeting share no words (§5.6) | Segment start | Offline replay of `refine_time` on the stored lang runs (8a step 0), then lang seed 1 and quick | Phase 8a | **Language-neutral anchors** when no chunk scores ≥ 0.1: the span's numbers (read in each text's language) and its `[owner: …]` (meeting's spelling for the segment, whole word or same-consonant katakana); most anchors wins, ties by word overlap then earliest; segment start when none. Citation accuracy clean-hi 58.3 → 100%, xling-ja 70 → 90%, quick identical. Names elsewhere in claims not used (تم = Tom, مللي = Maria in the replay) |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

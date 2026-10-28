@@ -2207,9 +2207,8 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
    monitoring…", "Review and clarify…") along with the real ones (+3 found, +4 made up). A
    filter for task-shaped claims with no owner, no due and no planted verb is the candidate;
    judge it on long-en and AMI together.
-2. **Cross-language jump times:** non-English notes whose text shares no token with the
-   transcript cite the segment start (clean-hi 58.3%). Candidate: refine on the claim's
-   citation-bearing Map item text (English) instead of the translated claim.
+2. ~~**Cross-language jump times**~~: done in Phase 8a (D39, language-neutral anchors;
+   clean-hi 58.3 → 100%, xling-ja 70 → 90%). Left over: see 8a's "Open".
 3. **Map files a task only as a decision** (step 2b, xling-es "Victor will write the notes
    for the next version"): a Map prompt rule, judged on seeds 1–3.
 4. **Map miscopies digits in ja meetings** (D35): 354,000 written 3,400,000 / 345,000 even
@@ -2226,6 +2225,8 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
    left out in Phase 1 ("Not in Phase 1 (by plan)") and never added, so main's CI ran only
    `check` and the repo had no tags. Added on `ci-release-job` (user's choice over a hand
    release); its merge to main tags v1.0.0 and attaches the wheel and sdist.
+10. **Japanese chunks without punctuation** (8a): a citation on the right chunk lands at its
+    start when Transcribe wrote no 。 before the moment (xling-ja MARIA, −21.8 s).
 
 ## 2026-10-14 · Phase 7 kickoff prompt (no code)
 - PLAN §21 "Kickoff prompt for Phase 7": cross-meeting search from §13. Step 0 checks the
@@ -2303,3 +2304,59 @@ scored on the fact's run: a transcript hit / a note within ±15 s among its top 
   language-neutral anchors (numbers read per language, owners through anyascii) or argue for more.
 - Baseline-lang citation accuracy: clean-hi 58.3%, **xling-ja 70%** (English notes, Japanese
   transcript: same cause the other way round), the other five 100%.
+
+## 2026-10-28 · Phase 8a: cross-language citation times
+Branch `phase-8a-jump-times`. No prompt change (REDUCE_HASH unchanged), no FORMAT_VERSION bump.
+
+### 0. Measurement and proposal (approved as proposed)
+- Offline replay (D19's approach): rebuilt notes from each stored lang run's `raw` through
+  `build_notes` + `restore_owners` with an instrumented refiner. Reproduces the stored notes
+  exactly, so its before/after equals `--rerun reduce`.
+- What each wrong citation shares with its true chunk: **clean-hi**, the 5 action items: only
+  the owner, in Devanagari (`[owner: लॉरा]`); its numbers already land (digits overlap).
+  **xling-ja**: 4650 is shared but scores 0.08 (long span, < 0.1); Tom is said as トム; MARIA
+  is on the right chunk (0.11) but placed 21.8 s early (below).
+- Names in claim text, outside `[owner: …]`, aren't usable anchors: through D34's consonants
+  تم "was done" = Tom, مللي "milli" = Maria, سرعة "speed" = "Sorry" in the stored runs.
+- Two traps the replay caught in the prototype: an owner resolved per chunk (मारिया matched
+  Omar, the only m-r name in that chunk; resolve once per segment), and substring names ("Tom"
+  in "cus**tom**ers"; whole words, but kana next to "MARIAさん" is no word character).
+
+### 1. Fix (D39)
+- `reduce.refine_time`: unchanged while a chunk scores ≥ 0.1; otherwise the chunk with the
+  most anchors (span numbers in the notes' language, digits folded, vs `source_numbers_in` per
+  chunk; the `[owner: …]` restored for the segment and matched by `names.said_in`), ties by
+  word overlap then earliest, `t` at its sentence with the most anchors; segment start when
+  nothing anchors. `segment_refiner` takes the notes' and meeting's languages (Reduce:
+  `notes_language`, `source_language`; Ask: the answer language).
+- Tests: Hindi claim by owner and by a Bengali-digit number, English claim on Japanese text by
+  number and by katakana; must-not-fire: an overlapping English claim keeps today's time, a
+  number in two chunks loses to the chunk the words match, no chunks / no overlap at
+  `min_score` 0 keep the segment start (both crashed in a first draft).
+
+### 2. Measured
+| | before | after |
+|---|---|---|
+| lang seed 1, citation accuracy | 89.9% | **98.7%** |
+| clean-hi | 58.3% | **100%** |
+| xling-ja | 70% | **90%** |
+| other lang items | 100% | 100% |
+| lang recall / made-up items | 86.8% / 0 | unchanged |
+| quick (gate) | pass | pass, every metric identical |
+- Segment-start citations (all, not only planted facts): clean-hi 14 → 9, xling-ja 12 → 9,
+  xling-es 9 → 7, conflict-de 4 → 3, clean-ar 7 → 7 (no digits or owners in its fallbacks).
+- quick: no citation falls back, so the anchors never run there. long-en not run: two-pass
+  code unchanged and English on English.
+- clean-hi with Ask and the judge: Ask accuracy, citations, cross-language alone and with
+  history all 100% (19 questions). xling-es Ask is skipped by the eval (es meeting,
+  English-only questions), so Ask's cross-language path is covered by clean-hi only.
+- `baseline-lang.json` rewritten (seed 1, `--no-ask`, as before).
+
+### Open
+- **xling-ja MARIA, −21.8 s:** word overlap finds the right chunk, but Transcribe wrote 28 s
+  of Japanese without 。, so the "sentence" starts at the chunk start. A fix would change
+  placement on the path every language uses (e.g. place at the anchor inside a long
+  unpunctuated sentence); measure on quick and long-en first. Added as post-v1 item 10.
+- Claims with no number and no owner (summaries, decisions in Hindi or Arabic) still cite
+  the segment start, by design.
+

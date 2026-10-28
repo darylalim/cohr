@@ -21,8 +21,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
-from cohr import names, schemas
+from cohr import names, numbers, schemas
 from cohr.config import language_name, load_prompt
+from cohr.fts import fold_digits
 from cohr.fuse import overlap, slide_text, tokens
 from cohr.mapper import clock, fill
 from cohr.pipeline import Stage, StageContext
@@ -273,22 +274,73 @@ def sentence_offset(span_tokens: set[str], text: str) -> float:
     return best_pos / max(pos, 1)
 
 
+class Anchors(NamedTuple):
+    """What a span says in any language (D39): its numbers and an action item's owner."""
+
+    values: set[float]
+    owner: str | None
+
+    def hits(self, text: str, source_language: str) -> int:
+        said = numbers.source_numbers_in(fold_digits(text), source_language)
+        return len(self.values & said) + bool(self.owner and names.said_in(self.owner, text))
+
+
+def span_anchors(span: str, items: Sequence[TranscriptItem], notes_language: str) -> Anchors:
+    """The span's numbers read in the notes' language (other scripts' digits folded) and the
+    `[owner: …]` it starts with, in the meeting's spelling when the segment says it (D34:
+    per chunk, मारिया matched Omar, the only m-r name there). Names elsewhere in the text
+    aren't anchors: their consonants match common words (Arabic تم "was done" = Tom)."""
+    m = _ACTION.match(span.strip())
+    owner = _known(m.group(1)) if m else None
+    if owner and not names.latin(owner):
+        owner = names.restore(owner, [it.text for it in items])
+    return Anchors(numbers.notes_numbers(fold_digits(span), notes_language), owner)
+
+
+def anchor_offset(anchors: Anchors, text: str, source_language: str) -> float:
+    """Where in `text` (0–1) the sentence with the most anchors starts (ties: earliest)."""
+    best_pos, best, pos = 0, 0, 0
+    for m in _SENTENCE.finditer(text):
+        hits = anchors.hits(m.group(0), source_language)
+        if hits > best:
+            best_pos, best = m.start() + len(m.group(0)) - len(m.group(0).lstrip()), hits
+        pos = m.end()
+    return best_pos / max(pos, 1)
+
+
 def refine_time(
-    span: str, items: Sequence[TranscriptItem], seg_t0: float, min_score: float
+    span: str,
+    items: Sequence[TranscriptItem],
+    seg_t0: float,
+    min_score: float,
+    notes_language: str = "en",
+    source_language: str = "en",
 ) -> float:
     """Jump time for a cited span (§5.6, D19): the transcript chunk that best matches it (ties:
     earliest), then the start of its best-matching sentence, placed by character position
     (an even speaking rate; chunks are up to 30 s, so the chunk start alone was ~13 s early
-    on the eval). The segment's start when no chunk scores ≥ min_score."""
+    on the eval). When no chunk scores ≥ min_score (notes and meeting in different
+    languages share no words), the chunk with the most of the span's anchors (D39; ties:
+    word overlap, then earliest); the segment's start when no chunk has one."""
     span_tokens = set(tokens(span))
-    best_it, best = None, 0.0
-    for it in items:
-        score = overlap(span_tokens, set(tokens(it.text)))
-        if score > best:
-            best_it, best = it, score
-    if best_it is None or best < min_score:
+    scores = [overlap(span_tokens, set(tokens(it.text))) for it in items]
+    best = max(scores, default=0.0)
+    if best > 0 and best >= min_score:
+        best_it = items[scores.index(best)]
+        offset = sentence_offset(span_tokens, best_it.text)
+        return round(best_it.t0 + offset * (best_it.t1 - best_it.t0), 2)
+    anchors = span_anchors(span, items, notes_language)
+    if not anchors.values and not anchors.owner:
         return seg_t0
-    offset = sentence_offset(span_tokens, best_it.text)
+    ranked = [
+        (anchors.hits(it.text, source_language), s, -i)
+        for i, (it, s) in enumerate(zip(items, scores, strict=True))
+    ]
+    hits, _, index = max(ranked, default=(0, 0.0, 0))
+    if not hits:
+        return seg_t0
+    best_it = items[-index]
+    offset = anchor_offset(anchors, best_it.text, source_language)
     return round(best_it.t0 + offset * (best_it.t1 - best_it.t0), 2)
 
 
@@ -447,15 +499,21 @@ def notes_from_reply(
 
 
 def segment_refiner(
-    segments: Sequence[Segment], items: Sequence[TranscriptItem], min_score: float
+    segments: Sequence[Segment],
+    items: Sequence[TranscriptItem],
+    min_score: float,
+    notes_language: str,
+    source_language: str,
 ) -> Refine:
+    """Refines citations of spans written in `notes_language` against a meeting held in
+    `source_language` (D39's anchors read each in its own language)."""
     by_seg = {s.seg_id: s for s in segments}
     by_chunk = {it.chunk_id: it for it in items}
 
     def refine(seg_id: int, span: str) -> float:
         seg = by_seg[seg_id]
         chunks = [by_chunk[c] for c in seg.chunk_ids if c in by_chunk]
-        return refine_time(span, chunks, seg.t0, min_score)
+        return refine_time(span, chunks, seg.t0, min_score, notes_language, source_language)
 
     return refine
 
@@ -791,7 +849,9 @@ def run_stage(ctx: StageContext) -> None:
         return
     name = language_name(language)
     instruction = fill(load_prompt("reduce"), target_language=name)
-    refine = segment_refiner(segments, items, cfg.citation_min_score)
+    refine = segment_refiner(
+        segments, items, cfg.citation_min_score, language, ctx.config.source_language
+    )
 
     truncated = 0
 

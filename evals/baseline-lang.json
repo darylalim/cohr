@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-14T12:48:55.041692-10:00",
+  "created_at": "2026-10-28T06:50:51.221586-10:00",
   "set": "lang",
-  "git_sha": "b6ddfaf-dirty",
+  "git_sha": "0a2306c-dirty",
   "overrides": {
     "seed": 1
   },
@@ -161,7 +161,7 @@
           "section": "key_points",
           "claim": "Quartalsbudget: 80.000 $ (Folie: 18.000 $) (aktuell) im Vergleich zu 77.500 $ (vorheriger Quartal)",
           "citation_ok": true,
-          "t_error": -114.93,
+          "t_error": 0.22,
           "slide_cited": true
         },
         {
@@ -562,37 +562,37 @@
           "seconds": 34.58,
           "s_per_audio_hour": 355.5,
           "peak_mem_gb": 4.46,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 15.51,
           "s_per_audio_hour": 159.4,
           "peak_mem_gb": 7.54,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 29.35,
-          "s_per_audio_hour": 301.8,
-          "peak_mem_gb": 12.62,
-          "reused": false
+          "seconds": 31.09,
+          "s_per_audio_hour": 319.7,
+          "peak_mem_gb": 5.92,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -1062,37 +1062,37 @@
           "seconds": 31.72,
           "s_per_audio_hour": 319.1,
           "peak_mem_gb": 12.53,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 14.83,
           "s_per_audio_hour": 149.2,
           "peak_mem_gb": 12.06,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 26.02,
-          "s_per_audio_hour": 261.7,
-          "peak_mem_gb": 12.64,
-          "reused": false
+          "seconds": 26.29,
+          "s_per_audio_hour": 264.4,
+          "peak_mem_gb": 5.94,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -1610,37 +1610,37 @@
           "seconds": 31.62,
           "s_per_audio_hour": 318.1,
           "peak_mem_gb": 12.53,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 11.82,
           "s_per_audio_hour": 118.9,
           "peak_mem_gb": 12.06,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 24.25,
-          "s_per_audio_hour": 243.9,
-          "peak_mem_gb": 12.62,
-          "reused": false
+          "seconds": 24.42,
+          "s_per_audio_hour": 245.6,
+          "peak_mem_gb": 5.92,
+          "reused": true
         },
         "translate": {
-          "seconds": 14.29,
-          "s_per_audio_hour": 143.7,
-          "peak_mem_gb": 11.9,
-          "reused": false
+          "seconds": 20.09,
+          "s_per_audio_hour": 202.1,
+          "peak_mem_gb": 8.75,
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -1653,7 +1653,7 @@
         "facts": 13,
         "facts_found": 12,
         "fact_recall": 0.9231,
-        "citation_accuracy": 0.5833,
+        "citation_accuracy": 1.0,
         "claims": 20,
         "uncited_claims": 0,
         "made_up_items": 0,
@@ -1729,8 +1729,8 @@
           "judge_covered": null,
           "section": "action_items",
           "claim": "अनुबंध को कानूनी टीम को शुक्रवार तक भेजें",
-          "citation_ok": false,
-          "t_error": -46.04,
+          "citation_ok": true,
+          "t_error": 0.84,
           "slide_cited": false
         },
         {
@@ -1755,8 +1755,8 @@
           "judge_covered": null,
           "section": "action_items",
           "claim": "हायरिंग प्लान को अगले सप्ताह के अंत तक तैयार करें",
-          "citation_ok": false,
-          "t_error": -98.77,
+          "citation_ok": true,
+          "t_error": 0.35,
           "slide_cited": false
         },
         {
@@ -1794,8 +1794,8 @@
           "judge_covered": null,
           "section": "action_items",
           "claim": "रिलीज़ नोट्स को अगले सप्ताह के अंत तक तैयार करें",
-          "citation_ok": false,
-          "t_error": -172.93,
+          "citation_ok": true,
+          "t_error": 0.74,
           "slide_cited": false
         },
         {
@@ -1833,8 +1833,8 @@
           "judge_covered": null,
           "section": "action_items",
           "claim": "ग्राहक सर्वेक्षण को अगले सप्ताह के अंत तक तैयार करें",
-          "citation_ok": false,
-          "t_error": -245.66,
+          "citation_ok": true,
+          "t_error": 0.87,
           "slide_cited": false
         },
         {
@@ -1911,8 +1911,8 @@
           "judge_covered": null,
           "section": "action_items",
           "claim": "सोमवार तक ऑनबोर्डिंग वीडियो रिकॉर्ड करें",
-          "citation_ok": false,
-          "t_error": -48.35,
+          "citation_ok": true,
+          "t_error": 0.58,
           "slide_cited": false
         },
         {
@@ -2076,6 +2076,7 @@
           "section": "action_items",
           "claim": "Action item: अनुबंध को कानूनी टीम को शुक्रवार तक भेजें (owner: Laura; due: शुक्रवार)",
           "citations": [
+            "seg 0",
             "seg 0"
           ],
           "supported": "yes",
@@ -2151,37 +2152,37 @@
           "seconds": 31.71,
           "s_per_audio_hour": 319.0,
           "peak_mem_gb": 12.53,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 14.99,
           "s_per_audio_hour": 150.8,
           "peak_mem_gb": 12.06,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 41.29,
-          "s_per_audio_hour": 415.4,
-          "peak_mem_gb": 12.77,
-          "reused": false
+          "seconds": 41.12,
+          "s_per_audio_hour": 413.7,
+          "peak_mem_gb": 9.62,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -2699,37 +2700,37 @@
           "seconds": 31.63,
           "s_per_audio_hour": 318.2,
           "peak_mem_gb": 12.53,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 11.82,
           "s_per_audio_hour": 118.9,
           "peak_mem_gb": 12.06,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 24.27,
-          "s_per_audio_hour": 244.2,
-          "peak_mem_gb": 12.62,
-          "reused": false
+          "seconds": 24.26,
+          "s_per_audio_hour": 244.0,
+          "peak_mem_gb": 9.48,
+          "reused": true
         },
         "translate": {
-          "seconds": 12.85,
-          "s_per_audio_hour": 129.2,
-          "peak_mem_gb": 11.9,
-          "reused": false
+          "seconds": 12.93,
+          "s_per_audio_hour": 130.0,
+          "peak_mem_gb": 8.75,
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -2897,7 +2898,7 @@
           "section": "key_points",
           "claim": "Monthly recurring revenue: $354,000 (up from $134,000 last month)",
           "citation_ok": true,
-          "t_error": -197.87,
+          "t_error": -0.01,
           "slide_cited": true
         },
         {
@@ -2988,7 +2989,7 @@
           "section": "key_points",
           "claim": "Lead generation metrics show new leads at 4,650, compared to 2,600 last month",
           "citation_ok": true,
-          "t_error": -47.81,
+          "t_error": 0.91,
           "slide_cited": true
         },
         {
@@ -3245,37 +3246,37 @@
           "seconds": 35.74,
           "s_per_audio_hour": 337.8,
           "peak_mem_gb": 12.53,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 11.89,
           "s_per_audio_hour": 112.4,
           "peak_mem_gb": 12.06,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 24.39,
-          "s_per_audio_hour": 230.5,
-          "peak_mem_gb": 12.62,
-          "reused": false
+          "seconds": 24.35,
+          "s_per_audio_hour": 230.1,
+          "peak_mem_gb": 9.48,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -3288,7 +3289,7 @@
         "facts": 13,
         "facts_found": 10,
         "fact_recall": 0.7692,
-        "citation_accuracy": 0.7,
+        "citation_accuracy": 0.9,
         "claims": 20,
         "uncited_claims": 0,
         "made_up_items": 0,
@@ -3533,8 +3534,8 @@
           "judge_covered": null,
           "section": "key_points",
           "claim": "Trial registration numbers are higher this month (4,650) compared to last month (2,600), with seasonal factors to consider.",
-          "citation_ok": false,
-          "t_error": -103.58,
+          "citation_ok": true,
+          "t_error": 0.02,
           "slide_cited": false
         },
         {
@@ -3546,8 +3547,8 @@
           "judge_covered": null,
           "section": "action_items",
           "claim": "Create new employee onboarding video by Monday.",
-          "citation_ok": false,
-          "t_error": -143.23,
+          "citation_ok": true,
+          "t_error": -0.68,
           "slide_cited": false
         },
         {
@@ -3787,37 +3788,37 @@
           "seconds": 40.36,
           "s_per_audio_hour": 313.0,
           "peak_mem_gb": 12.53,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 11.84,
           "s_per_audio_hour": 91.8,
           "peak_mem_gb": 12.05,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 23.09,
-          "s_per_audio_hour": 179.0,
-          "peak_mem_gb": 12.62,
-          "reused": false
+          "seconds": 22.96,
+          "s_per_audio_hour": 178.0,
+          "peak_mem_gb": 9.48,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     }
@@ -3826,7 +3827,7 @@
     "items": 7,
     "facts": 91,
     "fact_recall": 0.8681,
-    "citation_accuracy": 0.8987,
+    "citation_accuracy": 0.9873,
     "uncited_claims": 0,
     "made_up_items": 0,
     "made_up_open_questions": 0,
@@ -3888,38 +3889,29 @@
       "peak_mem_gb": 12.06
     },
     "reduce": {
-      "s_per_audio_hour": 264.0,
-      "peak_mem_gb": 12.77
+      "s_per_audio_hour": 266.5,
+      "peak_mem_gb": 9.62
     },
     "translate": {
-      "s_per_audio_hour": 37.2,
-      "peak_mem_gb": 11.9
+      "s_per_audio_hour": 45.3,
+      "peak_mem_gb": 8.75
     },
     "render": {
       "s_per_audio_hour": 0.0,
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 907.6,
+      "s_per_audio_hour": 918.2,
       "peak_mem_gb": 16.88
     }
   },
   "citation_errors": [
-    -245.66,
-    -197.87,
-    -172.93,
-    -143.23,
-    -114.93,
-    -103.58,
-    -98.77,
-    -48.35,
-    -47.81,
-    -46.04,
     -22.96,
     -21.81,
     -2.71,
     -1.58,
     -0.69,
+    -0.68,
     -0.52,
     -0.5,
     -0.45,
@@ -3941,6 +3933,8 @@
     -0.02,
     -0.02,
     -0.01,
+    -0.01,
+    0.02,
     0.02,
     0.21,
     0.21,
@@ -3950,6 +3944,8 @@
     0.22,
     0.22,
     0.22,
+    0.22,
+    0.35,
     0.35,
     0.35,
     0.35,
@@ -3957,6 +3953,8 @@
     0.39,
     0.58,
     0.58,
+    0.58,
+    0.74,
     0.74,
     0.74,
     0.74,
@@ -3968,8 +3966,11 @@
     0.84,
     0.84,
     0.84,
+    0.84,
+    0.87,
     0.87,
     0.89,
+    0.91,
     0.92,
     0.92,
     0.92,
@@ -3989,7 +3990,7 @@
     "loaded": false,
     "calls": 0,
     "cached": 174,
-    "seconds": 0.03,
+    "seconds": 0.02,
     "s_per_audio_hour": 0.0,
     "peak_mem_gb": null
   },
