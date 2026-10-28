@@ -1195,6 +1195,10 @@ every meeting by owner). Two-table tokenizing (D37), transcript hits at the matc
 digits folded across scripts (D38). Search check on the 12 planted-fact eval items
 (`scripts/search_check.py`, report-only): within ±15 s in the fact's top 5, numbers
 119/126 transcript · 100/126 notes, owners 67/75 · 53/75, fact words 252/288 · 109/288.
+**Phase 8a (after v1): cross-language citation times** (post-v1 item 2): a claim whose words
+share no token with the transcript (Hindi notes of an English meeting, English notes of a
+Japanese one) cites its segment's start, not its moment. lang baseline: citation accuracy
+clean-hi 58.3%, xling-ja 70%, every other item 100%. Kickoff prompt in §21.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2781,4 +2785,62 @@ its gate. Don't bump the version: I'll ask for 1.1.0 separately.
 When done: tick the checklist, add new decisions to §20, update §13 where the build differs
 from the sketch, add a NOTES.md entry, make sure the gate passes, and open a PR (ask before
 pushing).
+```
+
+### Kickoff prompt for Phase 8a (cross-language citation times)
+```text
+Continue cohr: Phase 8a (cross-language citation times, post-v1 item 2). Read CLAUDE.md, then
+PLAN.md §5.5–5.7 (Map, Reduce and its jump times, Ask), §18 (citation accuracy, the lang set),
+§19, D19, D34 and D38 in §20, and NOTES.md: the 6e-2 entry (step 3, "New carry-over
+(cross-language jump times)", and the post-v1 list) and the Phase 7 entry (clean-hi owners).
+Work on branch phase-8a-jump-times from main (v1.1.0 is released: #46, #47).
+The problem: `reduce.refine_time` finds a citation's moment by token overlap between the cited
+span and each transcript chunk of the segment (`fuse.tokens`, `fuse.overlap`). When the notes
+and the transcript are in different languages nothing overlaps, no chunk reaches
+`citation_min_score` and the citation gets the segment's start: every clean-hi action item
+cites t = 0.002 s (46–246 s early). Baseline-lang citation accuracy: clean-hi 58.3%, xling-ja
+70% (English notes, Japanese transcript), every other item 100%. Arabic escapes only because
+its task text keeps the Latin names; sw and bn because "Other (beta)" runs Reduce in English
+and translates after. Ask uses the same refiner (`reduce.segment_refiner`), so its answers in
+another language fall back too (5b, NOTES "German answer, no token overlap").
+Correction to the post-v1 candidate ("refine on the claim's English Map item"): Map writes
+every value in the notes language (`map.json` of clean-hi is Hindi), so there's no English
+Map text to match. Don't build on it without a new reason.
+0. Proposal before code (ask me). First measure, without models: replay `refine_time` on the
+   stored lang runs (notes.json `raw`, segments, transcript; the D19 approach, "offline on
+   stored replies") and list, per item, which citations fall back and what the span shares
+   with its true chunk (digits, Latin names, owner and due, nothing). Then propose the fix,
+   in Python (CLAUDE.md: values are fixed in Python, not in prompts). Candidates, not choices:
+   - Language-neutral anchors when word overlap fails: numbers read in each text's own
+     language (`numbers.source_numbers_in` for the transcript, `fts.fold_digits` for notes in
+     other scripts; "35万4000" and "354 mil" read as 354000), and names: an action item's
+     owner and names in the claim in another script, read through D34's anyascii
+     transliteration (लॉरा → Laura; Japanese ビクター doesn't match Victor, post-v1 item 5).
+   - Via the item's Map note: the action item's owner/due and Map task in the same segment,
+     whose words may share more with the transcript than the R7B claim does.
+   - Anything that needs a Map output change (e.g. a chunk id per item) bumps FORMAT_VERSION
+     and is a Map prompt change, judged on seeds 1–3: say what it would cost before choosing it.
+   Say what happens when no anchor is found: the segment start stays the honest fallback,
+   never an invented time (§5.6). Embeddings or a translation model are out of scope (models,
+   memory, licensing) unless the measurement shows nothing else works.
+1. The fix in `reduce.py` (or a small shared helper if Ask needs the same code). Tests: a
+   Hindi claim with a number and an owner lands at its chunk's sentence; an English claim on a
+   Japanese transcript lands by its number; and tests where the new anchor must not fire
+   (CLAUDE.md: a fallback needs one): an English claim that already overlaps keeps today's
+   time exactly, and a number said in two chunks of the segment doesn't win over the chunk the
+   words match. No prompt changes, so REDUCE_HASH must not move.
+2. Measure on every set it can reach: the offline replay first (before/after per item), then
+   lang -c seed=1 with `--rerun reduce` (the stage's config hash doesn't move on a code-only
+   change) and quick, which must pass its gate unchanged (its citations are English on
+   English and must keep their times). Run xling-es and clean-hi once with Ask and the judge
+   on, since the refiner change reaches Ask (CLAUDE.md: lang always runs --no-ask). Long-en
+   doesn't need to run unless step 1 changes two-pass code.
+3. Rewrite baseline-lang.json if the fix moves it on purpose, with the reason in the commit.
+Rules from CLAUDE.md apply. Ask me before every full or long run, the opt-in model tests and
+new dependencies (none should be needed). quick and lang runs are fine. The rest of the
+post-v1 list stays open; don't fix it here unless step 0 shows it shares this cause. Don't
+bump the version: I'll ask separately.
+When done: tick the checklist, add new decisions to §20 (the anchor rule as a D-number), update
+§5.6's jump-time paragraph, add a NOTES.md entry, make sure the gate passes, and open a PR
+(ask before pushing).
 ```
