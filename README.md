@@ -34,7 +34,9 @@ uv run streamlit run app.py
 ```
 Pages: **New run** (upload or link a recording and slides, pick the languages), **Notes** (cited
 notes, with a Sources panel of the audio and slides beside or below them), **Ask** (questions about a run,
-answered with citations), **Runs** (status, size, prune, delete).
+answered with citations), **Search** (words, names and numbers across every run's transcript,
+slides and notes, and every meeting's action items by owner), **Runs** (status, size, prune,
+delete).
 
 ## Command line
 ```
@@ -44,7 +46,11 @@ uv run cohr runs                                             # list runs with si
 uv run cohr resume <run>                                     # re-run from the first incomplete stage
 uv run cohr prune <run>                                      # drop media, keep notes and JSON
 uv run cohr rm <run>                                         # delete a run
+uv run cohr search "budget" --kind note                      # search every run
+uv run cohr index rebuild                                    # rebuild runs/index.db
 ```
+The search index (`runs/index.db`) is rebuilt from the run files whenever it's missing or
+out of date, so deleting it is always safe.
 Settings: `COHR_RUNS_DIR` (default `./runs`), `COHR_HF_HOME` (model cache location).
 
 ## Deleting models

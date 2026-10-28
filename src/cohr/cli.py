@@ -1,11 +1,11 @@
-"""Command line (PLAN §6, §12, §18): `cohr run`, `resume`, `runs`, `prune`, `rm`, `models`,
-`eval`."""
+"""Command line (PLAN §6, §12, §13, §18): `cohr run`, `resume`, `runs`, `prune`, `rm`,
+`index`, `search`, `models`, `eval`."""
 
 import argparse
 import sys
 from pathlib import Path
 
-from cohr import models, pipeline, schemas, storage
+from cohr import index, models, pipeline, schemas, storage
 from cohr.asr import LANGUAGES
 from cohr.config import Config, runs_dir
 from cohr.ingest import IngestError, probe
@@ -101,6 +101,32 @@ def cmd_rm(args: argparse.Namespace) -> int:
             return 1
     storage.delete_run(run_dir)
     return 0
+
+
+def cmd_index(_args: argparse.Namespace) -> int:
+    runs = runs_dir()
+    runs.mkdir(parents=True, exist_ok=True)
+    result = index.rebuild(runs)
+    print(f"indexed {len(result.indexed)} run(s) into {runs / index.FILENAME}", file=sys.stderr)
+    for run_id in result.failed:
+        print(f"  skipped {run_id}: manifest.json unreadable", file=sys.stderr)
+    return 0
+
+
+def cmd_search(args: argparse.Namespace) -> int:
+    with index.open_index(runs_dir()) as con:
+        results = index.search(
+            con, args.query, kinds=args.kind or None, langs=args.lang or None, limit=args.limit
+        )
+    if results.any_term:
+        print("no result has every word; these have some", file=sys.stderr)
+    for hit in results.hits:
+        snippet = " ".join(
+            hit.snippet.replace(index.MARK_START, "**").replace(index.MARK_END, "**").split()
+        )
+        kind = hit.section or hit.kind
+        print(f"{hit.run_id}  {kind:<14} {index.where(hit.t, hit.slide_id):>8}  {snippet}")
+    return 0 if results.hits else 1
 
 
 def cmd_models(args: argparse.Namespace) -> int:
@@ -212,6 +238,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("run")
     p.add_argument("-y", "--yes", action="store_true", help="don't ask for confirmation")
     p.set_defaults(func=cmd_rm)
+
+    p = sub.add_parser("index", help="search index (PLAN §13)")
+    p.add_argument("action", choices=["rebuild"], help="rebuild index.db from the run files")
+    p.set_defaults(func=cmd_index)
+
+    p = sub.add_parser("search", help="search every run's transcript, slides and notes")
+    p.add_argument("query")
+    p.add_argument("--kind", action="append", choices=index.KINDS, help="repeatable")
+    p.add_argument("--lang", action="append", help="language code, e.g. de (repeatable)")
+    p.add_argument("--limit", type=int, default=20, help="most results shown (default 20)")
+    p.set_defaults(func=cmd_search)
 
     p = sub.add_parser("models", help="list pipeline models and whether they're downloaded")
     p.add_argument("action", nargs="?", choices=["list", "download"], default="list")

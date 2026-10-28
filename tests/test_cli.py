@@ -136,3 +136,22 @@ def test_eval_rerun_reaches_the_runs(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(SystemExit, match="stop here"):
         main(["eval", "--item", "ami", "--rerun", "reduce", "--rerun", "render"])
     assert seen["rerun"] == ["reduce", "render"] and seen["items"] == ["ami"]
+
+
+def test_index_rebuild_and_search(capsys: pytest.CaptureFixture[str]) -> None:
+    from cohr import index
+    from tests.test_index import BUDGET, make_run, sections
+
+    make_run(runs_dir(), "weekly", ["hello", "the budget is set"], notes=sections([BUDGET]))
+    assert main(["index", "rebuild"]) == 0
+    assert "indexed 1 run(s)" in capsys.readouterr().err
+    assert (runs_dir() / index.FILENAME).is_file()
+
+    assert main(["search", "budget"]) == 0
+    out = sorted(capsys.readouterr().out.splitlines(), key=lambda line: "transcript" in line)
+    assert len(out) == 2
+    assert "summary" in out[0] and "1:15" in out[0] and "**budget**" in out[0]
+    assert "transcript" in out[1] and "0:30" in out[1]
+    assert main(["search", "budget", "--kind", "transcript"]) == 0
+    assert len(capsys.readouterr().out.splitlines()) == 1
+    assert main(["search", "nothing-like-this"]) == 1

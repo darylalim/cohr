@@ -22,7 +22,7 @@ from typing import Any
 
 from cohr import reduce, schemas
 from cohr.config import TARGET_LANGUAGES, Config, language_name, load_prompt
-from cohr.fuse import STOPWORDS
+from cohr.fts import CJK, match, query_terms, tokenizer
 from cohr.mapper import fill
 from cohr.models import ModelManager
 from cohr.schemas import (
@@ -50,10 +50,7 @@ MIN_CONFIDENCE = 0.2
 MIN_LEAD = 0.05
 MIN_WORDS = 2
 
-_CJK = re.compile(r"[぀-ヿ㐀-鿿가-힯]")
 _WORD = re.compile(r"[^\W\d_]+")
-_TERM = re.compile(r"[^\W_]+")
-TRIGRAM = 3  # FTS5's trigram tokenizer matches terms of at least 3 characters
 # Over the cap, at most this many top-ranked documents (6c long-en): filling the whole 32K cap
 # (~60 documents) took ~100 s per answer and R7B fell into citing document after document.
 MAX_RANKED = 12
@@ -138,7 +135,7 @@ def lingua_confidences(text: str) -> list[tuple[str, float]]:
 
 def answer_language(question: str, fallback: str, detect: Detect = lingua_confidences) -> str:
     """The question's language when lingua is sure, else `fallback` (the run's target)."""
-    if not _CJK.search(question) and len(_WORD.findall(question)) < MIN_WORDS:
+    if not CJK.search(question) and len(_WORD.findall(question)) < MIN_WORDS:
         return fallback
     ranked = detect(question)
     if not ranked:
@@ -170,38 +167,21 @@ def instruction(question: str, history: Sequence[Turn], language: str) -> str:
 # --- ranking (pure) -----------------------------------------------------------------------
 
 
-def query_terms(text: str) -> tuple[list[str], bool]:
-    """FTS5 terms for a question and whether to use the trigram tokenizer: words (English
-    stopwords left out) for space-separated languages; for text with Chinese, Japanese or
-    Korean, every 3-character window of each run (trigram can't match shorter terms)."""
-    cjk = bool(_CJK.search(text))
-    out: list[str] = []
-    for run in _TERM.findall(text.casefold()):
-        if not cjk:
-            if run not in STOPWORDS and (len(run) > 1 or run.isdigit()):
-                out.append(run)
-            continue
-        out += [run[i : i + TRIGRAM] for i in range(len(run) - TRIGRAM + 1)]
-    return list(dict.fromkeys(out)), cjk
-
-
 def rank(query: str, docs: Sequence[dict[str, str]]) -> list[int]:
     """Document indices, best first: BM25 over title + snippet for the query terms OR'ed
     (D27); documents matching no term follow in meeting order."""
     terms, cjk = query_terms(query)
     hits: list[int] = []
     if terms:
-        tokenizer = "trigram" if cjk else "unicode61 remove_diacritics 2"
         con = sqlite3.connect(":memory:")
         try:
-            con.execute(f"CREATE VIRTUAL TABLE d USING fts5(body, tokenize='{tokenizer}')")
+            con.execute(f"CREATE VIRTUAL TABLE d USING fts5(body, tokenize='{tokenizer(cjk)}')")
             con.executemany(
                 "INSERT INTO d(rowid, body) VALUES (?, ?)",
                 [(i + 1, f"{d['title']}\n{d['snippet']}") for i, d in enumerate(docs)],
             )
-            match = " OR ".join('"' + t.replace('"', '""') + '"' for t in terms)
             rows = con.execute(
-                "SELECT rowid FROM d WHERE d MATCH ? ORDER BY bm25(d), rowid", (match,)
+                "SELECT rowid FROM d WHERE d MATCH ? ORDER BY bm25(d), rowid", (match(terms),)
             )
             hits = [r[0] - 1 for r in rows]
         finally:

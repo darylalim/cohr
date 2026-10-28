@@ -16,6 +16,7 @@ from cohr.config import Config, runs_dir
 from cohr.jobs import JobRunner
 from cohr.pipeline import Stage, StageContext
 from cohr.schemas import (
+    ActionItem,
     Citation,
     Claim,
     Frame,
@@ -146,7 +147,13 @@ def app(page: str | None = None) -> AppTest:
     return at
 
 
-PAGES = ["app_pages/new_run.py", "app_pages/notes.py", "app_pages/ask.py", "app_pages/runs.py"]
+PAGES = [
+    "app_pages/new_run.py",
+    "app_pages/notes.py",
+    "app_pages/ask.py",
+    "app_pages/search.py",
+    "app_pages/runs.py",
+]
 
 
 @pytest.mark.parametrize("page", [None, *PAGES])
@@ -376,3 +383,78 @@ def test_new_run_without_ffmpeg_warns_and_says_so(
     # the install hint, not "Could not read the recording" (the file is fine)
     assert at.error[0].value.startswith("ffprobe not found on PATH")
     assert storage.list_runs(runs_dir()) == []
+
+
+# --- Search (§13) ----------------------------------------------------------------------------
+
+
+def search(query: str) -> AppTest:
+    at = app("app_pages/search.py")
+    at.text_input(key="search_query").set_value(query).run()
+    assert not at.exception, at.exception
+    return at
+
+
+def test_search_finds_notes_and_slides(tmp_path: Path) -> None:
+    run_dir = make_fixture_run(tmp_path)
+    at = search("budget")
+    captions = [c.value for c in at.caption]
+    assert f"**{run_dir.name}** · Summary · 0:01 · en" in captions
+    assert any(c.startswith(f"**{run_dir.name}** · Slides · slide 1") for c in captions)
+    md = [m.value for m in at.markdown]
+    assert "**Budget** is \\$14,500." in md  # match bolded, text escaped
+    assert not any("every word" in c for c in captions)
+
+
+def test_search_without_matches_or_query(tmp_path: Path) -> None:
+    make_fixture_run(tmp_path)
+    at = app("app_pages/search.py")
+    assert any("every run" in c.value for c in at.caption)
+    at = search("zebra")
+    assert any(c.value == "No matches." for c in at.caption)
+    at = search("budget zebra")
+    assert any("No result has every word" in c.value for c in at.caption)
+
+
+def test_search_listen_opens_the_drawer(tmp_path: Path) -> None:
+    make_fixture_run(tmp_path)
+    at = search("ship")
+    next(b for b in at.button if b.label == "Listen").click().run()
+    assert not at.exception
+    assert any(h.value == "0:06–0:09" for h in at.subheader)  # seg 2's block, in the drawer
+    assert len(at.get("audio")) == 1
+
+
+def test_search_open_notes_at_the_moment(tmp_path: Path) -> None:
+    run_dir = make_fixture_run(tmp_path)
+    at = search("ship")
+    next(b for b in at.button if b.label == "Open notes").click().run()
+    assert not at.exception
+    assert at.title[0].value == run_dir.name
+    assert at.session_state[ui.RUN_KEY] == run_dir.name
+    assert [i.value for i in at.info] == ["From Search: [0:07](#seg-2)"]
+
+
+def test_search_open_notes_banner_only_for_its_run(tmp_path: Path) -> None:
+    make_fixture_run(tmp_path)
+    at = app("app_pages/notes.py")
+    at.session_state[ui.FOCUS_KEY] = ui.Focus("another-run", 2, None, 7.0)
+    at.run()
+    assert not at.info
+
+
+def test_search_action_items_filter_by_owner(tmp_path: Path) -> None:
+    run_dir = make_fixture_run(tmp_path)
+    doc = schemas.load(run_dir, NotesDoc)
+    tasks = [
+        ActionItem(text="Send the deck", citations=[Citation(kind="seg", id=1, t=4.0)], owner=o)
+        for o in ("Priya", "Tom")
+    ]
+    doc.sections.action_items = tasks
+    schemas.save(run_dir, doc)
+    at = app("app_pages/search.py")
+    [table] = at.dataframe
+    assert list(table.value["owner"]) == ["Priya", "Tom"]
+    assert list(table.value["at"]) == ["0:04", "0:04"]
+    at.multiselect(key="search_owners").set_value(["Tom"]).run()
+    assert list(at.dataframe[0].value["owner"]) == ["Tom"]
