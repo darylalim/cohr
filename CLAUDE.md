@@ -10,7 +10,8 @@ uv run pytest (no models) · uv run streamlit run app.py · uv run cohr run … 
 Eval flags: -c seed=N · --no-ask --no-judge (fast loop) · --rerun STAGE (code-only changes, e.g.
 the number guard, don't move a stage's config hash; re-runs that stage onward; --fresh redoes
 every stage) · --update-baseline (instant right after a run)
-uv run cohr eval --set long --baseline evals/baseline-long.json (~40 min; ask first)
+uv run cohr eval --set long --baseline evals/baseline-long.json (~40 min; ask first;
+~10 min with --rerun reduce, which reuses Map)
 uv run cohr eval --set lang -c seed=1 --no-ask (de, ar, beta sw; report-only, ~10 min)
 uv run python scripts/trace_facts.py evals/reports/<ts>.json: each planted fact's path transcript → Map → notes
 uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
@@ -89,6 +90,13 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
 - The guard hook blocks Bash commands containing the full-eval or models-marker text (heredocs
   too): write such text with the Edit/Write tools. It also blocks `rm -rf`: copy scratch
   output to new folder names instead of deleting.
+- Measure a filter on AMI as well as the generated sets: a rule can fit the generator, not
+  meetings. "No owner and no due" caught all 9 of long-en's owner-less made-up tasks only
+  because evals/gen plants every task with an owner; on AMI it would have moved 25 of 47 real
+  tasks (8b).
+- Check a value against the text its claim cites, with its words close together. The 6 copied
+  dues were said elsewhere in long-en (a whole-meeting check kept them), and a whole-segment
+  word check passed AMI's "End of meeting" on "end" and "meeting" far apart (8b, `dues.said`).
 
 ## Where things are (PLAN.md)
 Architecture §3 · Memory §4 · Stages §5 · Layout & tooling §6 · UI, layout, theme §7 ·
