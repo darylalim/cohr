@@ -1229,6 +1229,11 @@ cited text doesn't say (`dues.py`, shared with the evals), and `reduce.move_vagu
 owner-less, due-less "Continue …"/"Ensure …" tasks to Key points. long-en made-up items 12 → 7
 (recall 67.5%, unchanged; support 75.7 → 79.4%); AMI coverage unchanged, support up in 4 of 5;
 quick and lang seed 1 identical.
+**Phase 8c (after v1): Ask on long meetings** (post-v1 item 7): long-en Ask accuracy 77.8%
+(`baseline-long.json`; 94.4% on the audio before 6e-2), the same 4 misses before and after 8b.
+Ranking isn't the cause: the answer's segment ranks in the top 3 for all four. Three trace to
+Map's values in Ask's documents (a copied due, a misread date, a missed task), one to a
+one-word cited span placing the citation. Kickoff prompt in §21.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2942,4 +2947,78 @@ included) unless step 0 shows it shares this cause. Don't bump the version: I'll
 When done: tick the checklist, add new decisions to §20 as D-numbers, update §5.6 (owner and
 due rules), add a NOTES.md entry and update the post-v1 list, make sure the gate passes, and
 open a PR (ask before pushing).
+```
+
+### Kickoff prompt for Phase 8c (Ask on long meetings)
+```text
+Continue cohr: Phase 8c (Ask on long meetings, post-v1 item 7). Read CLAUDE.md, then PLAN.md
+§5.5–5.7 (Map, Reduce citations and `refine_time`, Ask), §18 (Ask metrics, the long set),
+§19, D19, D27, D39 and D40 in §20, and NOTES.md: the 8b entry ("Open"), the post-v1 list and
+the 8c kickoff entry. Work on branch phase-8c-ask-long from main (v1.3.0 is released: #56,
+#57).
+The problem: long-en Ask accuracy is 77.8% (18 of 24; 94.4% on the audio before 6e-2), with
+the same 4 misses in reports 20261014-123008-long.json and 20261028-125536-long.json (run
+evals/data/runs/long-en/20261014-115732-long-en; cached replies evals/data/ask/long-en.json).
+Correction to the post-v1 candidate ("check with Ask ranking"): replaying `ask.rank` on the
+stored run puts the segment holding each answer at rank 0, 0, 0 and 2 (at most 12 are sent,
+MAX_RANKED), so the right text reaches R7B every time. The misses, from the kickoff check:
+- a-f26 "What does Tom need to do by November 17?": answer right, citation −197.7 s. R7B
+  wrote `<co>Tom</co: 0:[5]> needs to <co>finish the incident post mortem…</co: 0:[5]>`;
+  `refine_time` places "Tom" at his first chunk in seg 6 (1820.88) and the full span at
+  2019.56 (right), and the claim keeps the first. Same `resolve` path as Reduce's notes.
+- a-f61 "What does Omar need to do by the end of next week?": Map's Omar line is right (seg
+  16, rank 0), but 8 of the 12 top-ranked documents carry a `[due: end of next week]` Map line (9 in
+  the meeting; map.md's example, 8b "Open"), and R7B answered Maria's real one, ignoring the
+  owner the question names.
+- a-f82 "What does Grace need to do by November 11?": Map wrote "November 1" in both its
+  decision and its action line (the transcript says "11 November"), and R7B answered another
+  Grace task ("book the venue … by November 14th"). The 8b "1 November" date.
+- a-f15 "What does Omar need to do by Wednesday?": the transcript says "Oma will organize the
+  team lunch by Wednesday" (ASR dropped the r); Map has no lunch item, and R7B answered
+  Omar's Map line "Read marketing emails by Monday" instead of the transcript.
+So 3 of 4 trace to Map's values (Ask's documents put Map's lines before the transcript) and 1
+to citation placement. Read the run files yourself before building on this (CLAUDE.md).
+0. Proposal before code (ask me). First, without models: for each miss, the cached raw reply,
+   its cited spans and where each places, and the Map lines and transcript text the sent
+   documents hold for the question's owner and date. Then count, over all 24 cached replies
+   and the stored notes.json `raw` of quick, lang and long-en, how often a claim's citations
+   to one segment place differently by span and which one wins (name-only spans). Then
+   propose fixes in Python first (CLAUDE.md: values are fixed in Python). Candidates, not
+   choices:
+   - Citation time: when one claim cites a segment through several spans, place it by the
+     span that scores best (or the claim sentence) instead of the first; a name-only span
+     (an `[owner: …]` name alone, D39's anchor) never wins over a longer one. Reaches Reduce's
+     notes on every set, so citation accuracy on quick, lang and long-en must not drop.
+   - Map's values in Ask's documents: apply 8b's due guard (`dues.said`) and a date digit
+     check (like Map's number guard: "November 1" vs said "11 November") to the Map lines
+     `segment_snippet` writes, or to map.json itself. The snippet side reaches Ask and
+     Reduce's input (REDUCE_HASH doesn't move, but Reduce's output can: a long-en run); the
+     map.json side changes Map's stage output (say what that costs). Show must-not-fire
+     cases: a due said in other words, a cross-language due (8b's digits-only rule).
+   - Removing "end of next week" from map.md's example: a Map prompt change (seeds 1–3,
+     every set, example not in evals/gen/script.py). Say whether the Python fix makes it
+     unnecessary.
+   - a-f15 (a task Map missed under a misspelled name) may stay a miss: say whether anything
+     short of Map recall reaches it, and don't fit a rule to it alone.
+   - An Ask prompt rule ("answer for the person the question names") only if step 0 shows
+     the Python fixes leave a-f61 wrong; ASK_PROMPTS hashes move, so every cached answer
+     re-runs.
+1. The fixes, with tests: a claim with a name-only span and a full span on one segment places
+   at the full span; a guarded or repaired Map line in the snippet; and must-not-fire tests
+   (CLAUDE.md: a fallback needs one): one span per segment unchanged, a said due kept, a
+   Hindi due on an English meeting kept.
+2. Measure: replay first. Citation fixes: `parse_answer` on the cached raw replies and
+   `build_notes` + `restore_owners` on stored notes.json `raw`, scored with `evals.score_item`
+   on a copy of each run (copy, don't delete). Snippet changes move the Ask cache key
+   (sources hash), so they need R7B: quick and lang -c seed=1 --no-ask with `--rerun reduce`
+   are fine; long-en (~10 min with `--rerun reduce`, Ask included): ask first. Report Ask
+   accuracy, stated, citation accuracy and near-miss, and notes recall, citation accuracy and
+   made-up items, before and after.
+3. Rewrite the baselines the fix moves on purpose, with the reason in the commit.
+Rules from CLAUDE.md apply. Ask me before every full or long run, AMI runs, the opt-in model
+tests and new dependencies (none should be needed). quick and lang runs are fine. The rest of
+the post-v1 list stays open (items 3, 4, 5, 8 and 10) unless step 0 shows it shares a cause.
+Don't bump the version: I'll ask separately. When done: tick the checklist, add new decisions
+to §20 as D-numbers, update §5.6–5.7 (citation placement, Ask documents), add a NOTES.md entry
+and update the post-v1 list, make sure the gate passes, and open a PR (ask before pushing).
 ```

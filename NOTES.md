@@ -2421,3 +2421,20 @@ Branch `phase-8b-made-up-tasks`. Post-v1 items 1 and 6; D40.
   repair in task text, like Map's number guard, is the candidate.
 
 - 1.3.0 bump: done 2026-10-28 on request (release-1.3.0).
+
+## 2026-10-28 · Phase 8c kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 8c" and a §9 line: Ask on long meetings (post-v1 item
+  7). Picked over item 3 (Map task-as-decision, a prompt rule on seeds 1–3) and item 10 (ja
+  chunks without 。, moves placement on every language's path): Ask is what users query, and
+  its misses share causes with 8b's "Open".
+- Checked the post-v1 candidate on the stored run before writing (CLAUDE.md lesson): ranking
+  isn't the cause. `ask.rank` puts the answer's segment at rank 0, 0, 0 and 2 for the 4
+  misses (identical in the 6e-2 and 8b reports, cached replies unchanged).
+- The misses: a-f26 right answer, citation −197.7 s (R7B cited `<co>Tom</co>` alone first;
+  `refine_time` puts "Tom" at 1820.88, the full span at 2019.56). a-f61: 8 of the 12
+  top-ranked documents carry a `[due: end of next week]` Map line (map.md's example), and R7B
+  answered Maria's. a-f82: Map wrote "November 1" (said "11 November"), R7B answered another
+  Grace task. a-f15: ASR wrote "Oma", Map missed the lunch task, R7B answered Omar's Map line.
+- So the prompt asks step 0 to measure name-only spans across the stored notes too (the same
+  `resolve` path places Reduce's citations), and to weigh a due/date check on the Map lines in
+  Ask's documents against changing map.md's example.
