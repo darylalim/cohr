@@ -184,6 +184,15 @@ def test_action_owner_and_due() -> None:
     assert action_fit(item("Book the venue", "Priya", "October 20"), f) == "none"
 
 
+def test_due_written_in_the_text_counts_when_the_field_is_empty() -> None:
+    f = fact()
+    # 8b: the due guard drops an unsaid "21 October"; the text still states it.
+    assert action_fit(item("Update the pricing page by 21 October.", "Priya"), f) == "wrong"
+    assert action_fit(item("Update the pricing page by the 20th of Oct.", "Priya"), f) == "match"
+    # "by" without a date is no due.
+    assert action_fit(item("Update the pricing page by the team.", "Priya"), f) == "match"
+
+
 def test_cross_language_matches_exact_fields_only() -> None:
     f = fact()
     de = item("Preisseite aktualisieren", "Priya", "20. Oktober")

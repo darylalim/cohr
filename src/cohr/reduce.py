@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
-from cohr import names, numbers, schemas
+from cohr import dues, names, numbers, schemas
 from cohr.config import language_name, load_prompt
 from cohr.fts import fold_digits
 from cohr.fuse import overlap, slide_text, tokens
@@ -74,7 +74,23 @@ _ACTION = re.compile(
 )
 _SENTENCE = re.compile(r"[^.!?。！？]+(?:[.!?。！？]+|$)")
 _NONE = {"none", "n/a", "-", "—", "nothing"}
-_UNKNOWN = {"", "?", "none", "null", "unknown", "n/a", "-"}
+_UNKNOWN = {
+    "",
+    "?",
+    "none",
+    "null",
+    "unknown",
+    "n/a",
+    "-",
+    "not specified",  # AMI: Map's placeholder owner/due (8b)
+    "unspecified",
+    "not stated",
+    "not mentioned",
+    "tbd",
+}
+# A task that only says to keep doing something (D40, 8b): moved to Key points when it has no
+# owner and no due.
+_VAGUE_TASK = re.compile(r"(?:continue|ensure|keep|monitor|maintain)\b", re.I)
 
 
 class ReduceTooLong(RuntimeError):
@@ -406,6 +422,68 @@ def restore_owners(doc: NotesDoc, texts: Sequence[str]) -> tuple[NotesDoc, list[
         items.append(item)
     sections = doc.sections.model_copy(update={"action_items": items})
     return doc.model_copy(update={"sections": sections}), changed
+
+
+def cited_text(claim: Claim, segments: Mapping[int, Segment], slides: Mapping[int, Slide]) -> str:
+    """The transcripts and slide text a claim cites."""
+    return "\n".join(
+        segments[c.id].transcript_text if c.kind == "seg" else slide_text(slides[c.id])
+        for c in claim.citations
+        if c.id in (segments if c.kind == "seg" else slides)
+    )
+
+
+def guard_dues(
+    doc: NotesDoc, segments: Sequence[Segment], slides: Sequence[Slide], source_language: str
+) -> tuple[NotesDoc, list[str]]:
+    """D40: a due its cited segments and slides don't say is dropped, never replaced by a
+    guessed one (Map copies its prompt's example due, "end of next week", onto tasks that have
+    none: 6 of long-en's made-up items, 18 AMI dues, 8b). English notes of an English meeting:
+    the due's words, close together (`dues.said`). Otherwise only digits can be read: each in
+    the cited text, in the meeting's language; a due without digits is kept. An uncited item
+    keeps its due: there is nothing to check it against. The drops, "Update dashboard: end of
+    next week"."""
+    by_seg = {s.seg_id: s for s in segments}
+    by_slide = {s.slide_id: s for s in slides}
+    english = doc.language == source_language == "en"
+    dropped: list[str] = []
+    items = []
+    for item in doc.sections.action_items:
+        text = cited_text(item, by_seg, by_slide)
+        if item.due and text:
+            if english:
+                kept = dues.said(item.due, text)
+            else:
+                want = numbers.notes_numbers(fold_digits(item.due), doc.language)
+                kept = want <= numbers.source_numbers_in(fold_digits(text), source_language)
+            if not kept:
+                dropped.append(f"{item.text}: {item.due}")
+                item = item.model_copy(update={"due": None})
+        items.append(item)
+    sections = doc.sections.model_copy(update={"action_items": items})
+    return doc.model_copy(update={"sections": sections}), dropped
+
+
+def move_vague_tasks(doc: NotesDoc) -> tuple[NotesDoc, list[str]]:
+    """D40: an action item with no owner and no due that only says to keep doing something
+    ("Continue monitoring retention metrics…", "Ensure the dashboard is up to date") is a
+    point the meeting made, not a task: moved to Key points, never deleted (§5.6). English notes
+    only; tasks with an owner or a due stay ("Run the user conference online", long-en)."""
+    if doc.language != "en":
+        return doc, []
+    items: list[ActionItem] = []
+    moved: list[Claim] = []
+    for item in doc.sections.action_items:
+        if item.owner is None and item.due is None and _VAGUE_TASK.match(item.text):
+            moved.append(Claim(text=item.text, citations=item.citations))
+        else:
+            items.append(item)
+    if not moved:
+        return doc, []
+    sections = doc.sections.model_copy(
+        update={"action_items": items, "key_points": [*doc.sections.key_points, *moved]}
+    )
+    return doc.model_copy(update={"sections": sections}), [c.text for c in moved]
 
 
 def add_task(items: list[ActionItem], task: ActionItem) -> None:
@@ -900,6 +978,12 @@ def run_stage(ctx: StageContext) -> None:
     doc, restored = restore_owners(doc, texts)
     if restored:
         ctx.log.info("reduce: owners in the meeting's spelling: %s", ", ".join(restored))
+    doc, dropped = guard_dues(doc, segments, slides, ctx.config.source_language)
+    if dropped:
+        ctx.log.info("reduce: dues not said where cited, dropped: %s", "; ".join(dropped))
+    doc, vague = move_vague_tasks(doc)
+    if vague:
+        ctx.log.info("reduce: %d vague tasks moved to key points: %s", len(vague), vague)
     if truncated:
         ctx.log.warning(
             "reduce: %d repl%s cut at reduce.max_tokens = %d: the notes end early",

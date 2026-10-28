@@ -842,3 +842,114 @@ def test_restore_owners_uses_the_meetings_spelling() -> None:
 def test_refine_time_without_chunks_or_overlap_keeps_the_segment_start() -> None:
     assert reduce.refine_time("budget 75", [], 5.0, 0.1, "hi", "en") == 5.0
     assert reduce.refine_time("nothing shared", EN_CHUNKS, 5.0, 0.0) == 5.0
+
+
+def _due_doc(items: list[ActionItem], language: str = "en") -> NotesDoc:
+    return NotesDoc(
+        sections=NotesSections(
+            summary=[], key_points=[], decisions=[], action_items=items, open_questions=[]
+        ),
+        passes=1,
+        language=language,
+        raw="",
+    )
+
+
+DUE_SEGMENTS = [
+    Segment(
+        seg_id=0,
+        t0=0.0,
+        t1=60.0,
+        chunk_ids=[0],
+        transcript_text="Tom, finish the incident post mortem by the 17th of November. "
+        "Laura configures the error alerts by Friday.",
+        slide_ids=[],
+    ),
+    Segment(
+        seg_id=1,
+        t0=60.0,
+        t1=120.0,
+        chunk_ids=[1],
+        transcript_text="The dashboard for revenue was updated on Monday. "
+        "Grace, summarise the competitor research by 11 November.",
+        slide_ids=[],
+    ),
+]
+SEG1 = [Citation(kind="seg", id=1)]
+
+
+def test_guard_dues_drops_an_unsaid_due_and_keeps_a_said_one() -> None:
+    doc = _due_doc(
+        [
+            ActionItem(
+                text="Finish the post mortem", citations=SEG0, owner="Tom", due="17 November"
+            ),
+            ActionItem(text="Configure error alerts", citations=SEG0, owner="Laura", due="Friday"),
+            ActionItem(text="Update revenue dashboard", citations=SEG1, due="end of next week"),
+            ActionItem(text="Summarise research", citations=SEG1, owner="Grace", due="1 November"),
+        ]
+    )
+    fixed, dropped = reduce.guard_dues(doc, DUE_SEGMENTS, [], "en")
+    assert [a.due for a in fixed.sections.action_items] == ["17 November", "Friday", None, None]
+    assert [a.owner for a in fixed.sections.action_items] == ["Tom", "Laura", None, "Grace"]
+    assert dropped == [
+        "Update revenue dashboard: end of next week",
+        "Summarise research: 1 November",
+    ]
+
+
+def test_guard_dues_must_not_fire() -> None:
+    slide = _slide(0, "Next steps", "Send the contract — due 20 October")
+    doc = _due_doc(
+        [
+            # Said in other words: "by the 17th of November" for "the seventeenth of Nov".
+            ActionItem(text="Post mortem", citations=SEG0, due="the seventeenth of Nov"),
+            # Said on the cited slide, not in a transcript.
+            ActionItem(
+                text="Send the contract", citations=[Citation(kind="slide", id=0)], due="20 Oct"
+            ),
+            # Uncited: nothing to check it against.
+            ActionItem(text="Book the venue", citations=[], due="end of next week"),
+        ]
+    )
+    fixed, dropped = reduce.guard_dues(doc, DUE_SEGMENTS, [slide], "en")
+    assert fixed == doc and dropped == []
+
+
+def test_guard_dues_reads_only_digits_across_languages() -> None:
+    doc = _due_doc(
+        [
+            # A Hindi weekday on an English meeting: unreadable, kept.
+            ActionItem(text="अलर्ट कॉन्फ़िगर करें", citations=SEG0, due="शुक्रवार"),
+            ActionItem(text="पोस्ट मॉर्टम", citations=SEG0, due="17 नवंबर"),
+            ActionItem(text="शोध का सारांश", citations=SEG1, due="1 नवंबर"),
+        ],
+        language="hi",
+    )
+    fixed, dropped = reduce.guard_dues(doc, DUE_SEGMENTS, [], "en")
+    assert [a.due for a in fixed.sections.action_items] == ["शुक्रवार", "17 नवंबर", None]
+    assert dropped == ["शोध का सारांश: 1 नवंबर"]
+
+
+def test_move_vague_tasks_to_key_points() -> None:
+    vague = ActionItem(text="Continue monitoring retention metrics.", citations=SEG1)
+    kept = [
+        # An owner-less task that's real (long-en: planted open question, due "next time").
+        ActionItem(text="Run the user conference online.", citations=SEG0, due="next time"),
+        ActionItem(text="Prepare a questionnaire for the next meeting.", citations=SEG0),
+        ActionItem(text="Ensure the alerts fire.", citations=SEG0, owner="Laura"),
+    ]
+    fixed, moved = reduce.move_vague_tasks(_due_doc([vague, *kept]))
+    assert fixed.sections.action_items == kept
+    assert fixed.sections.key_points == [Claim(text=vague.text, citations=SEG1)]
+    assert moved == [vague.text]
+    other = _due_doc([vague], language="de")
+    assert reduce.move_vague_tasks(other) == (other, [])
+
+
+def test_placeholder_dues_are_unknown() -> None:
+    claim = Claim(
+        text="[owner: Marketing] [due: Not specified] Look into requirements", citations=SEG0
+    )
+    item = reduce.action_item(claim, {})
+    assert (item.owner, item.due) == ("Marketing", None)
