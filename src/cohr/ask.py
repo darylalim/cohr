@@ -279,7 +279,11 @@ def ask(
         seed=config.seed,
     )
     refine = reduce.segment_refiner(
-        sources.segments, sources.items, config.reduce.citation_min_score
+        sources.segments,
+        sources.items,
+        config.reduce.citation_min_score,
+        language,
+        config.source_language,
     )
     claims, dropped = parse_answer(reply, fitted.targets, refine)
     if dropped:

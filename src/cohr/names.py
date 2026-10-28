@@ -16,6 +16,8 @@ from anyascii import anyascii
 _SAME = str.maketrans("bclvwy", "fkrfui")
 _VOWELS = set("aeiou")
 _WORD = re.compile(r"[^\W\d_]+(?:['’-][^\W\d_]+)*")
+_LATIN_LETTER = r"[A-Za-zÀ-ɏ]"
+_KATAKANA = re.compile(r"[ァ-ヺー]{2,}")  # ー (long vowel) included, ・ not
 
 
 def latin(text: str) -> bool:
@@ -52,6 +54,21 @@ def said_names(texts: Iterable[str]) -> list[str]:
             elif word[0].islower():
                 lower.add(word)
     return [w for w in seen if w.lower() not in lower]
+
+
+def said_in(name: str, text: str) -> bool:
+    """`name` is said in `text`: as a whole word ("Tom", not the "tom" of "customers"; also
+    "MARIAさん"), or, for a Latin name, as a katakana word with the same consonants (トム =
+    Tom, D39)."""
+    letter = _LATIN_LETTER if latin(name) else r"[^\W\d_]"  # kana next to "MARIA" is no letter
+    if re.search(rf"(?<!{letter}){re.escape(name)}(?!{letter})", text, re.I):
+        return True
+    target = skeleton(name)
+    return (
+        latin(name)
+        and len(target) >= 2
+        and any(skeleton(k) == target for k in _KATAKANA.findall(text))
+    )
 
 
 def restore(owner: str, texts: Iterable[str]) -> str:

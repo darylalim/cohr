@@ -105,7 +105,7 @@ def _slide(sid: int, title: str = "", text: str = "") -> Slide:
 
 
 def _refine() -> reduce.Refine:
-    return reduce.segment_refiner(_segments(), _items(), 0.1)
+    return reduce.segment_refiner(_segments(), _items(), 0.1, "en", "en")
 
 
 # --- documents -----------------------------------------------------------------------------
@@ -229,6 +229,77 @@ def test_refine_time_moves_to_the_sentence_inside_a_long_chunk() -> None:
     assert t == round(100.0 + 30.0 * text.index("The approved") / len(text), 2)
     assert reduce.refine_time("welcome back everyone", [chunk], 0.0, 0.1) == 100.0
     assert reduce.sentence_offset({"budget"}, "No match here") == 0.0
+
+
+# Cross-language jump times (D39): clean-hi and xling-ja shaped, chunks of one segment.
+EN_CHUNKS = [
+    TranscriptItem(chunk_id=0, t0=0.0, t1=30.0, text="Welcome back. Omar will draft the plan."),
+    TranscriptItem(
+        chunk_id=1,
+        t0=30.0,
+        t1=60.0,
+        text="When we talked to customers, retention came up. "
+        "Maria, can you prepare the survey? The pipeline has 75 candidates.",
+    ),
+    TranscriptItem(
+        chunk_id=2, t0=60.0, t1=90.0, text="Action item for Tom record the video by Monday."
+    ),
+]
+JA_CHUNKS = [
+    TranscriptItem(chunk_id=0, t0=0.0, t1=20.0, text="では、始めましょう。リテンションの話です。"),
+    TranscriptItem(
+        chunk_id=1,
+        t0=20.0,
+        t1=40.0,
+        text="トライアル登録に移りましょう。今月の新規トライアル登録数は、4650です。",
+    ),
+    TranscriptItem(chunk_id=2, t0=40.0, t1=60.0, text="トムさんへのアクションアイテムです。"),
+]
+
+
+def _at(chunk: TranscriptItem, sentence: str) -> float:
+    return round(chunk.t0 + (chunk.t1 - chunk.t0) * chunk.text.index(sentence) / len(chunk.text), 2)
+
+
+def test_refine_time_anchors_a_hindi_claim_by_its_owner_and_number() -> None:
+    def refine(span: str) -> float:
+        return reduce.refine_time(span, EN_CHUNKS, 0.0, 0.1, "hi", "en")
+
+    # no shared words: the owner, in the meeting's spelling for the whole segment (मारिया
+    # alone in chunk 0's text would match Omar, the only m-r name there)
+    survey = "[owner: मारिया] [due: अगले सप्ताह का अंत] ग्राहक सर्वेक्षण तैयार करें"
+    assert refine(survey) == _at(EN_CHUNKS[1], "Maria, can")
+    # Tom said as a word in chunk 2, not the "tom" of "customers" in chunk 1
+    assert refine("[owner: टॉम] [due: सोमवार] ऑनबोर्डिंग वीडियो रिकॉर्ड करें") == 60.0
+    assert refine("पाइपलाइन में कैंडिडेट्स की संख्या ७५ है") == _at(EN_CHUNKS[1], "The pipeline")
+    # no anchor, or one the segment doesn't say: the segment's start (§5.6)
+    assert refine("नया लोगो वेबसाइट पर उपयोग किया जाएगा।") == 0.0
+    assert refine("[owner: ?] [due: ?] बजट 42,500 है") == 0.0
+
+
+def test_refine_time_anchors_an_english_claim_on_a_japanese_meeting() -> None:
+    def refine(span: str) -> float:
+        return reduce.refine_time(span, JA_CHUNKS, 0.0, 0.1, "en", "ja")
+
+    claim = "Trial registration numbers are higher this month (4,650) than last month (2,600)."
+    assert refine(claim) == _at(JA_CHUNKS[1], "今月の")
+    assert refine("[owner: Tom] [due: Monday] Create the onboarding video by Monday.") == 40.0
+
+
+def test_refine_time_anchors_only_when_words_dont_match() -> None:
+    # English on English: today's time exactly, though 75 and Omar point elsewhere
+    span = "Omar will draft the plan; the pipeline has 75 candidates"
+    want = reduce.refine_time(span, EN_CHUNKS, 0.0, 0.1)
+    assert want == _at(EN_CHUNKS[0], "Omar")
+    assert reduce.refine_time(span, EN_CHUNKS, 0.0, 0.1, "hi", "en") == want
+    # a number said in two chunks: the chunk the words match wins
+    chunks = [
+        TranscriptItem(chunk_id=0, t0=0.0, t1=30.0, text="Last year we had 75 people."),
+        TranscriptItem(chunk_id=1, t0=30.0, t1=60.0, text="The pipeline has 75 candidates."),
+    ]
+    assert reduce.refine_time("Pipeline: 75 candidates", chunks, 0.0, 0.1, "en", "en") == 30.0
+    # word overlap under min_score still breaks a tie between anchored chunks
+    assert reduce.refine_time("pipeline 75 क ख ग घ ङ च छ ज झ", chunks, 9.0, 0.5, "hi", "en") == 30.0
 
 
 def test_action_item_format_and_map_fallback() -> None:
@@ -766,3 +837,8 @@ def test_restore_owners_uses_the_meetings_spelling() -> None:
     assert [a.owner for a in fixed.sections.action_items] == ["Laura", "प्रिया", None]
     assert fixed.sections.action_items[0].due == "शुक्रवार"  # only the owner changes
     assert changed == ["लॉरा → Laura"]
+
+
+def test_refine_time_without_chunks_or_overlap_keeps_the_segment_start() -> None:
+    assert reduce.refine_time("budget 75", [], 5.0, 0.1, "hi", "en") == 5.0
+    assert reduce.refine_time("nothing shared", EN_CHUNKS, 5.0, 0.0) == 5.0

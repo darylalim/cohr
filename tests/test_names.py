@@ -83,3 +83,18 @@ def test_words_that_start_sentences_are_not_names() -> None:
 
 def test_two_names_equally_close_keep_the_owner() -> None:
     assert names.restore("مر", ["Mira and Mara spoke."]) == "مر"
+
+
+@pytest.mark.parametrize(
+    ("name", "text", "said"),
+    [
+        ("Tom", "Action item for Tom record the video.", True),
+        ("Tom", "When we talked to customers, it came up.", False),  # not the "tom" of customers
+        ("Maria", "よかったですMARIAさん来週までに", True),  # xling-ja: Latin inside Japanese
+        ("Tom", "トムさんへのアクションアイテム", True),  # katakana, same consonants (D39)
+        ("Tom", "トライアル登録に移りましょう", False),
+        ("Laura", "لورا سترسل العقد", False),  # only Latin names are read from katakana
+    ],
+)
+def test_said_in(name: str, text: str, said: bool) -> None:
+    assert names.said_in(name, text) is said
