@@ -2203,10 +2203,8 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
   Latin owners, step 4 is eval-only). Gate green: ruff, ty, pytest 526 passed.
 
 ### After v1 (post-v1 list)
-1. **Long-en made-up tasks (new):** with step 2, pass 2 keeps Map's vague tasks ("Continue
-   monitoring…", "Review and clarify…") along with the real ones (+3 found, +4 made up). A
-   filter for task-shaped claims with no owner, no due and no planted verb is the candidate;
-   judge it on long-en and AMI together.
+1. ~~**Long-en made-up tasks**~~: done in Phase 8b (D40, due guard + vague-task move;
+   made-up items 12 → 7). Left over: see 8b's "Open".
 2. ~~**Cross-language jump times**~~: done in Phase 8a (D39, language-neutral anchors;
    clean-hi 58.3 → 100%, xling-ja 70 → 90%). Left over: see 8a's "Open".
 3. **Map files a task only as a decision** (step 2b, xling-es "Victor will write the notes
@@ -2215,7 +2213,8 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
    from grouped digits. The guard flags it; no repair.
 5. **Japanese ビクター** isn't matched to Victor (no final r); Japanese owners in Japanese
    notes aren't in any set.
-6. **Map's ownerless "End of next week" dues** on AMI tasks (step 2 trace).
+6. ~~**Map's ownerless "End of next week" dues**~~: dropped from the notes in Phase 8b
+   (D40: 34 unsaid, 4 placeholders; 1 of AMI's 39 left); Map still writes them (8b's "Open").
 7. **Ask on the regenerated long-en**: 77.8% (was 94.4% on the old audio); the 4 misses
    are actions answered from the wrong part. Not caused by 6e-2; check with Ask ranking.
 8. Carry-overs 5–7 from 6e-1: Japanese chunk-start and dense-segment drops, eval-only gaps,
@@ -2376,3 +2375,47 @@ Branch `phase-8a-jump-times`. No prompt change (REDUCE_HASH unchanged), no FORMA
 - quick and lang stored runs have no owner-less action items except one in conflict-de, so
   neither set measures this; the prompt asks for an offline replay on long-en and AMI
   (`evals.made_up` is judge-free), then an AMI-only run (ask) for coverage.
+
+## 2026-10-28 · Phase 8b: made-up action items on long meetings
+Branch `phase-8b-made-up-tasks`. Post-v1 items 1 and 6; D40.
+- Step 0 (stored runs, no models): every real long-en due (12) is said in its cited segment;
+  the 6 copied "end of next week" dues are said only elsewhere in the meeting, and "1
+  November" is "11 November" in its segment. AMI: 1 of 39 dues said where cited. A
+  `due_key ⊆ words` check over a whole segment was too loose ("End of meeting" matched "end"
+  and "meeting" far apart), hence the window (`dues.said`, 4 extra words).
+- Rejected filters: an ask-cue check on the cited sentence (long-en's "Let's move on to…"
+  trips it; AMI's ASR has no sentence breaks); "no owner and no due" alone (9/9 on long-en,
+  but 25 of AMI's 47 tasks: it fits the generator, where every planted task has an owner).
+- Fix on the final notes, after `restore_owners`: `guard_dues` then `move_vague_tasks`
+  (English notes only, Continue/Ensure/Keep/Monitor/Maintain). Placeholders ("Not
+  specified", "TBD") parse as unknown. Cross-language: digits only; clean-hi's Hindi dues and
+  conflict-de's German ones stay. `due_key` and `due_in` moved from evals to `dues.py`.
+- Eval: `_stated_due` reads a due written in the task text when the field is empty, so the
+  guard clearing "1 November" leaves "Summarise competitor research by 1 November" wrong, not
+  a match.
+- Offline replay (one-pass runs rebuilt from `raw`; long-en's steps on the stored notes)
+  matched the model runs item for item.
+
+| | before | after |
+|---|---|---|
+| long-en made-up items | 12 | **7** |
+| long-en recall / support rate | 67.5% / 75.7% | 67.5% / **79.4%** |
+| AMI coverage (5 meetings) | — | unchanged on every meeting |
+| AMI support rate | 69.6–88.6% | up in 4 of 5 (TS3003c 69.6 → 73.9%) |
+| AMI dues | 39 | 1 (34 unsaid dropped, 4 placeholders cleared) |
+| quick (gate), lang seed 1 | — | every metric identical, guard never fires |
+
+- Runs: quick and lang seed 1 `--no-ask` with `--rerun reduce`; long-en `--rerun reduce`
+  (Map reused); AMI items of the full set `--rerun reduce` with Ask and the judge.
+- `baseline-long.json` rewritten (made-up items 12 → 7 on purpose). quick, lang and full
+  baselines unchanged (identical, or AMI report-only).
+
+### Open
+- Map still copies "end of next week" into map.json, and Ask's segment snippets show it
+  (`_action_line`). Fixing it means changing map.md's example (seeds 1–3, every set) or the
+  guard on Map's items (Reduce input moves: a long-en run).
+- 5 long-en made-up items remain: "Explain quarterly budget reporting", "Update revenue
+  dashboard", "Review and clarify…", "Address the support queue backlog", "Standardise on
+  PostGIS" (a decision). No source signal separates them from real owner-less tasks yet.
+- "Summarise competitor research by 1 November": the text still says 1 (said 11). A digit
+  repair in task text, like Map's number guard, is the candidate.

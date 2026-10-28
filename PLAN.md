@@ -413,6 +413,14 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
 - **Owners in the meeting's spelling (6e-2, D34):** an owner in a non-Latin script that the
   transcript doesn't contain as written is replaced by the name said in the meeting with the
   same consonants after transliteration (`names.py`, `anyascii`); kept as written otherwise.
+- **Due guard and vague tasks (8b, D40):** on the final notes, after the owners. A due that its
+  cited segments and slides don't say is dropped, never replaced (Map copies its prompt's
+  example due onto tasks that have none). English notes of an English meeting: the due's words
+  within a few words of each other (`dues.said`: "17 November" = "the 17th of November").
+  Otherwise only its digits are read, in the meeting's language; a due with no digits is kept,
+  and so is an uncited item's. Placeholder owners and dues ("Not specified", "TBD") are unknown.
+  Then an English action item with no owner and no due that starts "Continue", "Ensure", "Keep",
+  "Monitor" or "Maintain" moves to Key points with its citations (never deleted).
 - **Cut replies (6e-2, D32):** a reply that stopped at `reduce.max_tokens` without
   `<|END_RESPONSE|>` (mlx-lm's finish reason) is counted in `NotesDoc.truncated`, logged and
   shown on the Notes page. It is never retried (temperature 0 would write the same start) or
@@ -1216,6 +1224,11 @@ languages. lang seed 1: citation accuracy 89.9 → 98.7% (clean-hi 58.3 → 100%
 lists 12 made-up decisions and action items (`baseline-long.json`), 11 of them action items. 9 of
 those 11 have no owner, and 6 of the 9 carry Map's due "end of next week", which their cited
 segment doesn't say (AMI: 18 owner-less dues, none said in a cited segment). Kickoff prompt in §21.
+Done 2026-10-28 (NOTES.md). On the final notes (D40): `reduce.guard_dues` drops a due its
+cited text doesn't say (`dues.py`, shared with the evals), and `reduce.move_vague_tasks` moves
+owner-less, due-less "Continue …"/"Ensure …" tasks to Key points. long-en made-up items 12 → 7
+(recall 67.5%, unchanged; support 75.7 → 79.4%); AMI coverage unchanged, support up in 4 of 5;
+quick and lang seed 1 identical.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2079,6 +2092,7 @@ section.
 | D37 | Tokenizer for zh/ja/ko text in the index (§13) | unicode61 for everything | Proposal (step 0), then `test_index.py` and the search check | Phase 7 | **Two FTS5 tables (unicode61, trigram) over the same rows**; a CJK query uses trigram for all rows, any other query trigram for ja/zh/ko rows only. Found while testing: unicode61 kept "チケットは390件" as one token, so "390" missed it |
 | D38 | Digits in other scripts (§13) | As written | Search check (Phase 7 step 4) | Phase 7 | **Folded to ASCII** in the index and the query: Tiny Aya writes Bengali notes with Bengali digits ("$৪২,৫০০"); clean-bn numbers found in the notes 2/8 → 8/8. Snippets show ASCII digits |
 | D39 | Jump time when the notes and the meeting share no words (§5.6) | Segment start | Offline replay of `refine_time` on the stored lang runs (8a step 0), then lang seed 1 and quick | Phase 8a | **Language-neutral anchors** when no chunk scores ≥ 0.1: the span's numbers (read in each text's language) and its `[owner: …]` (meeting's spelling for the segment, whole word or same-consonant katakana); most anchors wins, ties by word overlap then earliest; segment start when none. Citation accuracy clean-hi 58.3 → 100%, xling-ja 70 → 90%, quick identical. Names elsewhere in claims not used (تم = Tom, مللي = Maria in the replay) |
+| D40 | Dues and owner-less tasks the meeting didn't give (§5.6) | As Map and Reduce wrote them | Step 0 measurement on the stored long-en and AMI runs, offline replay, then quick, lang seed 1, long-en and AMI | Phase 8b | **Due guard + vague-task move on the final notes** (user): a due its cited segments and slides don't say is dropped, never replaced (English: words within a window, `dues.said`; other languages: digits only, in the meeting's language; uncited kept); then an English action item with no owner and no due starting Continue/Ensure/Keep/Monitor/Maintain moves to Key points. long-en made-up items 12 → 7, recall unchanged; AMI 34 unsaid dues dropped and 4 placeholders cleared (1 of 39 left), coverage unchanged; quick and lang identical. Rejected: "no owner and no due" alone (9/9 on long-en but would move 25 of AMI's 47 tasks) and an ask-cue check on the source (no signal). Map's example due left as is (post-v1). Eval: an empty due field reads a due written in the task text, so clearing a field can't turn a wrong date into a match |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

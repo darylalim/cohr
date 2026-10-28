@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-14T12:30:08.368357-10:00",
+  "created_at": "2026-10-28T12:55:36.705181-10:00",
   "set": "long",
-  "git_sha": "f969efe-dirty",
+  "git_sha": "a957ee1-dirty",
   "overrides": {},
   "models": {
     "vad": "mlx-community/silero-vad-v6@2ebf4a5",
@@ -36,7 +36,7 @@
         "citation_accuracy": 0.9815,
         "claims": 107,
         "uncited_claims": 0,
-        "made_up_items": 12,
+        "made_up_items": 7,
         "made_up_open_questions": 4,
         "wrong_owner_or_due": 2,
         "judge_only_facts": 0,
@@ -75,9 +75,9 @@
         "ask_xlang_history": 1.0,
         "ask_near_miss": 1.0,
         "cited_claims": 107,
-        "support_rate": 0.757,
+        "support_rate": 0.7944,
         "support_partial": 6,
-        "support_no": 20,
+        "support_no": 16,
         "support_unjudged": 0,
         "judge_covered": 0,
         "judge_recall": null
@@ -1230,15 +1230,10 @@
       ],
       "made_up": [
         "Standardise on PostGIS for analytics.",
-        "Continue discussing and updating trial signups metrics.",
-        "Ensure the dashboard for trial signups is up-to-date.",
-        "Continue to cover site speed and revenue topics with customers.",
         "Explain quarterly budget reporting to the team.",
         "Update revenue dashboard.",
         "Read marketing emails by Monday.",
-        "Continue monitoring and reporting on quarterly budget and hiring metrics.",
         "Summarise competitor research by 1 November.",
-        "Continue monitoring retention metrics and share updates with stakeholders.",
         "Review and clarify the reporting of cloud costs.",
         "Address the support queue backlog and stale tickets."
       ],
@@ -1832,6 +1827,51 @@
           "reason": "The cited text states the approved budget for the central region is $75,000 compared to $73,000 last quarter, and confirms the trend is steady and not surprising."
         },
         {
+          "section": "key_points",
+          "claim": "Key point: Continue discussing and updating trial signups metrics.",
+          "citations": [
+            "seg 2"
+          ],
+          "supported": "yes",
+          "reason": "The meeting mentions discussing and updating trial signups metrics as a reason for covering them, and the dashboard was updated, indicating ongoing attention."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Ensure the dashboard for trial signups is up-to-date.",
+          "citations": [
+            "seg 2"
+          ],
+          "supported": "yes",
+          "reason": "The dashboard for trial signups was updated on Monday, so these are fresh numbers."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Continue to cover site speed and revenue topics with customers.",
+          "citations": [
+            "seg 12"
+          ],
+          "supported": "yes",
+          "reason": "The claim is supported by the statement that 'A few people asked me about sight speed this week, so it's good that we're covering it' and similar for revenue."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Continue monitoring and reporting on quarterly budget and hiring metrics.",
+          "citations": [
+            "seg 18"
+          ],
+          "supported": "yes",
+          "reason": "The transcript mentions that quarterly and hiring metrics are being monitored and reported, as indicated by the fact that people asked about them and the dashboards were updated and checked."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Continue monitoring retention metrics and share updates with stakeholders.",
+          "citations": [
+            "seg 25"
+          ],
+          "supported": "no",
+          "reason": "The claim about continuing to monitor retention metrics and share updates is not explicitly stated or agreed upon in the cited text."
+        },
+        {
           "section": "decisions",
           "claim": "Decision: Introduce annual billing discounts.",
           "citations": [
@@ -1995,24 +2035,6 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Continue discussing and updating trial signups metrics. (due: end of next week)",
-          "citations": [
-            "seg 2"
-          ],
-          "supported": "no",
-          "reason": "The cited text mentions discussing trial signups and updating the dashboard, but does not state an action item to continue discussing and updating trial signups metrics with a due date of end of next week."
-        },
-        {
-          "section": "action_items",
-          "claim": "Action item: Ensure the dashboard for trial signups is up-to-date. (due: end of next week)",
-          "citations": [
-            "seg 2"
-          ],
-          "supported": "partial",
-          "reason": "The dashboard for trial signups was updated on Monday, and the team confirmed it was fresh."
-        },
-        {
-          "section": "action_items",
           "claim": "Action item: Collect quotes from moving companies by the end of next week. (owner: Maria; due: end of next week)",
           "citations": [
             "seg 6"
@@ -2040,30 +2062,21 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Continue to cover site speed and revenue topics with customers. (due: end of next week)",
+          "claim": "Action item: Explain quarterly budget reporting to the team.",
           "citations": [
-            "seg 12"
+            "seg 13"
           ],
-          "supported": "no",
-          "reason": "The claim mentions an action item not stated or agreed in the cited text."
+          "supported": "partial",
+          "reason": "The speaker mentions that the way quarterly budget is reported is confusing and that they keep having to explain it, indicating a need to clarify it."
         },
         {
           "section": "action_items",
-          "claim": "Action item: Explain quarterly budget reporting to the team. (due: end of next week)",
+          "claim": "Action item: Update revenue dashboard.",
           "citations": [
             "seg 13"
           ],
           "supported": "no",
-          "reason": "The cited text mentions that the way quarterly budget is reported is confusing and that the speaker keeps having to explain it, but there is no explicit agreement or decision to explain it to the team with a due date."
-        },
-        {
-          "section": "action_items",
-          "claim": "Action item: Update revenue dashboard. (due: end of next week)",
-          "citations": [
-            "seg 13"
-          ],
-          "supported": "no",
-          "reason": "The cited text mentions the revenue dashboard was updated on Monday, but does not state or imply an action item to update it by the end of next week."
+          "reason": "The cited text mentions the revenue dashboard was updated on Monday, but does not state that an action item to update it was agreed upon."
         },
         {
           "section": "action_items",
@@ -2121,15 +2134,6 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Continue monitoring and reporting on quarterly budget and hiring metrics. (due: end of next week)",
-          "citations": [
-            "seg 18"
-          ],
-          "supported": "no",
-          "reason": "The cited text mentions that people asked about quarterly and hiring metrics, and that the dashboards were updated with fresh numbers, but there is no explicit agreement to monitor and report on them with a due date."
-        },
-        {
-          "section": "action_items",
           "claim": "Action item: Test the backup restore by the end of next week. (owner: Maria; due: end of next week)",
           "citations": [
             "seg 21"
@@ -2139,21 +2143,12 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Summarise competitor research by 1 November. (owner: Grace; due: 1 November)",
+          "claim": "Action item: Summarise competitor research by 1 November. (owner: Grace)",
           "citations": [
             "seg 26"
           ],
           "supported": "no",
-          "reason": "The action item mentions a date that differs from the cited text, which states 'by 11 November'."
-        },
-        {
-          "section": "action_items",
-          "claim": "Action item: Continue monitoring retention metrics and share updates with stakeholders.",
-          "citations": [
-            "seg 25"
-          ],
-          "supported": "no",
-          "reason": "The claim mentions an action item not discussed or stated in the transcript."
+          "reason": "The action item mentions a date of 1 November, but the cited text states the date as 11 November."
         },
         {
           "section": "action_items",
@@ -2742,55 +2737,55 @@
           "seconds": 1.72,
           "s_per_audio_hour": 0.8,
           "peak_mem_gb": null,
-          "reused": false
+          "reused": true
         },
         "vad": {
           "seconds": 49.76,
           "s_per_audio_hour": 22.7,
           "peak_mem_gb": 0.09,
-          "reused": false
+          "reused": true
         },
         "transcribe": {
           "seconds": 271.42,
           "s_per_audio_hour": 123.6,
           "peak_mem_gb": 5.65,
-          "reused": false
+          "reused": true
         },
         "vision": {
           "seconds": 181.89,
           "s_per_audio_hour": 82.8,
           "peak_mem_gb": 8.59,
-          "reused": false
+          "reused": true
         },
         "fuse": {
           "seconds": 0.11,
           "s_per_audio_hour": 0.1,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "map": {
           "seconds": 144.63,
           "s_per_audio_hour": 65.9,
           "peak_mem_gb": 11.77,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 315.39,
-          "s_per_audio_hour": 143.6,
-          "peak_mem_gb": 17.37,
-          "reused": false
+          "seconds": 322.45,
+          "s_per_audio_hour": 146.8,
+          "peak_mem_gb": 6.53,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     }
@@ -2801,7 +2796,7 @@
     "fact_recall": 0.675,
     "citation_accuracy": 0.9815,
     "uncited_claims": 0,
-    "made_up_items": 12,
+    "made_up_items": 7,
     "made_up_open_questions": 4,
     "wrong_owner_or_due": 2,
     "gap_words": 0,
@@ -2828,9 +2823,9 @@
     "pass2_claim": 117,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.757,
+    "support_rate": 0.7944,
     "support_partial": 6,
-    "support_no": 20,
+    "support_no": 16,
     "support_unjudged": 0,
     "judge_recall": null,
     "ask_questions": 24,
@@ -2869,8 +2864,8 @@
       "peak_mem_gb": 11.77
     },
     "reduce": {
-      "s_per_audio_hour": 143.6,
-      "peak_mem_gb": 17.37
+      "s_per_audio_hour": 146.8,
+      "peak_mem_gb": 6.53
     },
     "translate": {
       "s_per_audio_hour": 0.0,
@@ -2881,8 +2876,8 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 439.5,
-      "peak_mem_gb": 17.37
+      "s_per_audio_hour": 442.7,
+      "peak_mem_gb": 11.77
     }
   },
   "citation_errors": [
@@ -2948,19 +2943,19 @@
     156.34
   ],
   "judge": {
-    "loaded": true,
-    "calls": 92,
-    "cached": 15,
-    "seconds": 230.54,
-    "s_per_audio_hour": 105.0,
-    "peak_mem_gb": 4.77
+    "loaded": false,
+    "calls": 0,
+    "cached": 107,
+    "seconds": 0.01,
+    "s_per_audio_hour": 0.0,
+    "peak_mem_gb": null
   },
   "ask": {
-    "loaded": true,
-    "calls": 24,
-    "cached": 0,
-    "seconds": 759.76,
-    "s_per_audio_hour": 345.9,
+    "loaded": false,
+    "calls": 0,
+    "cached": 24,
+    "seconds": 0.05,
+    "s_per_audio_hour": 0.0,
     "peak_mem_gb": null
   },
   "gate_items": null,

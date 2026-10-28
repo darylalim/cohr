@@ -38,9 +38,23 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from cohr import ami, ask, asr, atomic, fleurs, ingest, judge, pipeline, render, schemas, storage
+from cohr import (
+    ami,
+    ask,
+    asr,
+    atomic,
+    dues,
+    fleurs,
+    ingest,
+    judge,
+    pipeline,
+    render,
+    schemas,
+    storage,
+)
 from cohr.ami import AmiSpec
 from cohr.config import Config, prompt_hash
+from cohr.dues import due_key
 from cohr.fleurs import FleursSpec
 from cohr.fuse import slide_text, tokens
 from cohr.judge import CachedJudge, Generate, Label, Supported
@@ -244,34 +258,6 @@ def coverage(fact: str, claim: str) -> float:
     return len(f & content(claim)) / len(f) if f else 0.0
 
 
-_DUE_FILLER = {"by", "the", "of", "on", "at", "before", "until", "due", "end"}
-_MONTH_ABBR = {
-    "jan": "january",
-    "feb": "february",
-    "mar": "march",
-    "apr": "april",
-    "jun": "june",
-    "jul": "july",
-    "aug": "august",
-    "sep": "september",
-    "sept": "september",
-    "oct": "october",
-    "nov": "november",
-    "dec": "december",
-}
-
-
-def due_key(due: str) -> frozenset[str]:
-    """ "the twentieth of October" and "Oct 20" → {"20", "october"}; "end of next week" →
-    {"next", "week", "end"} ("end" kept when it's what distinguishes the date)."""
-    words = [w.lower().strip(".,") for w in digits(due).split()]
-    words = [_MONTH_ABBR.get(w, w) for w in words if w]
-    key = {w for w in words if w not in _DUE_FILLER}
-    if "end" in words:
-        key.add("end")
-    return frozenset(key)
-
-
 def same_due(stated: str, planted: str) -> bool:
     return due_key(stated) == due_key(planted)
 
@@ -301,8 +287,25 @@ def _owner_in(claim: Claim, owner: str) -> bool | None:
     return True if re.search(rf"\b{re.escape(fold(owner))}\b", fold(claim.text)) else None
 
 
+_TEXT_DUE = re.compile(r".*\bby\s+(.+?)[\s.!]*$", re.I | re.S)
+_DATE_WORD = re.compile(
+    r"\d|\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|week|month|tomorrow|"
+    + "|".join(sorted(set(dues.MONTH_ABBR.values()) | {"may"}))
+    + r")\b",
+    re.I,
+)
+
+
 def _stated_due(claim: Claim) -> str | None:
-    return claim.due if isinstance(claim, ActionItem) and claim.due else None
+    """The action item's due, or one its text still states when the field is empty ("… by 1
+    November" after the due guard dropped an unsaid "1 November", 8b): a guard that clears the
+    field mustn't turn a wrong date in the text into a match."""
+    if not isinstance(claim, ActionItem):
+        return None
+    if claim.due:
+        return claim.due
+    m = _TEXT_DUE.match(digits(claim.text))
+    return m.group(1) if m and _DATE_WORD.search(m.group(1)) else None
 
 
 def action_fit(
@@ -1195,11 +1198,7 @@ def answer_numbers(text: str) -> set[float]:
 
 def due_in(text: str, due: str) -> bool:
     """The planted due date is stated somewhere in free text ("by the end of next week")."""
-    words = {
-        _MONTH_ABBR.get(w, w)
-        for w in re.findall(r"\w+", re.sub(r"(\d+)(?:st|nd|rd|th)\b", r"\1", digits(text).lower()))
-    }
-    return due_key(due) <= words
+    return due_key(due) <= set(dues.words(text))
 
 
 def meeting_numbers(truth: Truth) -> set[float]:
