@@ -2361,3 +2361,18 @@ Branch `phase-8a-jump-times`. No prompt change (REDUCE_HASH unchanged), no FORMA
   the segment start, by design.
 
 - 1.2.0 bump: done 2026-10-28 on request (release-1.2.0).
+
+## 2026-10-28 · Phase 8b kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 8b" and a §9 line: made-up action items on long meetings
+  (post-v1 item 1, merged with item 6). Picked over item 10 (ja chunks without 。), which moves
+  placement on every language's path for one citation.
+- Checked the post-v1 candidate on the stored run before writing (CLAUDE.md lesson): "no owner,
+  no due" fits only 3 of long-en's 11 made-up action items. 9 have no owner, and 6 of those 9
+  carry the due "end of next week", which their cited segment doesn't say (1 of long-en's 7
+  owner-less dues is said there). AMI: 18 owner-less dues, none said in a cited segment.
+- Cause candidate: map.md's example due is "end of next week" (line 12), and
+  evals/gen/script.py plants it (RELATIVE_DUES), so Map copies the example and long-en can
+  reward it. map.json has it on 22 lines in AMI; the AMI transcripts say "next week" once.
+- quick and lang stored runs have no owner-less action items except one in conflict-de, so
+  neither set measures this; the prompt asks for an offline replay on long-en and AMI
+  (`evals.made_up` is judge-free), then an AMI-only run (ask) for coverage.
