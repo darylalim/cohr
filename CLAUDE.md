@@ -74,6 +74,9 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
   move) changes what pass 2 writes: check long-en, not only quick.
 - A PLAN section isn't the code: the §16 release job was planned but never in ci.yml, so 1.0.0
   merged without a release (6e-2). Check the workflow before saying a merge releases.
+- A NOTES "candidate" fix is a guess: open the run files it assumes before building on it.
+  Post-v1 item 2 said to refine on "the English Map item", but Map writes in the notes
+  language (clean-hi `map.json` is Hindi), so there was none (8a kickoff).
 - The guard hook blocks Bash commands containing the full-eval or models-marker text (heredocs
   too): write such text with the Edit/Write tools. It also blocks `rm -rf`: copy scratch
   output to new folder names instead of deleting.
