@@ -70,6 +70,12 @@ def overlap(a: set[str], b: set[str]) -> float:
     return len(a & b) / max(min(len(a), len(b)), MIN_DENOMINATOR)
 
 
+def match_score(a: str, b: str) -> float:
+    """Shared tokens over the smaller text's: one task or claim against another (§5.6)."""
+    ta, tb = set(tokens(a)), set(tokens(b))
+    return len(ta & tb) / min(len(ta), len(tb)) if ta and tb else 0.0
+
+
 def score_matrix(slides: Sequence[str], chunks: Sequence[str]) -> list[list[float]]:
     """scores[i][j]: slide i against chunk j, after dropping tokens common to most chunks."""
     chunk_sets = [set(tokens(c)) for c in chunks]

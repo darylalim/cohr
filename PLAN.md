@@ -367,6 +367,17 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   dropped (`dues.due_said`, D40's rule: English words close together, other languages digits
   only) and listed in `dropped_dues` (`MapFile` v5): Map copies its prompt's example due ("End
   of next week") onto tasks that have none, and Ask's documents showed it beside the real ones.
+- **Owners (8d, D42):** last, on every segment (not behind `map.number_guard`), English notes
+  only (`mapper.guard_owners`, `names.py`). A decision saying a person will do something
+  ("Tom will update the pricing page by the 2nd of November") becomes that person's action item
+  when the person is said in the segment (a `said_names` word, accents folded: "Víctor") and
+  no Map task there states it (≥ 0.6); its due only if `dues.due_said` passes. A task with no
+  owner gets one from its own text ("Laura will clean up …") or, in an English meeting, from
+  the segment sentence it matches best, when that sentence gives it to exactly one person in a
+  cue position ("Maria, can you …", "Grace will …", "Action item for Tom …") and names no
+  one else; never from a neighbouring task. Weekdays, months and pronouns are no one; AMI's
+  "Design will …" isn't a said name ("design" is said too). Changes are logged only (no
+  MapFile field: a new field would move every Ask cache key, 8c).
 - **Optional regional Map models (Phase 6, decision D18):** Cohere's regional Tiny Aya variants
   have the same size (3.35B), chat template and license (CC-BY-NC) as Global. The release
   describes their focus as Earth: Africa + West Asia, Fire: South Asia, Water: Asia-Pacific +
@@ -434,6 +445,16 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   and so is an uncited item's. Placeholder owners and dues ("Not specified", "TBD") are unknown.
   Then an English action item with no owner and no due that starts "Continue", "Ensure", "Keep",
   "Monitor" or "Maintain" moves to Key points with its citations (never deleted).
+- **Map's tasks the notes lose (8d, D42):** before the owners are restored. An action item
+  R7B wrote as `[owner: ?]` takes the owner of the cited segment's Map task it matches best
+  (≥ 0.6; a tie between owners stays unknown); when another item already gives that owner the
+  same task, its citations merge there (pass 2 wrote one task twice). Then a Map task with an owner said in its
+  segment that no action item or decision states (≥ 0.6) is added, citing its segment, in
+  segment order: R7B drops some although every prompt keeps every task (pass 2 lost a task
+  pass 1 had; a one-pass reply lost one). Both place the segment citation with an
+  `[owner: …] task` span, so the owner anchors it in another language (D39); the anchors
+  compare names with accents folded. Owner-less Map tasks are never added (AMI writes decided
+  designs as tasks).
 - **Cut replies (6e-2, D32):** a reply that stopped at `reduce.max_tokens` without
   `<|END_RESPONSE|>` (mlx-lm's finish reason) is counted in `NotesDoc.truncated`, logged and
   shown on the Notes page. It is never retried (temperature 0 would write the same start) or
@@ -1261,6 +1282,12 @@ and long reports miss 17 planted action items. Map wrote 2 only as a decision (i
 "Tom will update the pricing page", xling-es "Victor will write the notes"), 3 without their
 owner (clean-sw, clean-bn, conflict-de), and 5 as tasks the final notes lost or changed; 7 it
 never wrote. Kickoff prompt in §21.
+Done 2026-10-29 (NOTES.md, D42). Map: a person's "X will …" decision becomes their task and an
+owner-less task takes the one person its own text or sentence gives it to
+(`mapper.guard_owners`). Reduce: `[owner: ?]` items take their Map task's owner
+(`reduce.fill_owners`) and owned Map tasks the notes lost are added (`reduce.add_lost_tasks`),
+cited with the owner as anchor. 9 of the 17 found; lang seed 1 action recall 80.0 → 94.3%,
+long-en 55 → 70% (made-up 4 → 6: two owner-less pass-1 tasks pass 2 now keeps); quick identical; AMI replay unchanged.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2126,6 +2153,7 @@ section.
 | D39 | Jump time when the notes and the meeting share no words (§5.6) | Segment start | Offline replay of `refine_time` on the stored lang runs (8a step 0), then lang seed 1 and quick | Phase 8a | **Language-neutral anchors** when no chunk scores ≥ 0.1: the span's numbers (read in each text's language) and its `[owner: …]` (meeting's spelling for the segment, whole word or same-consonant katakana); most anchors wins, ties by word overlap then earliest; segment start when none. Citation accuracy clean-hi 58.3 → 100%, xling-ja 70 → 90%, quick identical. Names elsewhere in claims not used (تم = Tom, مللي = Maria in the replay) |
 | D40 | Dues and owner-less tasks the meeting didn't give (§5.6) | As Map and Reduce wrote them | Step 0 measurement on the stored long-en and AMI runs, offline replay, then quick, lang seed 1, long-en and AMI | Phase 8b | **Due guard + vague-task move on the final notes** (user): a due its cited segments and slides don't say is dropped, never replaced (English: words within a window, `dues.said`; other languages: digits only, in the meeting's language; uncited kept); then an English action item with no owner and no due starting Continue/Ensure/Keep/Monitor/Maintain moves to Key points. long-en made-up items 12 → 7, recall unchanged; AMI 34 unsaid dues dropped and 4 placeholders cleared (1 of 39 left), coverage unchanged; quick and lang identical. Rejected: "no owner and no due" alone (9/9 on long-en but would move 25 of AMI's 47 tasks) and an ask-cue check on the source (no signal). Map's example due left as is (post-v1). Eval: an empty due field reads a due written in the task text, so clearing a field can't turn a wrong date into a match |
 | D41 | Ask on long meetings: citation placement and Map's values in its documents (§5.5–5.7) | First span places a segment citation; Map's dates and dues as written | Step 0 on the cached Ask replies and stored notes (offline replay), then quick, lang seed 1 and long-en | Phase 8c | **Best-matching span places the citation; Map's dates repaired or flagged, unsaid dues dropped on map.json** (user: on Map's items, one value for every reader). Date repair only from exactly one said date of the same month a digit edit away, English notes of an English meeting; dues by D40's rule (`dues.due_said`). long-en Ask 77.8 → 88.9%, citation 93.3 → 100%, made-up items 7 → 4; quick citation 98.4 → 100%; lang identical but one judged claim. map.md's example kept (the check drops every copy). Rejected: Ask snippet-only fix (leaves map.json wrong), an Ask prompt rule (a-f61 left open) |
+| D42 | Missed action items: tasks Map wrote as decisions or without owners, tasks the notes lost (§5.5–5.6) | As Map and Reduce wrote them | Step 0 on the stored quick, lang and long runs (pass-1 replies are stored in notes.json), offline replay incl. AMI, then lang seed 1, quick and long-en | Phase 8d | **Python on map.json and the final notes** (user): Map's "X will …" decision → X's task when X is said in the segment; an owner-less task's owner from its own text or its best sentence's one cued person (English notes; English meeting for the sentence); an `[owner: ?]` notes item takes its Map task's owner (merged into a duplicate); an owned Map task no notes item states is added, cited with `[owner: …]` as anchor. Logged, no MapFile field (user: Ask keys move only where map.json changes). lang seed 1 action recall 80.0 → 94.3%; long-en action recall 55 → 70%, fact recall 67.5 → 71.3%, made-up 4 → 6 (owner-less pass-1 tasks pass 2 kept, not the rules: replayed without them, still 6); quick identical; AMI replay 0 changes. Rejected: a map.md prompt rule (Python reaches every Map-reachable case but conflict-de f6, a German task of an English meeting) and names anywhere in a sentence (`said_names` keeps "Okay", "Monday", "Action") |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

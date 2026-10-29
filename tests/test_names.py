@@ -98,3 +98,57 @@ def test_two_names_equally_close_keep_the_owner() -> None:
 )
 def test_said_in(name: str, text: str, said: bool) -> None:
     assert names.said_in(name, text) is said
+
+
+def test_said_folded_ignores_accents_but_not_katakana_marks() -> None:
+    assert names.said_folded("Victor", "Víctor, ¿puedes escribir las notas?")  # xling-es
+    assert names.said_folded("María", "Maria, can you prepare the survey?")
+    assert names.said_folded("Victor", "ビクターさん") is names.said_in("Victor", "ビクターさん")
+
+
+# --- who a task is for (8d, D42) ------------------------------------------------------------
+
+PEOPLE = {"Tom", "Maria", "Laura", "Grace", "Victor", "Omar", "Crews", "Monday", "Okay", "Action"}
+
+
+@pytest.mark.parametrize(
+    ("text", "found"),
+    [
+        (
+            "Tom will update the pricing page by the 2nd of November.",
+            ("Tom", "update the pricing page by the 2nd of November."),
+        ),  # noqa: E501
+        (
+            "Laura to send contract to legal by Friday.",
+            ("Laura", "send contract to legal by Friday."),
+        ),  # noqa: E501
+        ("Omar Crews will read marketing emails", ("Omar Crews", "read marketing emails")),
+        # must not fire: AMI's product decisions, "we", a weekday, a word said in lowercase too
+        ("The remote control will incorporate corporate image.", None),
+        ("Design will incorporate fashion trends.", None),
+        ("We will drop the legacy export.", None),
+        ("Monday will be the cut-off.", None),
+        ("Tom said the page is done.", None),
+    ],
+)
+def test_subject_task(text: str, found: tuple[str, str] | None) -> None:
+    assert names.subject_task(text, PEOPLE) == found
+
+
+@pytest.mark.parametrize(
+    ("sentence", "owner"),
+    [
+        ("Maria, can you prepare the customer survey by the end of next week?", "Maria"),
+        ("Okay, Maria, could you prepare the survey?", "Maria"),
+        ("Grace will write the release notes by Wednesday.", "Grace"),
+        ("Action item for Tom finish the post mortem by Monday.", "Tom"),  # Monday: no person
+        # must not fire: two people, nobody in a cue position, an interjection, "I"
+        ("Tom, can you ask Maria to prepare the survey?", None),
+        ("Maria and Tom will prepare the survey.", None),
+        ("The dashboard was updated on Monday, so these are fresh numbers.", None),
+        ("Okay, so the decision is to keep the onboarding checklist.", None),
+        ("The way the budget is reported is confusing, and I keep having to explain it.", None),
+    ],
+)
+def test_addressee(sentence: str, owner: str | None) -> None:
+    assert names.addressee(sentence, PEOPLE) == owner

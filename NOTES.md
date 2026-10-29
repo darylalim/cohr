@@ -2207,8 +2207,9 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
    made-up items 12 → 7). Left over: see 8b's "Open".
 2. ~~**Cross-language jump times**~~: done in Phase 8a (D39, language-neutral anchors;
    clean-hi 58.3 → 100%, xling-ja 70 → 90%). Left over: see 8a's "Open".
-3. **Map files a task only as a decision** (step 2b, xling-es "Victor will write the notes
-   for the next version"): a Map prompt rule, judged on seeds 1–3.
+3. ~~**Map files a task only as a decision**~~: done in Phase 8d, widened to every missed
+   action item Map reached (D42, Python on map.json and the final notes, no prompt rule;
+   9 of 17 found). Left over: see 8d's "Open".
 4. **Map miscopies digits in ja meetings** (D35): 354,000 written 3,400,000 / 345,000 even
    from grouped digits. The guard flags it; no repair.
 5. **Japanese ビクター** isn't matched to Victor (no final r); Japanese owners in Japanese
@@ -2513,3 +2514,56 @@ Branch `phase-8c-ask-long`. Post-v1 item 7; D41.
   rule needs the subject to be a name said in the meeting; on the stored runs that fires on
   exactly the 2 real cases.
 - long-en notes.json keeps no pass-1 notes, so which pass lost f31 and f82 needs a replay.
+
+## 2026-10-29 · Phase 8d: missed action items
+Branch `phase-8d-missed-tasks`. Post-v1 item 3, widened; D42.
+- Step 0 (stored runs, no models): the kickoff's 17 misses held. long-en's pass-1 replies
+  *are* stored (`notes.json` `two_pass.groups[].raw`), so no replay was needed to place them:
+  f82 (Grace) was a correct owned item in pass 1 that pass 2 dropped; f22 (Tom) a pass-1
+  decision no Map task matched (D33 can't move it), dropped by pass 2; f31 (Laura) a Map
+  task with its owner inside the text ("Laura will clean up …", owner null), never in pass 1.
+  clean-ar f17 is a one-pass R7B omission of a Map task; conflict-de f12 an `[owner: ?]` line
+  whose Map task names Tom. f40 is ASR ("Omar Crews read" for "Omar proofread"), not notes.
+- The cited sentences of the owner-less tasks: clean-sw/bn "Maria, can you prepare the customer
+  survey …?"; conflict-de "Grace will write the release notes by Wednesday." (German Map task:
+  no word overlap with it, so left open). xling-es says "Víctor", which is why the scan's name
+  check skipped Victor: names are compared with accents folded.
+- `said_names` keeps "Okay", "Thanks", "Action", "Monday", "I": counting names anywhere in a
+  sentence would misfire, so the owner comes only from a cue position ("X, can you", "X will",
+  "action item for X"), and weekdays, months and pronouns are no one.
+- Fixes (user: all four, changes logged with no MapFile field): `mapper.guard_owners` (A1
+  decision → task, A2 owner from the task text or its one-person sentence), `reduce.fill_owners`
+  (B1, merged into a duplicate the owner already has: long-en's pass 2 wrote Laura's board
+  presentation twice) and `reduce.add_lost_tasks` (B2). B1 and B2 place their citations with
+  an `[owner: …]` span: without it clean-ar f17 landed −48 s and conflict-de f12 −223 s
+  (D39 anchors only on owners and numbers); the anchors fold accents too (exact match first:
+  folding drops katakana voicing marks).
+- Replay first (17 stored runs rebuilt to the stored notes item for item): 9 of 17 found,
+  made-up unchanged, AMI 0 changes in decisions or action items. Then the runs matched it.
+
+| | before | after |
+|---|---|---|
+| lang seed 1 action recall / fact recall | 80.0% / 86.8% | **94.3% / 92.3%** |
+| lang made-up items, citation accuracy | 0, 98.7% | 0, 98.8% |
+| long-en action recall / fact recall | 55.0% / 67.5% | **70.0% / 71.3%** |
+| long-en made-up items | 4 | 6 (see Open) |
+| long-en citation accuracy, support, Ask | 98.2%, 82.0%, 88.9% | 98.3%, 81.9%, 88.9% |
+| quick (Ask and judge) | — | identical |
+
+- Runs: lang seed 1 `--no-ask` and quick with `--rerun map` (Map reproduced its output at the
+  same seed), long-en `--rerun map` then `--rerun reduce` for the merge. `baseline-lang.json`
+  and `baseline-long.json` rewritten on purpose; `baseline.json` unchanged.
+- A cut reply (no ACTION_ITEMS section) now gets Map's owned tasks back (B2); the cut-reply
+  test says so.
+
+### Open
+- long-en made-up 4 → 6: "Review and clarify the reporting of cloud costs" and "Address the
+  support queue backlog", owner-less pass-1 tasks (seg 25) in both runs; the old pass 2
+  dropped them, the new one (different pass-1 input from group 0) keeps them. Replayed with
+  D42 off, still 6.
+- conflict-de f6: a German Map task of an English meeting; its sentence can't be found by
+  words. Needs the task's time or a cross-language match.
+- Map never wrote 7 (long-en f14, f15, f19, f71, f86; noisy-en f7; conflict-de f5): Map recall,
+  seg 4 densest (3 tasks and a decision, none written). f40 is ASR.
+- B2 inserts in segment order before the first item citing a later segment; pass 2's own
+  order isn't chronological, so additions can sit mid-list.

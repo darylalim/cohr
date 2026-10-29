@@ -71,6 +71,77 @@ def said_in(name: str, text: str) -> bool:
     )
 
 
+def fold(text: str) -> str:
+    """Accents dropped: the Spanish transcript says "Víctor", Map's English notes "Victor"."""
+    return "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c))
+
+
+# --- who a task is for (English, 8d) --------------------------------------------------------
+
+# Capitalised words `said_names` keeps that are never a task's owner.
+_NOT_PEOPLE = {
+    *["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+    *["mondays", "tuesdays", "wednesdays", "thursdays", "fridays"],
+    *["january", "february", "march", "april", "may", "june", "july", "august"],
+    *["september", "october", "november", "december"],
+    *["i", "i'm", "i'll", "i'd", "i've"],
+    *["we", "you", "he", "she", "they", "it", "there", "this", "that"],
+    *["nobody", "everyone", "everybody", "someone", "somebody"],
+}
+_PERSON = r"[A-Z][\w’'-]*(?: [A-Z][\w’'-]*)?"
+# "Tom will update …", "Laura to send …": Map's way of writing a task as a decision or a task
+# with its owner inside (8d: long-en f22, f31).
+_SUBJECT = re.compile(
+    rf"^(?P<name>{_PERSON})\s+(?:will|shall|should|is going to|to)\s+(?P<rest>\S.*)$", re.S
+)
+# Where a meeting says who does a task: "Maria, can you …", "Grace will …", "Action item for
+# Tom: …" (8d).
+_CUES = (
+    re.compile(
+        rf"^(?:(?i:okay|ok|so|right|and|then),?\s+)*(?P<name>{_PERSON}),\s+"
+        r"(?i:can|could|would|will|please)\b"
+    ),
+    re.compile(rf"^(?P<name>{_PERSON})\s+(?:will|is going to|should|has to|needs to)\b"),
+    re.compile(rf"\b(?i:action item for)\s+(?P<name>{_PERSON})"),
+)
+
+
+def person(name: str, said: set[str]) -> bool:
+    """`name` is someone in the meeting: each word a said name (`said_names`, accents folded),
+    not a weekday, month or pronoun ("Design will …" on AMI is no one: "design" is said too)."""
+    words = name.split()
+    return bool(words) and all(fold(w) in said and w.casefold() not in _NOT_PEOPLE for w in words)
+
+
+def subject_task(text: str, said: set[str]) -> tuple[str, str] | None:
+    """`text` says a person will do something: (the person, the rest), "Tom will update the
+    pricing page" → ("Tom", "update the pricing page")."""
+    m = _SUBJECT.match(text.strip())
+    if m and person(m["name"], said):
+        return m["name"], m["rest"]
+    return None
+
+
+def addressee(sentence: str, said: set[str]) -> str | None:
+    """The one person a sentence gives a task to, in a cue position ("Maria, can you prepare
+    …?"); None when it names nobody there, or names anyone else ("Tom, can you ask Maria …"):
+    the owner would be a guess."""
+    sentence = sentence.strip()
+    cued = {m["name"] for c in _CUES if (m := c.search(sentence)) and person(m["name"], said)}
+    if len(cued) != 1:
+        return None
+    (name,) = cued
+    rest = _WORD.findall(sentence)[1:]  # the first word is capitalised anyway ("Okay", "Action")
+    others = {w for w in rest if w[0].isupper() and person(w, said) and w not in name.split()}
+    return None if others else name
+
+
+def said_folded(name: str, text: str) -> bool:
+    """`said_in`, else with accents dropped on both sides ("Victor" in "Víctor, ¿puedes …").
+    Folding comes second: it would also drop katakana voicing marks (ビ → ヒ)."""
+    return said_in(name, text) or said_in(fold(name), fold(text))
+
+
 def restore(owner: str, texts: Iterable[str]) -> str:
     """The name said in `texts` that a non-Latin, one-word `owner` transliterates to: same
     consonants, closest spelling (Arabic "ماريا" → Maria, not Omar). The owner as written when
