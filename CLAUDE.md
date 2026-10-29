@@ -97,6 +97,12 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
 - Check a value against the text its claim cites, with its words close together. The 6 copied
   dues were said elsewhere in long-en (a whole-meeting check kept them), and a whole-segment
   word check passed AMI's "End of meeting" on "end" and "meeting" far apart (8b, `dues.said`).
+- Any field added to a Map schema, even one with a default, changes `sources_hash` and with it
+  every Ask cache key: the next Ask run re-asks every question (76 on quick in 8c). Plan for it,
+  and to replay cached answers offline, hash without the new field.
+- The number guard reads a segment's numbers as one set, so a date passes if its day number is
+  said anywhere in the segment: "November 1" passed because seg 26 also says a 1, while the
+  meeting said "11 November" (8c). Check a date's month and day together (`dues.check_dates`).
 
 ## Where things are (PLAN.md)
 Architecture §3 · Memory §4 · Stages §5 · Layout & tooling §6 · UI, layout, theme §7 ·
