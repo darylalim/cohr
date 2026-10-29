@@ -471,3 +471,68 @@ def test_mark_slide_conflicts_walks_the_notes() -> None:
     assert out.terms == ["budget 80,000"]
     assert out.slide_conflicts == [_BUDGET]
     assert mapper.mark_slide_conflicts(notes, []) == notes
+
+
+# --- dates and dues (8c, D41) ---------------------------------------------------------------
+
+
+def _dated(**fields: object) -> SegmentNotes:
+    base: dict[str, object] = {
+        "seg_id": 0,
+        "summary": "",
+        "key_points": [],
+        "decisions": [],
+        "action_items": [],
+        "open_questions": [],
+        "terms": [],
+    }
+    return SegmentNotes.model_validate(base | fields)
+
+
+GRACE = "Action item for Grace: summarize the competitor research by 11 November. Makes sense."
+
+
+def test_guard_dates_repairs_map_dates_everywhere() -> None:
+    # long-en a-f82: the number guard kept "November 1" because the segment says 1 elsewhere.
+    notes = _dated(
+        decisions=["Summarize competitor research by November 1."],
+        action_items=[
+            MapActionItem(owner="Grace", task="Summarize research by November 1.", due="November 1")
+        ],
+    )
+    out = mapper.guard_dates(notes, GRACE + " A month ago, 1 team.", "en", "en")
+    assert out.decisions == ["Summarize competitor research by November 11."]
+    assert out.action_items == [
+        MapActionItem(owner="Grace", task="Summarize research by November 11.", due="November 11")
+    ]
+    assert out.number_repairs == [NumberRepair(original="November 1", repaired="November 11")] * 3
+    assert out.dropped_dues == [] and out.unverified_numbers == []
+
+
+def test_guard_dates_drops_a_due_the_segment_doesnt_say() -> None:
+    # Map's example due on a task with none (8b, 8c a-f61).
+    notes = _dated(
+        action_items=[
+            MapActionItem(owner=None, task="Update revenue dashboard", due="End of next week"),
+            MapActionItem(owner="Grace", task="Summarize research", due="the 11th of November"),
+        ]
+    )
+    out = mapper.guard_dates(notes, GRACE, "en", "en")
+    assert [a.due for a in out.action_items] == [None, "the 11th of November"]
+    assert out.dropped_dues == ["End of next week"]
+
+
+def test_guard_dates_must_not_fire_across_languages() -> None:
+    # Hindi notes of an English meeting: the due's digits are said; dates aren't read in Hindi.
+    hindi = MapActionItem(owner="ग्रेस", task="1 नवंबर तक शोध", due="11 नवंबर")
+    out = mapper.guard_dates(_dated(action_items=[hindi]), GRACE, "hi", "en")
+    assert out.action_items == [hindi] and out.number_repairs == [] and out.dropped_dues == []
+    # English notes of a Spanish meeting: dates are left to the number guard.
+    english = MapActionItem(owner="Grace", task="Research by November 1", due=None)
+    out = mapper.guard_dates(_dated(action_items=[english]), "para el 11 de noviembre", "en", "es")
+    assert out.action_items == [english] and out.number_repairs == []
+
+
+def test_guard_dates_leaves_raw_segments_alone() -> None:
+    notes = _dated(summary="not json by November 1", raw=True)
+    assert mapper.guard_dates(notes, GRACE, "en", "en") == notes

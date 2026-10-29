@@ -1,5 +1,5 @@
 {
-  "format_version": 4,
+  "format_version": 5,
   "schema": {
     "$defs": {
       "MapActionItem": {
@@ -74,6 +74,14 @@
               "type": "string"
             },
             "title": "Decisions",
+            "type": "array"
+          },
+          "dropped_dues": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Dropped Dues",
             "type": "array"
           },
           "key_points": {

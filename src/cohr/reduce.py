@@ -360,27 +360,44 @@ def refine_time(
     return round(best_it.t0 + offset * (best_it.t1 - best_it.t0), 2)
 
 
-Refine = Callable[[int, str], float]  # (seg_id, span) → jump time
+Refine = Callable[[int, Sequence[str]], float]  # (seg_id, spans citing it) → jump time
+
+
+def best_span(spans: Sequence[str], items: Sequence[TranscriptItem]) -> str:
+    """The span that matches one of the segment's chunks best (ties: the first). R7B often
+    cites a segment through a name alone and then the task (`<co>Tom</co>` needs to
+    `<co>finish the post mortem…</co>`), and the name's first chunk can be minutes off (8c);
+    `overlap`'s minimum denominator keeps a one-word span's score low."""
+    if len(spans) == 1:
+        return spans[0]
+    chunk_tokens = [set(tokens(it.text)) for it in items]
+    scores = [max((overlap(set(tokens(s)), c) for c in chunk_tokens), default=0.0) for s in spans]
+    return spans[scores.index(max(scores))]
+
+
+def cite(found: Sequence[tuple[Target, str]], refine: Refine) -> list[Citation]:
+    """Citations in first-occurrence order; a segment's `t` from all the spans citing it."""
+    spans: dict[Target, list[str]] = {}
+    for target, span in found:
+        spans.setdefault(target, []).append(span)
+    return [
+        Citation(kind=kind, id=target_id, t=refine(target_id, ss) if kind == "seg" else None)
+        for (kind, target_id), ss in spans.items()
+    ]
 
 
 def resolve(raw: RawClaim, targets: Sequence[Target], refine: Refine) -> tuple[Claim, int]:
     """The claim with its valid citations (first occurrence of each target), and how many
     out-of-range indices were dropped."""
-    citations: list[Citation] = []
-    seen: set[Target] = set()
+    found: list[tuple[Target, str]] = []
     dropped = 0
     for span, indices in raw.spans:
         for i in indices:
             if not 0 <= i < len(targets):
                 dropped += 1
                 continue
-            kind, target_id = targets[i]
-            if (kind, target_id) in seen:
-                continue
-            seen.add((kind, target_id))
-            t = refine(target_id, span) if kind == "seg" else None
-            citations.append(Citation(kind=kind, id=target_id, t=t))
-    return Claim(text=raw.text, citations=citations), dropped
+            found.append((targets[i], span))
+    return Claim(text=raw.text, citations=cite(found, refine)), dropped
 
 
 def _known(value: str | None) -> str | None:
@@ -445,20 +462,13 @@ def guard_dues(
     next week"."""
     by_seg = {s.seg_id: s for s in segments}
     by_slide = {s.slide_id: s for s in slides}
-    english = doc.language == source_language == "en"
     dropped: list[str] = []
     items = []
     for item in doc.sections.action_items:
         text = cited_text(item, by_seg, by_slide)
-        if item.due and text:
-            if english:
-                kept = dues.said(item.due, text)
-            else:
-                want = numbers.notes_numbers(fold_digits(item.due), doc.language)
-                kept = want <= numbers.source_numbers_in(fold_digits(text), source_language)
-            if not kept:
-                dropped.append(f"{item.text}: {item.due}")
-                item = item.model_copy(update={"due": None})
+        if item.due and text and not dues.due_said(item.due, text, doc.language, source_language):
+            dropped.append(f"{item.text}: {item.due}")
+            item = item.model_copy(update={"due": None})
         items.append(item)
     sections = doc.sections.model_copy(update={"action_items": items})
     return doc.model_copy(update={"sections": sections}), dropped
@@ -588,9 +598,10 @@ def segment_refiner(
     by_seg = {s.seg_id: s for s in segments}
     by_chunk = {it.chunk_id: it for it in items}
 
-    def refine(seg_id: int, span: str) -> float:
+    def refine(seg_id: int, spans: Sequence[str]) -> float:
         seg = by_seg[seg_id]
         chunks = [by_chunk[c] for c in seg.chunk_ids if c in by_chunk]
+        span = best_span(spans, chunks)
         return refine_time(span, chunks, seg.t0, min_score, notes_language, source_language)
 
     return refine
@@ -712,8 +723,7 @@ def pass2_resolver(
     against the resolved segments with the pass-2 span (§5.6); `resolved` counts the paths."""
 
     def resolver(raw: RawClaim) -> tuple[Claim, int]:
-        citations: list[Citation] = []
-        seen: set[Target] = set()
+        found: list[tuple[Target, str]] = []
         dropped = 0
         for span, indices in raw.spans:
             text = _MARKER.sub("", span)
@@ -723,18 +733,13 @@ def pass2_resolver(
                     continue
                 src = sources[i]
                 if isinstance(src, PassOne):
-                    found, how, unknown = span_targets(span, src, known)
+                    targets, how, unknown = span_targets(span, src, known)
                     resolved[how] += 1
                     dropped += unknown
                 else:
-                    found = [src]
-                for kind, target_id in found:
-                    if (kind, target_id) in seen:
-                        continue
-                    seen.add((kind, target_id))
-                    t = refine(target_id, text) if kind == "seg" else None
-                    citations.append(Citation(kind=kind, id=target_id, t=t))
-        return Claim(text=raw.text, citations=citations), dropped
+                    targets = [src]
+                found += [(t, text) for t in targets]
+        return Claim(text=raw.text, citations=cite(found, refine)), dropped
 
     return resolver
 

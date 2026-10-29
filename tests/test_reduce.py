@@ -2,6 +2,7 @@
 §4 two-pass reduce."""
 
 import logging
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -200,9 +201,56 @@ def test_list_items_with_continuation_lines() -> None:
 
 def test_resolve_drops_bad_indices_and_dedupes() -> None:
     raw = reduce.RawClaim("x", [("budget", [0, 9]), ("again", [0, 2]), ("more", [4])])
-    claim, dropped = reduce.resolve(raw, TARGETS, lambda _sid, _span: 1.0)
+    claim, dropped = reduce.resolve(raw, TARGETS, lambda _sid, _spans: 1.0)
     assert dropped == 2  # 9 and 4 are past the 4 documents
     assert [(c.kind, c.id, c.t) for c in claim.citations] == [("seg", 0, 1.0), ("slide", 0, None)]
+
+
+# 8c (Ask a-f26): R7B cited the segment through the owner's name alone first; the name's first
+# chunk is minutes before the task's.
+TOM_CHUNKS = [
+    TranscriptItem(chunk_id=0, t0=0.0, t1=20.0, text="Tom opened the sync. Revenue is flat."),
+    TranscriptItem(
+        chunk_id=1,
+        t0=200.0,
+        t1=220.0,
+        text="Tom will finish the incident post mortem by the 17th of November.",
+    ),
+]
+TOM_SEGMENT = Segment(
+    seg_id=0,
+    t0=0.0,
+    t1=220.0,
+    chunk_ids=[0, 1],
+    transcript_text="\n".join(it.text for it in TOM_CHUNKS),
+    slide_ids=[],
+)
+
+
+def _tom_refine() -> reduce.Refine:
+    return reduce.segment_refiner([TOM_SEGMENT], TOM_CHUNKS, 0.1, "en", "en")
+
+
+def test_a_segment_cited_by_a_name_and_a_task_is_placed_at_the_task() -> None:
+    [raw] = reduce.claims(
+        "<co>Tom</co: 0:[0]> needs to <co>finish the incident post mortem by the 17th of "
+        "November.</co: 0:[0]>",
+        sentences=True,
+    )
+    claim, _ = reduce.resolve(raw, [("seg", 0)], _tom_refine())
+    assert claim.citations == [Citation(kind="seg", id=0, t=200.0)]
+    # Pass 2 places the same way.
+    resolver = reduce.pass2_resolver([("seg", 0)], {("seg", 0)}, _tom_refine(), Counter())
+    assert resolver(raw)[0].citations == [Citation(kind="seg", id=0, t=200.0)]
+
+
+def test_one_span_per_segment_is_placed_by_that_span() -> None:
+    # Must not fire: each segment cited once keeps its own span's place, even a name's.
+    [raw] = reduce.claims("<co>Tom</co: 0:[0]> opened the sync.", sentences=True)
+    assert reduce.resolve(raw, [("seg", 0)], _tom_refine())[0].citations[0].t == 0.0
+    assert reduce.best_span(["Tom"], TOM_CHUNKS) == "Tom"
+    # Equal scores keep the first span.
+    assert reduce.best_span(["Revenue", "sync"], TOM_CHUNKS) == "Revenue"
 
 
 def test_markers_wrapped_in_citations_still_split() -> None:

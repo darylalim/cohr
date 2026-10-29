@@ -212,12 +212,16 @@ class SegmentNotes(_Model):
     # Speech/slide conflicts (§5.5, 6b-2): a slide row whose value was never said while another
     # was said for its label. The Map strings keep the spoken value and add the slide's.
     slide_conflicts: list[SlideConflict] = []
+    # Dues the segment doesn't say (8c, D41): dropped, as Reduce does on the final notes (D40).
+    # Map copies its prompt's example due onto tasks that have none ("End of next week").
+    dropped_dues: list[str] = []
 
 
 class MapFile(RunFile):
-    # v3: number guard (number_repairs, unverified_numbers); v4: slide_conflicts. Older runs
-    # re-run Map.
-    FORMAT_VERSION: ClassVar[int] = 4
+    # v3: number guard (number_repairs, unverified_numbers); v4: slide_conflicts; v5: dates
+    # checked against the segment's (in number_repairs / unverified_numbers) and dropped_dues
+    # (8c). Older runs re-run Map.
+    FORMAT_VERSION: ClassVar[int] = 5
     FILENAME: ClassVar[str] = "map.json"
 
     target_language: str
