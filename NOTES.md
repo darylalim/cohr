@@ -2567,3 +2567,5 @@ Branch `phase-8d-missed-tasks`. Post-v1 item 3, widened; D42.
   seg 4 densest (3 tasks and a decision, none written). f40 is ASR.
 - B2 inserts in segment order before the first item citing a later segment; pass 2's own
   order isn't chronological, so additions can sit mid-list.
+
+- 1.5.0 bump: done 2026-10-29 on request (release-1.5.0).
