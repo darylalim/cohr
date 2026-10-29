@@ -2496,3 +2496,20 @@ Branch `phase-8c-ask-long`. Post-v1 item 7; D41.
   citation accuracy unchanged.
 
 - 1.4.0 bump: done 2026-10-28 on request (release-1.4.0).
+
+## 2026-10-29 · Phase 8d kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 8d" and a §9 line: missed action items (post-v1 item 3,
+  widened). Picked over item 10 (ja chunks without 。, moves placement on every language's
+  path for one citation) and 8c's a-f61 Ask rule (moves every cached answer for one question):
+  action recall is the core metric and item 3 was passed over twice.
+- Checked the post-v1 candidate on the stored runs before writing (CLAUDE.md lesson): Map
+  writing a task only as a decision is 2 of the 17 action items missed in the latest quick,
+  lang and long reports (long-en f22 "Tom will update the pricing page", xling-es f8 Victor).
+  The rest: 3 Map tasks with no owner (clean-sw, clean-bn, conflict-de), 5 Map tasks the
+  final notes lost or changed (long-en f31, f40, f82; clean-ar f17; conflict-de f12), 7 Map
+  never wrote (5 on long-en). So the phase covers all three Map-reachable groups, Python first.
+- Scan of every stored map.json for "<subject> will/to/should …" decisions with no Map task in
+  the segment: 22, of which 17 AMI and 3 xling-ja are product decisions with no person. A
+  rule needs the subject to be a name said in the meeting; on the stored runs that fires on
+  exactly the 2 real cases.
+- long-en notes.json keeps no pass-1 notes, so which pass lost f31 and f82 needs a replay.

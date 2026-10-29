@@ -1256,6 +1256,11 @@ match (`reduce.best_span`); Map's dates are repaired or flagged and its unsaid d
 map.json (`mapper.guard_dates`, MapFile v5). long-en Ask 77.8 → 88.9% (citation 93.3 → 100%),
 made-up items 7 → 4, recall unchanged; quick citation accuracy 98.4 → 100%; lang identical
 but one judged claim.
+**Phase 8d (after v1): missed action items** (post-v1 item 3, widened): the latest quick, lang
+and long reports miss 17 planted action items. Map wrote 2 only as a decision (item 3: long-en
+"Tom will update the pricing page", xling-es "Victor will write the notes"), 3 without their
+owner (clean-sw, clean-bn, conflict-de), and 5 as tasks the final notes lost or changed; 7 it
+never wrote. Kickoff prompt in §21.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -3049,4 +3054,80 @@ the post-v1 list stays open (items 3, 4, 5, 8 and 10) unless step 0 shows it sha
 Don't bump the version: I'll ask separately. When done: tick the checklist, add new decisions
 to §20 as D-numbers, update §5.6–5.7 (citation placement, Ask documents), add a NOTES.md entry
 and update the post-v1 list, make sure the gate passes, and open a PR (ask before pushing).
+```
+
+### Kickoff prompt for Phase 8d (missed action items)
+```text
+Continue cohr: Phase 8d (missed action items, post-v1 item 3, widened). Read CLAUDE.md, then
+PLAN.md §5.5–5.6 (Map, its guards, Reduce's task handling), §18 (action recall, owner and due
+matching), §19, D33, D34, D40 and D41 in §20, and NOTES.md: the 8c entry ("Open"), the
+post-v1 list and the 8d kickoff entry. Work on branch phase-8d-missed-tasks from main (v1.4.0
+is released: #61, #63).
+Correction to the post-v1 candidate ("a Map prompt rule, judged on seeds 1–3"): Map writing a
+task only as a decision is 2 of the 17 action items missed in reports
+20261028-172217-quick.json, 20261028-165932-lang.json and 20261028-172216-long.json. From
+the kickoff check (scripts/trace_facts.py for English; lang map.json read by hand, since the
+trace matches English only):
+- Decision only, no Map task (2): long-en f22 seg 6 "Tom will update the pricing page by the
+  2nd of November." (the notes have it in no section); xling-es f8 seg 0 "Victor will write
+  the notes for the next version."
+- Map task without its owner (3): clean-sw and clean-bn f11 "Prepare customer survey by end
+  of next week" (owner null; Maria), conflict-de f6 "Verfasste Release-Notizen bis Mittwoch"
+  (owner null, past tense; Grace).
+- Map task, final notes lost or changed it (5): long-en f31 (Laura, shared drive) and f82
+  (Grace, competitor research; 8c's repaired date) are in map.json and in no notes section;
+  f40 is in the notes as "Omar Crews | Read marketing emails"; clean-ar f17 (Tom's video,
+  seg 1) is in map.json, not the notes; conflict-de f12 is in the notes with its owner lost.
+  long-en's pass-1 notes aren't stored, so where pass 1 or pass 2 lost them needs a replay.
+- Map never wrote it (7): long-en f14, f15 (ASR "Oma"), f19, f71, f86; noisy-en f7;
+  conflict-de f5. Only Map recall reaches these.
+The kickoff's scan of every stored map.json for decisions shaped "<subject> will/to/should
+…" with no Map task in the segment (coverage < 0.6) found 22: the 2 above, xling-ja 3
+("Onboarding checklist will be retained") and 17 on AMI, all product decisions with no person
+("The remote control will incorporate corporate image", "Voice recognition will not be
+included"). So a rule keyed on the verb alone would move AMI's real decisions (8b lesson);
+the subject has to be a person the meeting names. Read the run files yourself before building
+on this (CLAUDE.md).
+0. Proposal before code (ask me). First, without models: re-check the four groups on the
+   stored runs and the reports' fact lists; for the 5 the notes lost, find the stage that lost
+   each (Reduce's raw reply, its parse, D33's move, D40's due guard and vague-task move,
+   restore_owners, pass 2; replay pass 1 offline where needed) and for the 3 owner-less Map
+   tasks, what the cited sentence says. Then propose fixes in Python first (CLAUDE.md: prompts
+   set shape, Python fixes values). Candidates, not choices:
+   - Decision → Map task on map.json (where 8c put Map's fixes, so Ask, Reduce and search
+     read one value): a Map decision whose subject is a name said in the meeting
+     (`names.said_names`, whole word; English notes first, say what other notes languages
+     need) followed by a task cue, with no Map action item in the segment at ≥ 0.6, becomes
+     an action item with that owner; its due only if `dues.due_said` passes. Must-not-fire:
+     every AMI hit above, "we will …", a decision a Map task already states (D33 handles
+     those in Reduce). Say whether it changes MapFile (a new field moves every Ask cache key,
+     8c lesson) and whether it runs where `--rerun reduce` picks it up without Map.
+   - Owner-less Map tasks: fill the owner only from the task's own cited sentence (one name
+     said in it, directly addressed or the subject), never from a neighbour task (map.md's
+     rule). Show the must-not-fire case: a sentence naming two people.
+   - Tasks the notes lose: depends on step 0's stage. A pass-1/pass-2 drop is a Reduce
+     prompt or budget question (REDUCE_HASH moves; check `reduce.max_tokens` first,
+     CLAUDE.md); a Python drop is fixed where it happens.
+   - A map.md prompt rule ("a task someone will do goes in action_items even when it was
+     also agreed") only if the Python rule can't reach a case; seeds 1–3, every set, examples
+     not in evals/gen/script.py. Say what it would cost.
+   - The 7 Map never wrote stay open unless step 0 finds a shared cause (e.g. dense segments:
+     long-en seg 4 holds f14, f15 and f19).
+1. The fixes, with tests: Victor's and Tom's decisions become owned action items; AMI's
+   product decisions, "we will …" and an already-listed task don't move; an owner filled from
+   its own sentence, not from one naming two people.
+2. Measure: replay first. Map-side Python on copies of the stored runs (copy, don't delete),
+   then `build_notes` + `restore_owners` on notes.json `raw`, scored with `evals.score_item`.
+   Then quick and lang -c seed=1 --no-ask (`--rerun reduce` if the fix runs after Map) and
+   long-en (~10 min with `--rerun reduce`, Ask included: ask first). Report action recall,
+   owner and due accuracy, made-up items, decisions recall and Ask accuracy before and after;
+   AMI coverage and decision counts from a replay of the stored AMI runs (an AMI run: ask).
+3. Rewrite the baselines the fix moves on purpose, with the reason in the commit.
+Rules from CLAUDE.md apply. Ask me before every full or long run, AMI runs, the opt-in model
+tests and new dependencies (none should be needed). quick and lang runs are fine. The rest of
+the post-v1 list stays open (items 4, 5, 8 and 10, and 8c's a-f61 Ask rule) unless step 0
+shows it shares a cause. Don't bump the version: I'll ask separately. When done: tick the
+checklist, add new decisions to §20 as D-numbers, update §5.5–5.6 (Map guards, task
+handling), add a NOTES.md entry and update the post-v1 list, make sure the gate passes, and
+open a PR (ask before pushing).
 ```
