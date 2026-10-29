@@ -128,6 +128,14 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
   it then added the owner). Copy the words from the cited sentence in Python (`whole_task`).
 - zsh doesn't split an unquoted `$VAR`: `for i in $ITEMS` runs once on the whole string. In
   chained eval commands use `${=ITEMS}` or list the names (8e lost a chain to it).
+- Before choosing a fix for a missed fact, find which stage lost it: in no map.json, in
+  map.json under another list, or in map.json but not in notes.json. 8f's kickoff put 7 of 10
+  English misses on Map and left lang's unplaced; with lang's map.json read by hand, 6 of 18
+  were Reduce's (filed as a key point, a segment's decisions skipped), and one Python step
+  after Reduce caught both kinds (D44).
+- A test fixture's TranscriptItems need distinct `chunk_id`s, listed in their Segment's
+  `chunk_ids`: `segment_refiner` keys items by chunk id, so a repeated id silently drops all
+  but the last item and the citation time comes out wrong, with no error (8f).
 
 ## Where things are (PLAN.md)
 Architecture §3 · Memory §4 · Stages §5 · Layout & tooling §6 · UI, layout, theme §7 ·
