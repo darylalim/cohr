@@ -103,6 +103,15 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
 - The number guard reads a segment's numbers as one set, so a date passes if its day number is
   said anywhere in the segment: "November 1" passed because seg 26 also says a 1, while the
   meeting said "11 November" (8c). Check a date's month and day together (`dues.check_dates`).
+- Long meetings keep each pass-1 reply in notes.json (`two_pass.groups[].raw`): read them to
+  see which pass lost an item before planning a replay. 8d's f82 was a correct owned task in
+  pass 1 that pass 2 dropped, although reduce_pass2.md says to keep every action item.
+- `names.said_names` returns any capitalised word never said in lowercase: "Okay", "Thanks",
+  "Action", "Monday", "I". Take an owner only from where a sentence assigns the task ("X, can
+  you", "X will", "action item for X"), never from the names a sentence contains (8d, D42).
+- A Map change moves pass 2's input, and with it which pass-1 items pass 2 keeps: long-en's
+  made-up items went 4 → 6 from two owner-less pass-1 tasks the new pass 2 kept (8d). Before
+  blaming a new rule, replay the new run with the rule switched off.
 
 ## Where things are (PLAN.md)
 Architecture §3 · Memory §4 · Stages §5 · Layout & tooling §6 · UI, layout, theme §7 ·
