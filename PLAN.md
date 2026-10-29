@@ -1318,6 +1318,12 @@ per segment (`mapper.uncovered_cues`, `prompts/map_tasks.md`); Python sets the o
 checks the values. Map's misses change with the seed; quick action recall 100% at seeds 0, 2
 and 3 (was 95/80/75%); lang seed 1 94.3 → 97.1%; long-en 70 → 90%, Ask 88.9 → 94.4%, made-up
 6 → 7 (f15's ASR name). conflict-de f6 open: the model turns Grace's sentence down in German.
+**Phase 8f (after v1): missed decisions**: decisions are now the weakest kind in every set
+(quick 75% at seed 0, 81/81/88% at seeds 1–3; long-en 70%; lang 21/28 judge-covered), and no
+phase has looked at them. Of quick seed 0's 4 misses and long-en's 6, 7 are in no map.json,
+1 is a Map key point and 1 a Map decision that the notes lost; long-en f55 is ASR's "PostGIS"
+for Postgres. noisy-en f3 and slide-conflict-en f2 are missed at every seed 0–3. Kickoff
+prompt in §21.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -3270,4 +3276,86 @@ the post-v1 list stays open (items 4, 5, 8 and 10, 8c's a-f61 Ask rule, 8d's B2 
 step 0 shows it shares a cause. Don't bump the version: I'll ask separately. When done: tick
 the checklist, add new decisions to §20 as D-numbers, update §5.5–5.6, add a NOTES.md entry
 and update the post-v1 list, make sure the gate passes, and open a PR (ask before pushing).
+```
+
+### Kickoff prompt for Phase 8f (missed decisions)
+```text
+Continue cohr: Phase 8f (missed decisions). Read CLAUDE.md, then PLAN.md §5.5–5.6 (Map, its
+guards, Reduce's decision and task handling), §18 (decision recall, judge-only facts in lang,
+made-up items), §19, D33, D42 and D43 in §20, and NOTES.md: the 8e entry ("Open"), the
+post-v1 list and the 8f kickoff entry. Work on branch phase-8f-decisions from main (v1.6.0
+is released: #69, #71).
+Decisions are the weakest kind in every set, and no phase has worked on them: quick 75% at
+seed 0 (81.25 / 81.25 / 87.5% at seeds 1 / 2 / 3), long-en 70%, lang 21 of 28 judge-covered.
+From the kickoff check on reports 20261029-112133-quick.json, 20261029-114720-long.json and
+20261029-112647-lang.json (scripts/trace_facts.py; the 8e seed 1–3 quick reports):
+- evals/gen plants every decision in one of three forms: "We decided to …", "We agreed to …",
+  "OK, so the decision is to …". A scan of those sentences against each segment's Map
+  decisions (2+ shared content words) flags exactly the English misses:
+  - In no map.json (7): quick noisy-en f3 "We agreed to keep the onboarding checklist."
+    (Map wrote 3 decisions there, one of them an open question: "Move the company blog name
+    discussion to next time"); slide-conflict-en f2 "We decided to move the weekly sync to
+    Thursdays." and f14 "… freeze new features until the beta ships." (Map wrote 2 others;
+    slides don't touch either); long-en f18 (seg 4, Map decisions []), f27 (seg 6, Map's one
+    "decision" is Maria's task), f30 (seg 8, []), f33 (seg 9, Map wrote f35 and f37).
+  - In Map, lost later (2): clean-en f2 "We agreed to use the new logo on the website." is
+    in Map's key points (×2), not its decisions, and not in the notes; long-en f49 "consolidate
+    the design tools" is a Map decision (seg 13) the notes don't have. Read pass 1's raw
+    (`two_pass.groups[].raw`) to see which pass dropped it.
+  - long-en f55 "standardize on Postgres": ASR wrote "PostGIS"; the notes' "Standardise on
+    PostGIS for analytics." counts as a made-up item. ASR, like 8e's f15/f40: out of scope.
+- Unlike 8e, two misses don't move with the seed: noisy-en f3 and slide-conflict-en f2 are
+  missed at seeds 0, 1, 2 and 3. Others do (clean-en f15 at seed 1 only, noisy-en f15 at
+  seed 2 only). So a map.md change isn't ruled out the way it was in 8e; check it per seed.
+- Map's decisions list carries other kinds too: clean-en seg 0 has 4 of its 5 "decisions"
+  as tasks ("Laura to send contract to legal by Friday"; D33 moves them), noisy-en an open
+  question. Whether those crowd out real decisions isn't known.
+- lang: conflict-de misses the same two as slide-conflict-en (f2, f14), clean-ar 3 of 4,
+  clean-sw and clean-bn "move the weekly sync to Thursdays". Map writes in the notes language,
+  so the English word scan can't say where they were lost: read those map.json by hand.
+  lang decisions are judge-only (`judge_only`, recall_decision is None), so run lang with the
+  judge on to measure them.
+- AMI has 6 sentences in these forms across 5 meetings. 4 are already in Map's key points
+  or tasks; "I think we all agreed on that." refers back; "we agreed on the requirements and
+  the target market" sums up an earlier meeting. Real meetings decide in other words, so the
+  8b risk applies: a rule keyed to the three forms fits the generator. Must-not-fire cases
+  have to be tests from real speech: "I think we all agreed on that.", "Have we decided to
+  …?", "We haven't decided whether to …" (an open question), "We agreed last week to …",
+  "Did we agree on the date?".
+Read the run files yourself before building on this (CLAUDE.md).
+0. Proposal before code (ask me). First, without models: re-run the scan on every stored run
+   (AMI included), read the lang map.json files for the misses above, find where f49 and
+   clean-en f2 were lost, and check quick at -c seed=2 and seed=3 with --no-ask --no-judge
+   (fine to run; copy the stored runs first, 8e lesson) if the 8e reports aren't enough.
+   Then propose. Candidates, not choices:
+   - D43's path for decisions: the uncovered cue sentences of a segment go to one small call
+     (prompt in src/cohr/prompts/, notes language, no example lines that overlap
+     evals/gen/script.py), or into the same call as map_tasks.md. Say the cost per segment,
+     the config hash, and what `--rerun` reaches.
+   - A Python net on map.json: the verb phrase after the cue becomes a decision, English notes
+     only (say what other notes languages get).
+   - A map.md change or a prefill, now that two misses hold at every seed: judge on the mean
+     of seeds 1–3, every set (CLAUDE.md), and say what it does to which tasks Map keeps.
+   - Reduce side, for f49 and clean-en f2: a Map decision the notes lost is added (as
+     `reduce.add_lost_tasks` does for tasks), and a Map key point a cue sentence makes a
+     decision moves to Decisions.
+   For each: whether it changes MapFile (a new field moves every Ask cache key, 8c lesson),
+   what it does to made-up items and to open-question recall (a decision rule mustn't take
+   "We still don't know whether we should …"), and its must-not-fire cases.
+1. The fixes, with tests: the misses above become decisions with their citation. The
+   must-not-fire sentences and an already-listed decision add nothing.
+2. Measure: replay first. Apply a Python fix to copies of the stored runs (copy, don't
+   delete) and rebuild with `build_notes` + `restore_owners` on notes.json `raw` where Reduce
+   isn't needed. Then quick at seeds 0–3 --no-ask --no-judge, quick with Ask and the judge,
+   lang -c seed=1 --no-ask with the judge on (`--rerun` from the stage the fix lives in), and
+   long-en (Ask included; ask first). Report decision recall (lang: judge-covered), made-up
+   items, open-question and action recall, citation accuracy and Ask accuracy before and
+   after. For AMI, give the scan's count and replay the stored runs (an AMI run: ask).
+3. Rewrite the baselines the fix moves on purpose, with the reason in the commit.
+Rules from CLAUDE.md apply. Ask me before every full or long run, AMI runs, the opt-in model
+tests and new dependencies (none should be needed). quick and lang runs are fine. The rest of
+the post-v1 list stays open (items 4, 5, 8 and 10, 8e's "Open") unless step 0 shows it shares
+a cause. Don't bump the version: I'll ask separately. When done: tick the checklist, add new
+decisions to §20 as D-numbers, update §5.5–5.6, add a NOTES.md entry and update the post-v1
+list, make sure the gate passes, and open a PR (ask before pushing).
 ```
