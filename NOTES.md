@@ -2569,3 +2569,21 @@ Branch `phase-8d-missed-tasks`. Post-v1 item 3, widened; D42.
   order isn't chronological, so additions can sit mid-list.
 
 - 1.5.0 bump: done 2026-10-29 on request (release-1.5.0).
+
+## 2026-10-29 · Phase 8e kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 8e" and a §9 line: action items Map never wrote (8d's
+  "Open"), with long-en's made-up 4 → 6 measured alongside. Picked over item 10 (ja chunks
+  without 。, moves placement on every language's path for one citation) and items 4 and 5
+  (Japanese only, no eval set): action recall is the core metric, and 8d's Python on Map's
+  output reached all it could.
+- Checked the candidate on the stored runs before writing (CLAUDE.md lesson): "dense segments"
+  is wrong. long-en segments are 261–299 s and 726–864 words each; seg 4 wrote 0 of 3 tasks,
+  seg 6 all 3; a miss's position in its segment doesn't predict it.
+- All 8 misses (long-en f14, f15, f19, f71, f86; noisy-en f7; conflict-de f5, f6) are
+  cue sentences. A scan of `names.addressee` against each segment's Map owners reaches 7.
+  noisy-en f7 is lost to "F site" (F reads as a second person). The scan also flags "Okay,
+  will do." (9 runs; "okay" isn't in `_NOT_PEOPLE`), "Laura Schedule" (capitalised verb read
+  as a surname) and all of clean-hi (Devanagari owners compared as Latin).
+- AMI has 0 name-cued sentences, so it can't test the rule's must-not-fire side; the prompt
+  asks for must-not-fire tests from real speech and a seed 2/3 check on quick before choosing
+  between a Python net, a small model call on the flagged sentences, and a Map prompt change.
