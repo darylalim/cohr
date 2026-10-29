@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-29T07:24:13.496718-10:00",
+  "created_at": "2026-10-29T11:47:20.965424-10:00",
   "set": "long",
-  "git_sha": "8e19a86-dirty",
+  "git_sha": "5ca8788-dirty",
   "overrides": {},
   "models": {
     "vad": "mlx-community/silero-vad-v6@2ebf4a5",
@@ -31,14 +31,14 @@
       "duration_s": 7906.73,
       "metrics": {
         "facts": 80,
-        "facts_found": 57,
-        "fact_recall": 0.7125,
-        "citation_accuracy": 0.9825,
-        "claims": 105,
+        "facts_found": 63,
+        "fact_recall": 0.7875,
+        "citation_accuracy": 0.9841,
+        "claims": 109,
         "uncited_claims": 0,
-        "made_up_items": 6,
+        "made_up_items": 7,
         "made_up_open_questions": 4,
-        "wrong_owner_or_due": 1,
+        "wrong_owner_or_due": 2,
         "judge_only_facts": 0,
         "vad_speech_f1": 0.9421,
         "gap_words": 0,
@@ -56,28 +56,28 @@
         "unsupported_numbers": 0,
         "reduce_groups": 4,
         "pass2_marker": 0,
-        "pass2_claim": 144,
-        "pass2_group": 6,
+        "pass2_claim": 138,
+        "pass2_group": 5,
         "pass2_uncited": 0,
         "translation_citations_same": null,
         "untranslated_claims": null,
         "slide_alignment": 1.0,
         "recall_decision": 0.7,
-        "recall_action": 0.7,
-        "recall_number": 0.725,
+        "recall_action": 0.9,
+        "recall_number": 0.775,
         "recall_open_question": 0.75,
         "ask_questions": 24,
-        "ask_accuracy": 0.8889,
-        "ask_stated": 0.8889,
+        "ask_accuracy": 0.9444,
+        "ask_stated": 0.9444,
         "ask_citation_accuracy": 1.0,
         "ask_followup": 1.0,
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 0.0,
         "ask_near_miss": 1.0,
-        "cited_claims": 105,
-        "support_rate": 0.819,
-        "support_partial": 7,
-        "support_no": 12,
+        "cited_claims": 109,
+        "support_rate": 0.8257,
+        "support_partial": 6,
+        "support_no": 13,
         "support_unjudged": 0,
         "judge_covered": 0,
         "judge_recall": null
@@ -130,7 +130,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "action_items",
-          "claim": "Book venue for F site by November 14th",
+          "claim": "Book venue for F site by November 14th.",
           "citation_ok": true,
           "t_error": 0.65,
           "slide_cited": false
@@ -250,19 +250,19 @@
           "claim": "Support queue has shown steady numbers, with open tickets at 220 compared to 451 last week.",
           "citation_ok": true,
           "t_error": -0.03,
-          "slide_cited": true
+          "slide_cited": false
         },
         {
           "id": "f14",
           "kind": "action",
           "text": "send the contract to legal",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "Send the contract to legal.",
+          "citation_ok": true,
+          "t_error": -0.02,
           "slide_cited": false
         },
         {
@@ -321,13 +321,13 @@
           "id": "f19",
           "kind": "action",
           "text": "draft the hiring plan",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "Draft the hiring plan.",
+          "citation_ok": true,
+          "t_error": 0.29,
           "slide_cited": false
         },
         {
@@ -351,7 +351,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "key_points",
-          "claim": "Monthly cloud bill increased from $6,300 to $11,600, with stable figures and some seasonality.",
+          "claim": "Monthly cloud bill for the South region is $11,600, down from $6,300 last month.",
           "citation_ok": true,
           "t_error": -0.01,
           "slide_cited": true
@@ -390,7 +390,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "key_points",
-          "claim": "Monthly recurring revenue increased from $279,000 to $281,000, with stable figures and some seasonality.",
+          "claim": "Monthly recurring revenue for the South region is $281,000, up from $279,000 last month.",
           "citation_ok": true,
           "t_error": -0.02,
           "slide_cited": true
@@ -442,7 +442,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "key_points",
-          "claim": "Average page load time for the South region is 650 milliseconds, compared to 740 milliseconds last release.",
+          "claim": "Average page load time for the South region is 650 milliseconds, down from 740 milliseconds last release.",
           "citation_ok": true,
           "t_error": -0.1,
           "slide_cited": true
@@ -835,7 +835,7 @@
           "claim": "Support queue in the East region has 232 open tickets, down from 308 last week, with a stable trend.",
           "citation_ok": true,
           "t_error": 0.06,
-          "slide_cited": true
+          "slide_cited": false
         },
         {
           "id": "f59",
@@ -858,7 +858,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "action_items",
-          "claim": "Migrate staging database by October 21st.",
+          "claim": "Migrate staging database by October 21st",
           "citation_ok": true,
           "t_error": 0.77,
           "slide_cited": false
@@ -871,7 +871,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "action_items",
-          "claim": "Write release notes by the end of next week.",
+          "claim": "Write release notes by the end of next week",
           "citation_ok": true,
           "t_error": -0.85,
           "slide_cited": false
@@ -887,7 +887,7 @@
           "claim": "Retention in the West region shows a 77% week-2 return rate, up from 61% last month.",
           "citation_ok": true,
           "t_error": -0.29,
-          "slide_cited": true
+          "slide_cited": false
         },
         {
           "id": "f63",
@@ -897,7 +897,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "action_items",
-          "claim": "Prepare the customer survey by the 3rd of October.",
+          "claim": "Prepare the customer survey by the 3rd of October",
           "citation_ok": true,
           "t_error": 1.29,
           "slide_cited": false
@@ -913,7 +913,7 @@
           "claim": "Quarterly budget for the West Region is $49,500, down from $68,500 last quarter.",
           "citation_ok": true,
           "t_error": 0.52,
-          "slide_cited": true
+          "slide_cited": false
         },
         {
           "id": "f65",
@@ -952,7 +952,7 @@
           "claim": "Monthly cloud bill for West Region: $7,100 (last month: $7,500).",
           "citation_ok": true,
           "t_error": -0.21,
-          "slide_cited": true
+          "slide_cited": false
         },
         {
           "id": "f68",
@@ -965,7 +965,7 @@
           "claim": "Site speed in West Region: 670 ms (last release: 880 ms).",
           "citation_ok": true,
           "t_error": -3.2,
-          "slide_cited": true
+          "slide_cited": false
         },
         {
           "id": "f69",
@@ -997,13 +997,13 @@
           "id": "f71",
           "kind": "action",
           "text": "fix the login timeout bug",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "fix the login timeout bug",
+          "citation_ok": true,
+          "t_error": 0.77,
           "slide_cited": false
         },
         {
@@ -1017,7 +1017,7 @@
           "claim": "Monthly recurring revenue for the West region is $237,000, a slight decrease from $238,000 last month.",
           "citation_ok": true,
           "t_error": 0.83,
-          "slide_cited": true
+          "slide_cited": false
         },
         {
           "id": "f73",
@@ -1056,33 +1056,33 @@
           "claim": "New trial signups for the West region are 3,800, compared to 1,450 last month.",
           "citation_ok": true,
           "t_error": 0.42,
-          "slide_cited": true
+          "slide_cited": false
         },
         {
           "id": "f76",
           "kind": "number",
           "text": "Monthly recurring revenue (Central): $320,000",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
+          "section": "key_points",
+          "claim": "Monthly recurring revenue for the central region is $320,000.",
+          "citation_ok": true,
           "t_error": null,
-          "slide_cited": false
+          "slide_cited": true
         },
         {
           "id": "f77",
           "kind": "number",
           "text": "New trial signups (Central): 4,400",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
+          "section": "key_points",
+          "claim": "New trial signups for the central region are 4,400.",
+          "citation_ok": true,
           "t_error": null,
-          "slide_cited": false
+          "slide_cited": true
         },
         {
           "id": "f78",
@@ -1192,13 +1192,13 @@
           "id": "f86",
           "kind": "action",
           "text": "order laptops for the new starters",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "Order laptops for the new starters.",
+          "citation_ok": true,
+          "t_error": -0.06,
           "slide_cited": false
         },
         {
@@ -1230,11 +1230,12 @@
       ],
       "made_up": [
         "Standardise on PostGIS for analytics.",
+        "Organise the team lunch.",
         "Explain quarterly budget reporting to the team.",
         "Update revenue dashboard.",
+        "Read marketing emails by Monday.",
         "Review and clarify the reporting of cloud costs.",
-        "Address the support queue backlog and stale tickets.",
-        "Read marketing emails by Monday."
+        "Address the support queue backlog and stale tickets."
       ],
       "made_up_questions": [
         "The need to update old revenue documents.",
@@ -1243,6 +1244,7 @@
         "Hiring discussions in the chat were unproductive."
       ],
       "wrong_fields": [
+        "Organise the team lunch.",
         "Read marketing emails by Monday."
       ],
       "uncited": [],
@@ -1264,7 +1266,7 @@
       "support": [
         {
           "section": "summary",
-          "claim": "Summary: This weekly sync meeting for the Meridian project covers cloud costs and hiring in the North region, retention, quarterly budget metrics, support queue, trial signups, site speed, revenue, and cloud costs for the South and East regions.",
+          "claim": "Summary: This weekly sync covers cloud costs and hiring in the North region, retention, quarterly budget metrics, hiring, support queue, trial signups, site speed, revenue, and cloud costs for the South and East regions.",
           "citations": [
             "seg 0",
             "seg 8",
@@ -1290,31 +1292,19 @@
             "seg 25",
             "seg 16",
             "seg 27",
-            "seg 4",
-            "slide 7",
             "seg 24",
             "seg 18",
-            "seg 3",
-            "slide 5",
-            "seg 2",
             "seg 21",
-            "slide 31",
             "seg 26",
-            "seg 1",
-            "slide 28",
-            "slide 4",
-            "slide 30",
-            "seg 7",
-            "slide 10",
+            "seg 5",
+            "slide 8",
             "seg 17",
             "seg 20",
             "seg 22",
-            "seg 23",
-            "seg 5",
-            "seg 6"
+            "seg 23"
           ],
           "supported": "yes",
-          "reason": "The meeting covers all the mentioned topics with specific details and updates."
+          "reason": "The meeting covers all the mentioned topics with specific details and decisions."
         },
         {
           "section": "key_points",
@@ -1395,11 +1385,10 @@
           "section": "key_points",
           "claim": "Key point: Support queue has shown steady numbers, with open tickets at 220 compared to 451 last week.",
           "citations": [
-            "seg 3",
-            "slide 5"
+            "seg 3"
           ],
           "supported": "yes",
-          "reason": "The cited text states that the number of open support tickets for the North region is 220, compared with 451 last week, and that support queue has been steady."
+          "reason": "The cited text states the number of open support tickets for the North region is 220, compared with 451 last week, and confirms that support queue has been steady."
         },
         {
           "section": "key_points",
@@ -1422,42 +1411,33 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Monthly cloud bill increased from $6,300 to $11,600, with stable figures and some seasonality.",
+          "claim": "Key point: Monthly cloud bill for the South region is $11,600, down from $6,300 last month.",
           "citations": [
             "seg 5",
             "slide 8"
           ],
           "supported": "yes",
-          "reason": "The cited text states the monthly cloud bill is $11,600 compared to $6,300 last month, and confirms stability and seasonality."
+          "reason": "The cited text states the monthly cloud bill for the South region is $11,600 and compares it to $6,300 last month, confirming the decrease."
         },
         {
           "section": "key_points",
-          "claim": "Key point: Monthly recurring revenue increased from $279,000 to $281,000, with stable figures and some seasonality.",
+          "claim": "Key point: Monthly recurring revenue for the South region is $281,000, up from $279,000 last month.",
           "citations": [
             "seg 6",
             "slide 9"
           ],
           "supported": "yes",
-          "reason": "The cited text states the monthly recurring revenue is $281,000 compared to $279,000 last month, and confirms revenue has been steady with seasonality."
+          "reason": "The cited text states the monthly recurring revenue for the South region is $281,000, compared with $279,000 last month, and confirms the numbers are consistent with field reports and unchanged in measurement."
         },
         {
           "section": "key_points",
-          "claim": "Key point: Revenue and cloud costs have been more stable than expected, with no surprises in recent figures.",
-          "citations": [
-            "seg 6"
-          ],
-          "supported": "yes",
-          "reason": "The cited text states that both cloud costs and revenue have been more stable than expected and that nothing about them surprised the speaker."
-        },
-        {
-          "section": "key_points",
-          "claim": "Key point: Average page load time for the South region is 650 milliseconds, compared to 740 milliseconds last release.",
+          "claim": "Key point: Average page load time for the South region is 650 milliseconds, down from 740 milliseconds last release.",
           "citations": [
             "seg 7",
             "slide 10"
           ],
           "supported": "yes",
-          "reason": "The cited text explicitly states the average page load time for the South region is 650 milliseconds, compared to 740 milliseconds last release."
+          "reason": "The cited text states the average page load time is 650 milliseconds compared to 740 milliseconds last release."
         },
         {
           "section": "key_points",
@@ -1471,21 +1451,12 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Site speed and retention have been steady, with no significant surprises in recent data.",
+          "claim": "Key point: Revenue and cloud costs have been more stable than expected, with no surprises in recent figures.",
           "citations": [
-            "seg 7"
+            "seg 6"
           ],
           "supported": "yes",
-          "reason": "The cited text states that site speed and retention have been steady and that nothing about them surprised the presenter, which directly supports the claim."
-        },
-        {
-          "section": "key_points",
-          "claim": "Key point: Seasonality is present in both site speed and retention, so trends should be interpreted cautiously.",
-          "citations": [
-            "seg 7"
-          ],
-          "supported": "yes",
-          "reason": "The cited text explicitly states that there is seasonality in both site speed and retention, and that one should not read too much into one period."
+          "reason": "The cited text states that both cloud costs and revenue have been more stable than expected and that nothing about them surprised the speaker."
         },
         {
           "section": "key_points",
@@ -1636,31 +1607,28 @@
           "section": "key_points",
           "claim": "Key point: Hiring in the East region has remained steady with 64 candidates in the pipeline, unchanged since spring.",
           "citations": [
-            "seg 16",
-            "slide 22"
+            "seg 16"
           ],
-          "supported": "partial",
-          "reason": "The claim states hiring has remained steady with 64 candidates in the pipeline, unchanged since spring, but the cited text only confirms 64 candidates in the pipeline and says hiring moves slowly with small changes not meaning much, and that the measurement method hasn't changed since spring. It does not state that the number is unchanged since spring."
+          "supported": "no",
+          "reason": "The claim mentions 64 candidates and a change over time, but the cited text does not mention any number for hiring candidates or state that hiring has remained steady with 64 candidates."
         },
         {
           "section": "key_points",
           "claim": "Key point: Support queue in the East region has 232 open tickets, down from 308 last week, with a stable trend.",
           "citations": [
-            "seg 16",
-            "slide 23"
+            "seg 16"
           ],
           "supported": "yes",
-          "reason": "The cited text states the number of open support tickets for the East Region is 232, compared with 308 last week, and confirms the trend is roughly what was expected, with no surprise."
+          "reason": "The cited text states the number of open support tickets for the East Region is 232, compared with 308 last week, and notes that support queue moves slowly, so small changes don't mean much, implying stability."
         },
         {
           "section": "key_points",
           "claim": "Key point: Retention in the West region shows a 77% week-2 return rate, up from 61% last month.",
           "citations": [
-            "seg 16",
-            "slide 24"
+            "seg 16"
           ],
           "supported": "yes",
-          "reason": "The cited text states the week-2 return rate for trial users in the West region is 77%, compared with 61% last month."
+          "reason": "The claim states a 77% week-2 return rate and an increase from 61% last month, which is directly stated in the transcript."
         },
         {
           "section": "key_points",
@@ -1684,40 +1652,46 @@
           "section": "key_points",
           "claim": "Key point: Quarterly budget for the West Region is $49,500, down from $68,500 last quarter.",
           "citations": [
-            "seg 17",
-            "slide 25"
-          ],
-          "supported": "yes",
-          "reason": "The cited text states the approved budget for the West Region is $49,500 compared to $68,500 last quarter, and confirms the numbers are consistent with field reports and the slide."
-        },
-        {
-          "section": "key_points",
-          "claim": "Key point: Retention and quarterly budget have been stable, with no surprises in the latest data.",
-          "citations": [
             "seg 17"
           ],
           "supported": "yes",
-          "reason": "The cited text states that retention and quarterly budget have been steady and that nothing surprised the speaker, which aligns with the claim."
+          "reason": "The cited text states the approved budget for next quarter for the West Region is $49,500, compared with $68,500 last quarter, and confirms the numbers were checked against field input and are steady."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Retention figures remain consistent, with a 77% week-2 return rate compared to 61% last month.",
+          "citations": [
+            "seg 17"
+          ],
+          "supported": "no",
+          "reason": "The cited text mentions retention has been steady and that small changes don't mean much, but it does not state or imply a 77% week-2 return rate or a 61% return rate from last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: The dashboard for both metrics was updated, providing fresh data.",
+          "citations": [
+            "seg 18"
+          ],
+          "supported": "yes",
+          "reason": "The dashboard for quarterly budget and hiring was updated on Monday, so these are fresh numbers."
         },
         {
           "section": "key_points",
           "claim": "Key point: Monthly cloud bill for West Region: $7,100 (last month: $7,500).",
           "citations": [
-            "seg 19",
-            "slide 27"
+            "seg 19"
           ],
           "supported": "yes",
-          "reason": "The cited text states the monthly cloud bill for the West Region is $7,100 compared to $7,500 last month, directly matching the claim."
+          "reason": "The cited text states the monthly cloud bill for the West Region is $7,100, compared with $7,500 last month, and confirms the source is the same as before."
         },
         {
           "section": "key_points",
           "claim": "Key point: Site speed in West Region: 670 ms (last release: 880 ms).",
           "citations": [
-            "seg 19",
-            "slide 28"
+            "seg 19"
           ],
           "supported": "yes",
-          "reason": "The slide directly states the page load time for the West Region is 670 ms, compared to 880 ms last release."
+          "reason": "The claim directly matches the stated site speed figures and comparison to the previous release in the transcript."
         },
         {
           "section": "key_points",
@@ -1732,57 +1706,55 @@
           "section": "key_points",
           "claim": "Key point: Monthly recurring revenue for the West region is $237,000, a slight decrease from $238,000 last month.",
           "citations": [
-            "seg 21",
-            "slide 30"
+            "seg 21"
           ],
           "supported": "yes",
-          "reason": "The cited text states the monthly recurring revenue for the West region is $237,000, compared with $238,000 last month, confirming a slight decrease."
+          "reason": "The cited text states the monthly recurring revenue for the West region is $237,000, compared with $238,000 last month, and confirms the revenue is steady with no surprises."
         },
         {
           "section": "key_points",
           "claim": "Key point: New trial signups for the West region are 3,800, compared to 1,450 last month.",
           "citations": [
-            "seg 21",
-            "slide 31"
+            "seg 21"
           ],
           "supported": "yes",
-          "reason": "The cited text states the number of new trial signups for the West region is 3,800, compared to 1,450 last month, as reported on slide 32 and confirmed in the transcript."
+          "reason": "The cited text states the number of new trial signups for the West region is 3,800, compared to 1,450 last month."
         },
         {
           "section": "key_points",
-          "claim": "Key point: Trial signups have been more stable than initially expected, with no surprises in the latest figures.",
+          "claim": "Key point: Revenue has been more stable than expected, with no surprises.",
           "citations": [
-            "seg 22"
+            "seg 21"
           ],
           "supported": "yes",
-          "reason": "The cited text states that trial signups have been more stable than the speaker thought a month ago and that nothing about trial signups surprised him."
+          "reason": "The cited text states that 'Honestly, revenue has been more stable than I thought it would be a month ago' and 'Nothing about revenue surprised me this time, which is a nice change.'"
         },
         {
           "section": "key_points",
-          "claim": "Key point: Revenue has shown steady growth, with no surprises in the latest figures.",
+          "claim": "Key point: Trial signups have been steady, with minimal changes.",
           "citations": [
-            "seg 22"
-          ],
-          "supported": "no",
-          "reason": "The claim states 'steady growth' and 'no surprises', but the cited text says revenue has been 'steady' and 'more stable than I thought', with small changes not meaning much, and nothing surprising. 'Growth' is not mentioned; 'steady' implies stability, not growth."
-        },
-        {
-          "section": "key_points",
-          "claim": "Key point: Revenue trend is stable and more consistent than expected.",
-          "citations": [
-            "seg 23"
+            "seg 21"
           ],
           "supported": "yes",
-          "reason": "The transcript states revenue has been more stable than the speaker thought it would be a month ago."
+          "reason": "The cited text states that trial signups have been steady and that small changes don't mean much, which directly supports the claim."
         },
         {
           "section": "key_points",
-          "claim": "Key point: Trial signups have shown steady growth with small changes not being significant.",
+          "claim": "Key point: Monthly recurring revenue for the central region is $320,000.",
           "citations": [
-            "seg 23"
+            "slide 32"
           ],
-          "supported": "no",
-          "reason": "The claim states growth, but the cited text says trial signups have been steady and move slowly with small changes not meaning much, not growth."
+          "supported": "yes",
+          "reason": "The slide states the monthly recurring revenue is $320,000, directly supporting the claim."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: New trial signups for the central region are 4,400.",
+          "citations": [
+            "slide 33"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the metric for new trial signups as 4,400."
         },
         {
           "section": "key_points",
@@ -1831,24 +1803,6 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Continue monitoring and reporting on quarterly budget and hiring metrics.",
-          "citations": [
-            "seg 18"
-          ],
-          "supported": "yes",
-          "reason": "The transcript mentions that quarterly and hiring metrics are being monitored and reported, as indicated by the fact that people asked about them and the dashboards were updated and checked."
-        },
-        {
-          "section": "key_points",
-          "claim": "Key point: Continue to cover site speed and revenue topics with customers.",
-          "citations": [
-            "seg 12"
-          ],
-          "supported": "yes",
-          "reason": "The claim is supported by the statement that 'A few people asked me about sight speed this week, so it's good that we're covering it' and similar for revenue."
-        },
-        {
-          "section": "key_points",
           "claim": "Key point: Continue discussing and updating trial signups metrics.",
           "citations": [
             "seg 2"
@@ -1864,6 +1818,24 @@
           ],
           "supported": "yes",
           "reason": "The dashboard for trial signups was updated on Monday, so these are fresh numbers."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Continue to cover site speed and revenue topics with customers.",
+          "citations": [
+            "seg 12"
+          ],
+          "supported": "yes",
+          "reason": "The claim is supported by the statement that 'A few people asked me about sight speed this week, so it's good that we're covering it' and similar for revenue."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Continue monitoring retention metrics and share updates with stakeholders.",
+          "citations": [
+            "seg 25"
+          ],
+          "supported": "no",
+          "reason": "The claim about continuing to monitor retention metrics and share updates is not explicitly stated or agreed upon in the cited text."
         },
         {
           "section": "decisions",
@@ -2011,7 +1983,7 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Book venue for F site by November 14th (owner: Grace; due: November 14th)",
+          "claim": "Action item: Book venue for F site by November 14th. (owner: Grace; due: November 14th)",
           "citations": [
             "seg 0"
           ],
@@ -2020,66 +1992,39 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Clean up the shared drive by the end of the month. (owner: Laura)",
+          "claim": "Action item: Run the user conference online. (due: next time)",
           "citations": [
-            "seg 8"
+            "seg 1"
           ],
-          "supported": "yes",
-          "reason": "Laura will clean up the shared drive by the end of the month."
+          "supported": "no",
+          "reason": "The meeting mentioned an open question about running the user conference online, not an action item."
         },
         {
           "section": "action_items",
-          "claim": "Action item: Summarise competitor research by 11 November. (owner: Grace; due: 11 November)",
+          "claim": "Action item: Send the contract to legal. (owner: Maria; due: end of the month)",
           "citations": [
-            "seg 26"
+            "seg 4"
           ],
           "supported": "yes",
-          "reason": "The cited text states 'Action item for Grace summarize the competitor research by 11 November.'"
+          "reason": "Maria was asked to send the contract to legal by the end of the month."
         },
         {
           "section": "action_items",
-          "claim": "Action item: Review the security audit by the end of next week. (owner: Grace; due: end of next week)",
+          "claim": "Action item: Organise the team lunch. (owner: Oma; due: Wednesday)",
           "citations": [
-            "seg 27"
+            "seg 4"
           ],
           "supported": "yes",
-          "reason": "Grace is assigned to review the security audit by the end of next week."
+          "reason": "Oma will organize the team lunch by Wednesday."
         },
         {
           "section": "action_items",
-          "claim": "Action item: Migrate staging database by October 21st. (owner: Kenji; due: October 21st)",
+          "claim": "Action item: Draft the hiring plan. (owner: Kenji; due: end of the month)",
           "citations": [
-            "seg 16"
+            "seg 4"
           ],
           "supported": "yes",
-          "reason": "Kenji is assigned to migrate the staging database by the 21st of October."
-        },
-        {
-          "section": "action_items",
-          "claim": "Action item: Write release notes by the end of next week. (owner: Omar; due: end of next week)",
-          "citations": [
-            "seg 16"
-          ],
-          "supported": "yes",
-          "reason": "Omar will write the release notes by the end of next week."
-        },
-        {
-          "section": "action_items",
-          "claim": "Action item: Prepare the customer survey by the 3rd of October. (owner: Grace; due: 3rd of October)",
-          "citations": [
-            "seg 17"
-          ],
-          "supported": "yes",
-          "reason": "Grace is assigned to prepare the customer survey with a due date of the 3rd of October."
-        },
-        {
-          "section": "action_items",
-          "claim": "Action item: Test the backup restore by the end of next week. (owner: Maria; due: end of next week)",
-          "citations": [
-            "seg 21"
-          ],
-          "supported": "yes",
-          "reason": "The cited text states Maria will test the backup restore by the end of next week."
+          "reason": "Kenji will draft the hiring plan by the end of the month."
         },
         {
           "section": "action_items",
@@ -2110,6 +2055,15 @@
         },
         {
           "section": "action_items",
+          "claim": "Action item: Clean up the shared drive by the end of the month. (owner: Laura)",
+          "citations": [
+            "seg 8"
+          ],
+          "supported": "yes",
+          "reason": "Laura will clean up the shared drive by the end of the month."
+        },
+        {
+          "section": "action_items",
           "claim": "Action item: Schedule the board presentation by the end of the month. (owner: Laura; due: End of the month)",
           "citations": [
             "seg 9"
@@ -2137,33 +2091,6 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Review and clarify the reporting of cloud costs.",
-          "citations": [
-            "seg 25"
-          ],
-          "supported": "partial",
-          "reason": "The speaker mentions the reporting of cloud costs is confusing and requires explanation, and that they keep having to explain it, indicating a need to clarify it."
-        },
-        {
-          "section": "action_items",
-          "claim": "Action item: Address the support queue backlog and stale tickets.",
-          "citations": [
-            "seg 25"
-          ],
-          "supported": "no",
-          "reason": "The claim introduces an action item not mentioned or implied in the cited text."
-        },
-        {
-          "section": "action_items",
-          "claim": "Action item: Run the user conference online. (due: next time)",
-          "citations": [
-            "seg 1"
-          ],
-          "supported": "no",
-          "reason": "The meeting mentioned an open question about running the user conference online, not an action item."
-        },
-        {
-          "section": "action_items",
           "claim": "Action item: Configure error alerts by Friday. (owner: Laura; due: Friday)",
           "citations": [
             "seg 14"
@@ -2188,6 +2115,96 @@
           ],
           "supported": "yes",
           "reason": "The cited text explicitly states the action item for Omar Crews to read the marketing emails by Monday."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Migrate staging database by October 21st (owner: Kenji; due: October 21st)",
+          "citations": [
+            "seg 16"
+          ],
+          "supported": "yes",
+          "reason": "Kenji is assigned to migrate the staging database by the 21st of October."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Write release notes by the end of next week (owner: Omar; due: end of next week)",
+          "citations": [
+            "seg 16"
+          ],
+          "supported": "yes",
+          "reason": "Omar will write the release notes by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Prepare the customer survey by the 3rd of October (owner: Grace; due: 3rd of October)",
+          "citations": [
+            "seg 17"
+          ],
+          "supported": "yes",
+          "reason": "Grace is assigned to prepare the customer survey with a due date of the 3rd of October."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Test the backup restore by the end of next week. (owner: Maria; due: end of next week)",
+          "citations": [
+            "seg 21"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states Maria will test the backup restore by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: fix the login timeout bug (owner: Grace; due: 9th of November)",
+          "citations": [
+            "seg 21"
+          ],
+          "supported": "yes",
+          "reason": "The cited text explicitly states that Grace is to fix the login timeout bug by the 9th of November."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Summarise competitor research by 11 November. (owner: Grace; due: 11 November)",
+          "citations": [
+            "seg 26"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states 'Action item for Grace summarize the competitor research by 11 November.'"
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Review and clarify the reporting of cloud costs.",
+          "citations": [
+            "seg 25"
+          ],
+          "supported": "partial",
+          "reason": "The speaker mentions the reporting of cloud costs is confusing and requires explanation, and that they keep having to explain it, indicating a need to clarify it."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Address the support queue backlog and stale tickets.",
+          "citations": [
+            "seg 25"
+          ],
+          "supported": "no",
+          "reason": "The claim introduces an action item not mentioned or implied in the cited text."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Review the security audit by the end of next week. (owner: Grace; due: end of next week)",
+          "citations": [
+            "seg 27"
+          ],
+          "supported": "yes",
+          "reason": "Grace is assigned to review the security audit by the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Order laptops for the new starters. (owner: Kenji; due: 15 October)",
+          "citations": [
+            "seg 27"
+          ],
+          "supported": "yes",
+          "reason": "Kenji will order laptops for the new starters by the 15th of October is explicitly stated in the transcript."
         },
         {
           "section": "open_questions",
@@ -2385,13 +2402,12 @@
           "kind": "number",
           "question": "What is the number of new trial signups for the East region?",
           "fact": "f53",
-          "answer": "The meeting discussed trial signups for the East region. The number of new trial signups this month for the East region is 4,300.",
+          "answer": "The meeting discusses the number of new trial signups for the East region as 4,300.",
           "citations": [
             "seg 11 @3235.44",
-            "seg 14 @4021.73",
-            "slide 20",
             "seg 14 @4025.31",
-            "slide 20"
+            "slide 20",
+            "slide 33"
           ],
           "language": "en",
           "stated": true,
@@ -2508,7 +2524,7 @@
           "kind": "action",
           "question": "What does Grace need to do by November 14?",
           "fact": "f4",
-          "answer": "Grace needs to book the venue for the F site by November 14th.",
+          "answer": "Grace needs to book a venue for the F site by November 14th.",
           "citations": [
             "seg 0 @213.35"
           ],
@@ -2523,22 +2539,23 @@
           "kind": "action",
           "question": "What does Omar need to do by Wednesday?",
           "fact": "f15",
-          "answer": "The meeting states that Omar will write the release notes by the end of next week.",
+          "answer": "Omar needs to organise the team lunch by Wednesday.",
           "citations": [
+            "seg 4 @1230.45",
             "seg 16 @4803.68"
           ],
           "language": "en",
-          "stated": false,
-          "citation_ok": null,
-          "t_error": null,
-          "correct": false
+          "stated": true,
+          "citation_ok": true,
+          "t_error": -0.16,
+          "correct": true
         },
         {
           "id": "a-f26",
           "kind": "action",
           "question": "What does Tom need to do by November 17?",
           "fact": "f26",
-          "answer": "The meeting assigns an action item to Tom to finish the incident post mortem by the 17th of November.",
+          "answer": "The meeting assigns an action item to Tom, asking him to finish the incident post mortem by the 17th of November.",
           "citations": [
             "seg 6 @2019.56"
           ],
@@ -2570,7 +2587,10 @@
           "fact": "f61",
           "answer": "Maria will collect quotes from moving companies by the end of next week.",
           "citations": [
-            "seg 6 @1826.81"
+            "seg 4 @1221.09",
+            "seg 6 @1826.81",
+            "seg 21 @6148.29",
+            "seg 27 @7645.6"
           ],
           "language": "en",
           "stated": false,
@@ -2598,7 +2618,7 @@
           "kind": "followup",
           "question": "Who owns that, and by when?",
           "fact": "f4",
-          "answer": "Grace needs to book the venue for the F site by November 14th.",
+          "answer": "Grace needs to book a venue for the F site by November 14th.",
           "citations": [
             "seg 0 @213.35"
           ],
@@ -2629,7 +2649,7 @@
           "kind": "de_history",
           "question": "Wie hoch ist die Anzahl neuer Testanmeldungen in der Region North?",
           "fact": "f11",
-          "answer": "The meeting discussed key metrics for the North region, including site speed, trial signups, and revenue. The site speed figures show a trend consistent with expectations, with some seasonality. The trial signups trend is steady, and the dashboard was updated. Revenue for the North region is $200,000, compared to $264,000 last month. The site speed metric showed steady performance with no significant changes. The revenue metric demonstrated a slight increase from last month. The monthly recurring revenue for the East Region is $367,000. The approved budget for next quarter for the West Region is $49,500. The monthly recurring revenue for the West region is $237,000. The monthly recurring revenue for the South region is $281,000. The average page load time in milliseconds for the North region is 660 milliseconds. The week-2 return rate for trial users is 37%, down from 75% last month. The monthly cloud bill for the West Region is $7,100. The monthly cloud bill for the North region is $10,300. The monthly recurring revenue for the North region is $200,000. The monthly recurring revenue for the Central region is $75,000. The monthly recurring revenue for the South region is $281,000.",
+          "answer": "The meeting discussed key metrics for the North region, including site speed, trial signups, and revenue. The site speed figures show a trend consistent with expectations, with some seasonality. The trial signups trend is steady, and the dashboard was updated. Revenue for the North region is $200,000, compared to $264,000 last month. The site speed metric showed steady performance with no significant changes. The revenue metric demonstrated a slight increase from last month. The monthly recurring revenue for the East Region is $367,000. The approved budget for next quarter for the West Region is $49,500. The monthly recurring revenue for the West region is $237,000. The monthly recurring revenue for the South region is $281,000. The average page load time in milliseconds for the North region is 660 milliseconds. The week-2 return rate for trial users is 37%, down from 75% last month. The monthly cloud bill for the West Region is $7,100. The monthly cloud bill for the North region is $10,300. The monthly recurring revenue for the North region is $200,000. The monthly recurring revenue for the South region is $281,000. The monthly recurring revenue for the East Region is $367,000. The quarterly budget for the Central Region is $75,000, up from $73,000 last quarter. The monthly cloud bill for the South region is $11,600. The monthly cloud bill for the North region is $10,300. The monthly recurring revenue for the North region is $200,000. The monthly recurring revenue for the South region is $281,000. The monthly recurring revenue for the East Region is $367,000. The monthly recurring revenue for the West region is $237,000. The quarterly budget for the West Region is $49,500, down from $68,500 last quarter. The average page load time in milliseconds for the South region is 650 milliseconds. The average page load time in milliseconds for the West region is 670 milliseconds.",
           "citations": [
             "seg 2 @651.75",
             "seg 2 @582.74",
@@ -2647,8 +2667,18 @@
             "seg 19 @5388.43",
             "seg 0 @12.56",
             "seg 2 @855.75",
+            "seg 6 @1836.42",
+            "seg 12 @3624.25",
             "seg 27 @7709.36",
-            "seg 6 @1836.42"
+            "seg 6 @1833.01",
+            "seg 0 @12.56",
+            "seg 2 @855.75",
+            "seg 6 @1836.42",
+            "seg 12 @3624.25",
+            "seg 21 @5973.07",
+            "seg 17 @5008.43",
+            "seg 7 @2034.39",
+            "seg 19 @5578.67"
           ],
           "language": "de",
           "stated": false,
@@ -2761,28 +2791,28 @@
           "reused": true
         },
         "map": {
-          "seconds": 144.69,
-          "s_per_audio_hour": 65.9,
+          "seconds": 148.19,
+          "s_per_audio_hour": 67.5,
           "peak_mem_gb": 4.49,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 303.83,
-          "s_per_audio_hour": 138.3,
-          "peak_mem_gb": 6.53,
-          "reused": true
+          "seconds": 311.48,
+          "s_per_audio_hour": 141.8,
+          "peak_mem_gb": 10.1,
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     }
@@ -2790,12 +2820,12 @@
   "summary": {
     "items": 1,
     "facts": 80,
-    "fact_recall": 0.7125,
-    "citation_accuracy": 0.9825,
+    "fact_recall": 0.7875,
+    "citation_accuracy": 0.9841,
     "uncited_claims": 0,
-    "made_up_items": 6,
+    "made_up_items": 7,
     "made_up_open_questions": 4,
-    "wrong_owner_or_due": 1,
+    "wrong_owner_or_due": 2,
     "gap_words": 0,
     "gap_words_per_min": 0.0,
     "vad_speech_f1": 0.9421,
@@ -2809,25 +2839,25 @@
     "translation_citations_same": null,
     "untranslated_claims": null,
     "recall_decision": 0.7,
-    "recall_action": 0.7,
-    "recall_number": 0.725,
+    "recall_action": 0.9,
+    "recall_number": 0.775,
     "recall_open_question": 0.75,
     "map_numbers_repaired": 9,
     "map_numbers_unverified": 0,
     "unsupported_numbers": 0,
     "reduce_groups": 4,
     "pass2_marker": 0,
-    "pass2_claim": 144,
-    "pass2_group": 6,
+    "pass2_claim": 138,
+    "pass2_group": 5,
     "pass2_uncited": 0,
-    "support_rate": 0.819,
-    "support_partial": 7,
-    "support_no": 12,
+    "support_rate": 0.8257,
+    "support_partial": 6,
+    "support_no": 13,
     "support_unjudged": 0,
     "judge_recall": null,
     "ask_questions": 24,
-    "ask_accuracy": 0.8889,
-    "ask_stated": 0.8889,
+    "ask_accuracy": 0.9444,
+    "ask_stated": 0.9444,
     "ask_citation_accuracy": 1.0,
     "ask_followup": 1.0,
     "ask_xlang_alone": 1.0,
@@ -2857,12 +2887,12 @@
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 65.9,
+      "s_per_audio_hour": 67.5,
       "peak_mem_gb": 4.49
     },
     "reduce": {
-      "s_per_audio_hour": 138.3,
-      "peak_mem_gb": 6.53
+      "s_per_audio_hour": 141.8,
+      "peak_mem_gb": 10.1
     },
     "translate": {
       "s_per_audio_hour": 0.0,
@@ -2873,8 +2903,8 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 434.2,
-      "peak_mem_gb": 8.59
+      "s_per_audio_hour": 439.3,
+      "peak_mem_gb": 10.1
     }
   },
   "citation_errors": [
@@ -2894,8 +2924,10 @@
     -0.12,
     -0.1,
     -0.08,
+    -0.06,
     -0.03,
     -0.03,
+    -0.02,
     -0.02,
     -0.02,
     -0.02,
@@ -2912,6 +2944,7 @@
     0.17,
     0.21,
     0.25,
+    0.29,
     0.3,
     0.35,
     0.37,
@@ -2926,6 +2959,7 @@
     0.7,
     0.75,
     0.76,
+    0.77,
     0.77,
     0.83,
     0.92,
@@ -2943,19 +2977,19 @@
     156.34
   ],
   "judge": {
-    "loaded": false,
-    "calls": 0,
-    "cached": 105,
-    "seconds": 0.01,
-    "s_per_audio_hour": 0.0,
-    "peak_mem_gb": null
+    "loaded": true,
+    "calls": 1,
+    "cached": 108,
+    "seconds": 3.48,
+    "s_per_audio_hour": 1.6,
+    "peak_mem_gb": 3.12
   },
   "ask": {
-    "loaded": false,
-    "calls": 0,
-    "cached": 24,
-    "seconds": 0.05,
-    "s_per_audio_hour": 0.0,
+    "loaded": true,
+    "calls": 24,
+    "cached": 0,
+    "seconds": 769.3,
+    "s_per_audio_hour": 350.3,
     "peak_mem_gb": null
   },
   "gate_items": null,

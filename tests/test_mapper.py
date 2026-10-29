@@ -645,3 +645,149 @@ def test_stage_gives_tasks_their_owners(tmp_path: Path, caplog: pytest.LogCaptur
     assert notes.decisions == []
     assert notes.action_items == [MapActionItem(owner="Tom", task="Update the pricing page.")]
     assert "decision → task: Tom" in caplog.text
+
+
+# --- tasks Map never wrote (8e, D43) --------------------------------------------------------
+
+KENJI = (
+    "Maria, can you send the contract to legal by the end of the month? Sure. "
+    "Kenji will draft the hiring plan by the end of the month. "
+    "Tom, can you hear me? Kenji will be out next week. Grace will love this. "
+    "Okay, will do. Tom, can you ask Maria to check the numbers? "
+    "Let me pull up the next slide."
+)
+CUE_SAID = {"Tom", "Maria", "Kenji", "Grace", "Okay"}
+CONTRACT = MapActionItem(owner="Maria", task="Send the contract to legal", due="end of the month")
+
+
+def test_uncovered_cues_lists_the_people_map_gave_no_task() -> None:
+    # long-en seg 4: Maria's task is in Map, Kenji's isn't. The must-not-fire sentences are
+    # flagged here and left to the model; a reply, two people and Maria's own task are not.
+    notes = _dated(action_items=[CONTRACT])
+    assert mapper.uncovered_cues(notes, KENJI, CUE_SAID, "en") == [
+        ("Kenji", "Kenji will draft the hiring plan by the end of the month."),
+        ("Tom", "Tom, can you hear me?"),
+        ("Kenji", "Kenji will be out next week."),
+        ("Grace", "Grace will love this."),
+    ]
+
+
+def test_uncovered_cues_compares_owners_in_the_meetings_spelling() -> None:
+    # clean-hi: Map wrote Omar's owner in Devanagari ("ओमर", Maria's consonants too); his task.
+    notes = _dated(action_items=[MapActionItem(owner="ओमर", task="हायरिंग प्लान तैयार करें")])
+    text = "Omar will draft the hiring plan. Maria will check the numbers."
+    assert mapper.uncovered_cues(notes, text, CUE_SAID | {"Omar"}, "en") == [
+        ("Maria", "Maria will check the numbers.")
+    ]
+    # long-en seg 10: Map's owner is the cue's two words, the addressee the first
+    notes = _dated(action_items=[MapActionItem(owner="Omar Crews", task="Read marketing emails")])
+    text = "Action item for Omar Crews read the marketing emails by Monday."
+    assert mapper.uncovered_cues(notes, text, CUE_SAID | {"Omar", "Crews"}, "en") == []
+
+
+def test_uncovered_cues_must_not_fire() -> None:
+    notes = _dated(action_items=[CONTRACT])
+    assert mapper.uncovered_cues(notes, "Kenji, ¿puedes preparar el plan?", CUE_SAID, "es") == []
+    assert mapper.uncovered_cues(_dated(summary="x", raw=True), KENJI, CUE_SAID, "en") == []
+
+
+def test_cue_tasks_owns_each_task_by_its_sentence() -> None:
+    cues = [("Kenji", "Kenji will draft the hiring plan."), ("Tom", "Tom, can you hear me?")]
+    reply = (
+        'Here: {"tasks": [{"line": 1, "task": "Draft the hiring plan", "due": "end of the month"},'
+        ' {"line": 2, "task": null, "due": null}, {"line": 7, "task": "Made up", "due": null},'
+        ' {"line": 1, "task": "Again", "due": null}]}'
+    )
+    assert mapper.cue_tasks(cues, reply) == {
+        0: MapActionItem(owner="Kenji", task="Draft the hiring plan", due="end of the month")
+    }
+    assert mapper.cue_tasks(cues, '{"tasks": [{"line": 2, "task": "none"}]}') == {}
+    # noisy-en: Tiny Aya closed the list with "}}" instead of "]}"
+    broken = '{"tasks": [{"line": 1, "task": "book the venue", "due": "3 October"}}}'
+    assert mapper.cue_tasks(cues, broken) == {
+        0: MapActionItem(owner="Kenji", task="book the venue", due="3 October")
+    }
+    assert mapper.cue_tasks(cues, "no JSON") is None
+    assert mapper.cue_tasks(cues, '{"tasks": []}') is None
+
+
+@pytest.mark.parametrize(
+    ("task", "whole"),
+    [
+        # long-en f86: Tiny Aya cut the object short
+        ("order laptops", "order laptops for the new starters"),
+        ("Order laptops.", "order laptops for the new starters"),
+        # must not change: the whole task already, words the sentence doesn't say, part of a word
+        ("order laptops for the new starters", "order laptops for the new starters"),
+        ("buy laptops", "buy laptops"),
+        ("der laptops", "der laptops"),
+    ],
+)
+def test_whole_task(task: str, whole: str) -> None:
+    sentence = "Kenji will order laptops for the new starters by the 15th of October."
+    assert mapper.whole_task(task, sentence) == whole
+
+
+def test_cue_tasks_completes_a_task_only_in_english() -> None:
+    cues = [("Kenji", "Kenji will order laptops for the new starters by the 15th of October.")]
+    reply = '{"tasks": [{"line": 1, "task": "order laptops", "due": null}]}'
+    english, other = mapper.cue_tasks(cues, reply, english=True), mapper.cue_tasks(cues, reply)
+    assert english and english[0].task == "order laptops for the new starters"
+    assert other and other[0].task == "order laptops"
+
+
+def test_cue_prompt_ends_with_the_target_language() -> None:
+    cues = [("Kenji", "Kenji will draft the hiring plan.")]
+    prompt = mapper.fill(load_prompt("map_tasks"), **mapper.cue_values(cues, "de"))
+    assert "1. Kenji will draft the hiring plan." in prompt
+    assert prompt.rstrip().splitlines()[-1].startswith('Write every "task" and "due" in German')
+
+
+def _cue_run(tmp_path: Path, transcript: str, config: Config) -> Path:
+    run_dir = make_run(tmp_path, config=config)
+    schemas.save(run_dir, SlidesFile(slides=[]))
+    seg = _seg(0, []).model_copy(update={"transcript_text": transcript})
+    schemas.save(run_dir, SegmentsFile(segments=[seg], unaligned_slide_ids=[]))
+    return run_dir
+
+
+MAP_REPLY = (
+    '{"summary": "", "key_points": [], "decisions": [], "action_items": [{"owner": "Maria", '
+    '"task": "Send the contract to legal", "due": null}], "open_questions": [], "terms": []}'
+)
+
+
+def test_stage_adds_the_tasks_a_cue_gives(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    cue_reply = (
+        '{"tasks": [{"line": 1, "task": "Draft the hiring plan by the 31st", "due": "Friday"},'
+        ' {"line": 2, "task": null, "due": null}, {"line": 3, "task": null, "due": null},'
+        ' {"line": 4, "task": null, "due": null}]}'
+    )
+    run_dir = _cue_run(tmp_path, KENJI, Config())
+    lm = FakeLm([MAP_REPLY, cue_reply])
+    with caplog.at_level(logging.INFO, logger="cohr"):
+        mapper.run_stage(ctx_for(run_dir, "map", fake_manager(Config(), tmp_path, map=lm)))
+    notes = schemas.load(run_dir, MapFile).notes[0]
+    # the due the segment doesn't say is dropped, the number in no source flagged (Map's guards)
+    assert notes.action_items[1] == MapActionItem(
+        owner="Kenji", task="Draft the hiring plan by the 31st", due=None
+    )
+    assert notes.dropped_dues == ["Friday"] and notes.unverified_numbers == ["31st"]
+    assert lm.temperatures[1] == 0.0 and "4. Grace will love this." in lm.prompts[1]
+    assert "task from a cue: Kenji" in caplog.text
+    assert "cue, no task: Tom, can you hear me?" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("transcript", "config"),
+    [
+        ("Maria, can you send the contract to legal? Okay, will do.", Config()),  # covered
+        (KENJI, Config(map=MapConfig(cue_tasks=False))),
+    ],
+)
+def test_stage_makes_no_cue_call(tmp_path: Path, transcript: str, config: Config) -> None:
+    run_dir = _cue_run(tmp_path, transcript, config)
+    lm = FakeLm([MAP_REPLY])
+    mapper.run_stage(ctx_for(run_dir, "map", fake_manager(config, tmp_path, map=lm)))
+    assert len(lm.prompts) == 1
+    assert [a.owner for a in schemas.load(run_dir, MapFile).notes[0].action_items] == ["Maria"]

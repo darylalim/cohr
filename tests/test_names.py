@@ -108,7 +108,10 @@ def test_said_folded_ignores_accents_but_not_katakana_marks() -> None:
 
 # --- who a task is for (8d, D42) ------------------------------------------------------------
 
-PEOPLE = {"Tom", "Maria", "Laura", "Grace", "Victor", "Omar", "Crews", "Monday", "Okay", "Action"}
+PEOPLE = {
+    *["Tom", "Maria", "Laura", "Grace", "Victor", "Omar", "Crews", "Kenji"],
+    *["Monday", "Okay", "Action", "Schedule", "F"],  # said_names keeps these too (8d, 8e)
+}
 
 
 @pytest.mark.parametrize(
@@ -148,6 +151,10 @@ def test_subject_task(text: str, found: tuple[str, str] | None) -> None:
         ("The dashboard was updated on Monday, so these are fresh numbers.", None),
         ("Okay, so the decision is to keep the onboarding checklist.", None),
         ("The way the budget is reported is confusing, and I keep having to explain it.", None),
+        # 8e: a reply is no one; ASR's capitalised verb and one-letter word are no surname
+        ("Okay, will do.", None),
+        ("Action item for Laura Schedule the board presentation by the end of the month.", "Laura"),
+        ("Victor, can you book the venue for the F site by 3 October?", "Victor"),
     ],
 )
 def test_addressee(sentence: str, owner: str | None) -> None:

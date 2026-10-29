@@ -2210,6 +2210,8 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
 3. ~~**Map files a task only as a decision**~~: done in Phase 8d, widened to every missed
    action item Map reached (D42, Python on map.json and the final notes, no prompt rule;
    9 of 17 found). Left over: see 8d's "Open".
+   Map's never-written tasks: done in Phase 8e (D43, flagged sentences → one Tiny Aya call;
+   quick action recall 100% at seeds 0/2/3, long-en 70 → 90%). Left over: see 8e's "Open".
 4. **Map miscopies digits in ja meetings** (D35): 354,000 written 3,400,000 / 345,000 even
    from grouped digits. The guard flags it; no repair.
 5. **Japanese ビクター** isn't matched to Victor (no final r); Japanese owners in Japanese
@@ -2587,3 +2589,52 @@ Branch `phase-8d-missed-tasks`. Post-v1 item 3, widened; D42.
 - AMI has 0 name-cued sentences, so it can't test the rule's must-not-fire side; the prompt
   asks for must-not-fire tests from real speech and a seed 2/3 check on quick before choosing
   between a Python net, a small model call on the flagged sentences, and a Map prompt change.
+
+## 2026-10-29 · Phase 8e: action items Map never wrote
+Branch `phase-8e-map-recall`. 8d's "Open"; D43.
+- Step 0 (no models): with three fixes in the scan ("Okay" and other replies are no one, a
+  one-letter word is no one, owners compared by name: by consonants Omar = Maria = "mr"),
+  the scan flags exactly the 8 misses on the 17 stored runs, 0 elsewhere (AMI: no sentence
+  names anyone). The stored quick runs are pipeline seed 0 (`Config.seed`'s default, item
+  seeds 1–4 are the generator's); `-c seed=N` changes only the pipeline seed, media stay.
+- Map's misses change with the seed: quick action recall 95 / 80 / 75% at seeds 0 / 2 / 3
+  (Omar's hiring plan written at 0, dropped at 2 and 3; Nadia, Grace, Maria likewise). Every
+  missed action fact at every seed was a flagged sentence. A prompt change would move which
+  tasks drop; a net catches whichever do.
+- long-en's 2 extra made-up tasks (seg 25) don't share the cause: Map wrote them from filler
+  ("the way cloud costs is reported is a bit confusing"), and no sentence names anyone.
+- Fix (user: scan + model over a Python-only net and a map.md rule): `names.addressee` fixes
+  above, plus a two-word name cut to its first word when that is a person ("Action item for
+  Laura Schedule …"); `mapper.uncovered_cues` → one `map_tasks.md` call per flagged segment,
+  temperature 0; Python owns the owner and the values. `map.cue_tasks` switches it off.
+- Found while measuring: Tiny Aya closed noisy-en's one entry with `}}}` (each `{"line": …}`
+  is now read alone; a temperature-0 retry would repeat it); it judged conflict-de's "Grace
+  will write the release notes by Wednesday." no task when writing German (the same sentence
+  in English is one); and it cut f86 to "order laptops". Rewording the prompt ("with every
+  detail") left f86 short and put Nadia's name into the German task, so it was reverted and
+  `mapper.whole_task` completes the task from the sentence (English notes, words said
+  verbatim; replayed on every stored English run, it changed only f86).
+- Map owners "Omar Crews" (ASR, f40) cover Omar: an owner's first word counts as covered.
+
+| | before | after |
+|---|---|---|
+| quick action recall, seeds 0 / 2 / 3 | 95.0 / 80.0 / 75.0% | **100 / 100 / 100%** |
+| quick seed 0 fact recall, Ask, citation accuracy | 89.7%, 98.1%, 100% | 91.2%, 98.1%, 100% |
+| quick made-up items, wrong owner/due (3 seeds) | 0 / 1 / 0, 0 | 0 / 1 / 0 (same item), 0 |
+| lang seed 1 action recall / fact recall | 94.3% / 92.3% | **97.1% / 93.4%** |
+| long-en action recall / fact recall | 70.0% / 71.3% | **90.0% / 78.8%** |
+| long-en Ask, citation accuracy | 88.9%, 98.3% | **94.4%**, 98.4% |
+| long-en made-up items | 6 | 7 (f15: owner "Oma", ASR for Omar) |
+| AMI | — | 0 flagged sentences: no call, no change |
+
+- Runs: quick seeds 0/2/3 and lang seed 1 with `--rerun map --no-ask`, then the final quick
+  (Ask and judge), lang seed 1 `--no-ask` and long-en, each `--update-baseline`. All three
+  baselines rewritten on purpose (Map now writes the tasks it dropped).
+- Long runs cost: 4 of 30 long-en segments make the extra call; quick 0–2 per meeting.
+
+### Open
+- conflict-de f6: the model says Grace's sentence gives no task when writing German; Map's
+  own German task has no owner and no word overlap (8d).
+- f15 and f40: the transcription's names ("Oma", "Omar Crews read" for "Omar proofread").
+- Cues are English only (xling-es/ja have none); Japanese and Spanish meetings get no net.
+- The 5 long-en made-up items from 8b/8d remain (seg 25's two are Map writing filler as tasks).

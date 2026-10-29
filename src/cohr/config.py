@@ -197,6 +197,8 @@ class MapConfig(_Section):
     temperature: float = 0.3
     # check Map's digits against the segment's sources, and mark speech/slide conflicts (§5.5)
     number_guard: bool = True
+    # one call on a segment's sentences that give a named person a task Map didn't write (8e)
+    cue_tasks: bool = True
 
 
 class ReduceConfig(_Section):
