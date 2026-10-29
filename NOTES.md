@@ -2494,3 +2494,5 @@ Branch `phase-8c-ask-long`. Post-v1 item 7; D41.
   cited text").
 - `pass2_group` 0 → 5 on long-en (R7B's new pass-2 spans matched no pass-1 claim); notes
   citation accuracy unchanged.
+
+- 1.4.0 bump: done 2026-10-28 on request (release-1.4.0).
