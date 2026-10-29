@@ -1288,6 +1288,12 @@ owner-less task takes the one person its own text or sentence gives it to
 (`reduce.fill_owners`) and owned Map tasks the notes lost are added (`reduce.add_lost_tasks`),
 cited with the owner as anchor. 9 of the 17 found; lang seed 1 action recall 80.0 → 94.3%,
 long-en 55 → 70% (made-up 4 → 6: two owner-less pass-1 tasks pass 2 now keeps); quick identical; AMI replay unchanged.
+**Phase 8e (after v1): action items Map never wrote** (8d's "Open"): 8 planted tasks are in no
+map.json (long-en f14, f15, f19, f71, f86; noisy-en f7; conflict-de f5, f6 with no owner).
+Segments aren't uneven (long-en: 261–299 s, 726–864 words each; seg 4 wrote 0 of its 3 tasks,
+seg 6 all 3). Each is a sentence `names.addressee` already reads ("Maria, can you …", "Kenji
+will …", "Action item for Grace …"); a scan of those against each segment's Map owners reaches
+7 of the 8. AMI addresses no one by name, so it can't test a rule like that. Kickoff prompt in §21.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -3158,4 +3164,85 @@ shows it shares a cause. Don't bump the version: I'll ask separately. When done:
 checklist, add new decisions to §20 as D-numbers, update §5.5–5.6 (Map guards, task
 handling), add a NOTES.md entry and update the post-v1 list, make sure the gate passes, and
 open a PR (ask before pushing).
+```
+
+### Kickoff prompt for Phase 8e (action items Map never wrote)
+```text
+Continue cohr: Phase 8e (action items Map never wrote, 8d's "Open"; 8d's long-en made-up
+4 → 6 measured alongside). Read CLAUDE.md, then PLAN.md §5.5–5.6 (Map, its guards, Reduce's
+task handling), §18 (action recall, owner and due matching, made-up items), §19, D33, D34,
+D40, D41 and D42 in §20, and NOTES.md: the 8d entry ("Open"), the post-v1 list and the 8e
+kickoff entry. Work on branch phase-8e-map-recall from main (v1.5.0 is released: #65, #67).
+Correction to the candidate I gave first ("dense segments: split them before Map"): long-en's
+segments are all one size (261–299 s, 726–864 words). Seg 4 (816 words) wrote 0 of its 3 tasks
+and no decision ("with no major decisions or action items"); seg 6 (804) wrote all 3. Where
+a task sits in its segment doesn't predict it either: misses at 3% to 95% of the text, hits
+the same. From the kickoff check on reports 20261029-064420-quick.json,
+20261029-072413-lang.json and 20261029-072413-long.json (scripts/trace_facts.py; lang
+map.json read by hand):
+- In no map.json (8): long-en f14 "Maria, can you send the contract to legal …?", f15 "Oma
+  will organize the team lunch …" (ASR for Omar), f19 "Kenji will draft the hiring plan …"
+  (all seg 4), f71 "Action item for Grace fix the login timeout bug …" (seg 21), f86 "Kenji
+  will order laptops …" (seg 27, just before Grace's task, which Map wrote); noisy-en f7
+  "Victor, can you book the venue for the F site …?"; conflict-de f5 "Nadia, can you send the
+  contract to legal …?" and f6 "Grace will write the release notes …" (a German Map task
+  with no owner and no word overlap, 8d). f40 is ASR, out of scope.
+- Every one is a cue sentence `names.addressee` reads (D42's cue forms). A scan of each
+  segment's sentences for an addressee who owns no Map task in that segment (owners folded)
+  reaches 7 of the 8. It misses noisy-en f7: ASR's "F site" makes "F" a second person, so
+  `addressee` returns None. On the other stored runs it flags:
+  - "Okay, will do." in 9 runs. `names._NOT_PEOPLE` lacks "okay". It was never written as an
+    owner (8d reads only the sentences Map's tasks cite), but a transcript-wide scan would add
+    it.
+  - long-en seg 9 "Laura Schedule": `_PERSON` took ASR's capitalised verb as a surname.
+    Laura's f36 is in Map.
+  - clean-hi: all 6 tasks, because Map wrote the owners in Devanagari and the scan compared
+    folded Latin. Compare through `names.restore` or the skeleton.
+  - xling-es and xling-ja: 0 cue sentences (English cues only).
+- AMI has 0 such sentences: its speakers address no one by name ("can you go on to the next
+  slide?") and give themselves tasks ("I'll have to ask the manufacturing department"). So
+  AMI can't show this rule misfiring, and evals/gen plants every task in these three cue forms:
+  the 8b risk of a rule that fits the generator. Must-not-fire cases have to be written as
+  tests from real speech: "Tom, can you hear me?", "Maria, can you go to the next slide?",
+  "Kenji will be out next week", "Grace will love this".
+- Each report ran Map at one seed. Whether Map also misses these at seeds 2 and 3 isn't known.
+Read the run files yourself before building on this (CLAUDE.md).
+0. Proposal before code (ask me). First, without models: re-run the scan on every stored run
+   (fix the three false flags above in the scan, not yet in `names`), list each flag with its
+   sentence, and check quick at -c seed=2 and seed=3 with --no-ask --no-judge (fine to run)
+   to see if the same tasks go missing. Then propose. Candidates, not choices:
+   - A Python recall net on map.json, after `guard_owners` (where Ask, Reduce and search read
+     one value, as in 8c and 8d): an uncovered cue sentence becomes a Map action item. Owner
+     = the addressee, task = the verb phrase after the cue, due only if `dues.due_said`
+     passes. Works only when the notes are in English: Map writes in the notes language
+     (conflict-de's Map is German), so say what other notes languages get.
+   - A small model call on just the uncovered cue sentences ("which of these gives someone a
+     task? write each as an action item", prompt in src/cohr/prompts/, notes language, no
+     example lines that overlap evals/gen/script.py). The model separates "can you hear me"
+     from a task, and Python keeps the owner and checks the due. Say the cost: calls per
+     segment, Map's config hash, and whether `--rerun` can reach it without a full Map rerun.
+   - A map.md rule or a prefill (CLAUDE.md: start the reply, don't reword), only if neither
+     reaches a case; seeds 1–3, every set.
+   For each: whether it changes MapFile (a new field moves every Ask cache key, 8c lesson),
+   what it does to made-up items, and the `names` fixes it needs ("okay" and replies like
+   "Okay, will do."; a capitalised verb after the name; "F" and other one-letter words as
+   people). Also say whether long-en's 2 extra made-up tasks (seg 25, owner-less, from 8d's
+   pass 2) share a cause; otherwise they stay open.
+1. The fixes, with tests: the 7 sentences above become owned action items. The must-not-fire
+   sentences, "Okay, will do.", a sentence naming two people and an already-listed task add
+   nothing.
+2. Measure: replay first. Apply a Python fix to copies of the stored runs' map.json (copy,
+   don't delete) and rebuild with `build_notes` + `restore_owners` on notes.json `raw` where
+   Reduce isn't needed. A Map-side addition changes Reduce's input, so then run quick and lang
+   -c seed=1 --no-ask (`--rerun` from the stage the fix lives in), and long-en (Ask included;
+   ask first). Report action recall, owner and due accuracy, made-up items, decisions recall,
+   citation accuracy and Ask accuracy before and after. For AMI, give the scan's count (it
+   should add nothing) and replay the stored runs (an AMI run: ask).
+3. Rewrite the baselines the fix moves on purpose, with the reason in the commit.
+Rules from CLAUDE.md apply. Ask me before every full or long run, AMI runs, the opt-in model
+tests and new dependencies (none should be needed). quick and lang runs are fine. The rest of
+the post-v1 list stays open (items 4, 5, 8 and 10, 8c's a-f61 Ask rule, 8d's B2 order) unless
+step 0 shows it shares a cause. Don't bump the version: I'll ask separately. When done: tick
+the checklist, add new decisions to §20 as D-numbers, update §5.5–5.6, add a NOTES.md entry
+and update the post-v1 list, make sure the gate passes, and open a PR (ask before pushing).
 ```
