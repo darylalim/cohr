@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-14T09:48:45.922735-10:00",
+  "created_at": "2026-10-28T17:22:17.192521-10:00",
   "set": "quick",
-  "git_sha": "472efbc-dirty",
+  "git_sha": "afc4c3d-dirty",
   "overrides": {},
   "models": {
     "vad": "mlx-community/silero-vad-v6@2ebf4a5",
@@ -33,7 +33,7 @@
         "facts": 17,
         "facts_found": 16,
         "fact_recall": 0.9412,
-        "citation_accuracy": 0.9375,
+        "citation_accuracy": 1.0,
         "claims": 19,
         "uncited_claims": 0,
         "made_up_items": 0,
@@ -92,7 +92,7 @@
           "section": "key_points",
           "claim": "Support Queue: 390 open tickets (up from 233 last week). Seasonality noted; new logo on website.",
           "citation_ok": true,
-          "t_error": -2.22,
+          "t_error": 3.47,
           "slide_cited": false
         },
         {
@@ -131,7 +131,7 @@
           "section": "key_points",
           "claim": "Site Speed: 950ms average page load time (up from 820ms last release). Dashboard updated on Monday.",
           "citation_ok": true,
-          "t_error": -2.31,
+          "t_error": -0.33,
           "slide_cited": false
         },
         {
@@ -157,7 +157,7 @@
           "section": "key_points",
           "claim": "Quarterly Budget: $42,500 approved (down from $59,500 last quarter). Trend aligns with expectations.",
           "citation_ok": true,
-          "t_error": -1.44,
+          "t_error": 4.54,
           "slide_cited": false
         },
         {
@@ -170,7 +170,7 @@
           "section": "key_points",
           "claim": "Cloud Costs: $11,800 monthly bill (down from $7700 last month). Seasonality noted.",
           "citation_ok": true,
-          "t_error": -0.15,
+          "t_error": 1.99,
           "slide_cited": false
         },
         {
@@ -196,7 +196,7 @@
           "section": "key_points",
           "claim": "Revenue: $354,000 monthly recurring revenue (up from $134,000 last month). Trend aligns with expectations.",
           "citation_ok": true,
-          "t_error": -2.19,
+          "t_error": -0.45,
           "slide_cited": false
         },
         {
@@ -209,7 +209,7 @@
           "section": "key_points",
           "claim": "Retention: 34% week-2 return rate (down from 82% last month). Trend aligns with expectations.",
           "citation_ok": true,
-          "t_error": -1.44,
+          "t_error": 0.22,
           "slide_cited": false
         },
         {
@@ -247,8 +247,8 @@
           "judge_covered": null,
           "section": "key_points",
           "claim": "Hiring: 75 candidates in pipeline (down from 85 last month). Trend aligns with expectations.",
-          "citation_ok": false,
-          "t_error": -163.66,
+          "citation_ok": true,
+          "t_error": -0.03,
           "slide_cited": false
         },
         {
@@ -287,7 +287,7 @@
           "section": "key_points",
           "claim": "Trial signups: New trial signups increased from 2,600 last month to 4,650 this month. Seasonality noted.",
           "citation_ok": true,
-          "t_error": -1.68,
+          "t_error": 0.84,
           "slide_cited": false
         },
         {
@@ -746,13 +746,13 @@
           "fact": "f4",
           "answer": "Die Ladezeit der Seite beträgt 950 ms.",
           "citations": [
-            "seg 0 @0.002",
+            "seg 0 @67.2",
             "slide 1"
           ],
           "language": "de",
           "stated": true,
           "citation_ok": true,
-          "t_error": -67.53,
+          "t_error": -0.33,
           "correct": true
         },
         {
@@ -836,28 +836,28 @@
           "reused": true
         },
         "map": {
-          "seconds": 15.02,
-          "s_per_audio_hour": 151.1,
+          "seconds": 16.44,
+          "s_per_audio_hour": 165.4,
           "peak_mem_gb": 4.4,
           "reused": true
         },
         "reduce": {
-          "seconds": 34.96,
-          "s_per_audio_hour": 351.7,
-          "peak_mem_gb": 5.92,
-          "reused": false
+          "seconds": 34.38,
+          "s_per_audio_hour": 345.9,
+          "peak_mem_gb": 9.48,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -1667,28 +1667,28 @@
           "reused": true
         },
         "map": {
-          "seconds": 13.88,
-          "s_per_audio_hour": 138.6,
-          "peak_mem_gb": 7.54,
+          "seconds": 12.46,
+          "s_per_audio_hour": 124.4,
+          "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 23.13,
-          "s_per_audio_hour": 230.9,
-          "peak_mem_gb": 5.92,
-          "reused": false
+          "seconds": 23.43,
+          "s_per_audio_hour": 233.9,
+          "peak_mem_gb": 9.48,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -1800,7 +1800,7 @@
           "section": "key_points",
           "claim": "Site speed improved, with page load time decreasing from 670 ms to 350 ms.",
           "citation_ok": true,
-          "t_error": -2.32,
+          "t_error": -0.46,
           "slide_cited": true
         },
         {
@@ -2187,7 +2187,7 @@
           "citations": [
             "seg 0 @12.72",
             "slide 0",
-            "seg 0 @0.002",
+            "seg 0 @16.88",
             "slide 0"
           ],
           "language": "en",
@@ -2423,13 +2423,13 @@
           "fact": "f4",
           "answer": "Die Ladezeit der Seite beträgt 350 ms.",
           "citations": [
-            "seg 0 @0.002",
+            "seg 0 @74.15",
             "slide 1"
           ],
           "language": "de",
           "stated": true,
           "citation_ok": true,
-          "t_error": -74.61,
+          "t_error": -0.46,
           "correct": true
         },
         {
@@ -2519,28 +2519,28 @@
           "reused": true
         },
         "map": {
-          "seconds": 10.58,
-          "s_per_audio_hour": 106.6,
-          "peak_mem_gb": 12.06,
+          "seconds": 10.61,
+          "s_per_audio_hour": 107.0,
+          "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 28.83,
-          "s_per_audio_hour": 290.5,
-          "peak_mem_gb": 5.92,
-          "reused": false
+          "seconds": 29.01,
+          "s_per_audio_hour": 292.4,
+          "peak_mem_gb": 9.48,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -3392,26 +3392,26 @@
         "map": {
           "seconds": 11.95,
           "s_per_audio_hour": 122.9,
-          "peak_mem_gb": 12.06,
+          "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 22.7,
-          "s_per_audio_hour": 233.4,
-          "peak_mem_gb": 5.92,
-          "reused": false
+          "seconds": 22.74,
+          "s_per_audio_hour": 233.9,
+          "peak_mem_gb": 9.48,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     }
@@ -3420,7 +3420,7 @@
     "items": 4,
     "facts": 68,
     "fact_recall": 0.8971,
-    "citation_accuracy": 0.9836,
+    "citation_accuracy": 1.0,
     "uncited_claims": 0,
     "made_up_items": 0,
     "made_up_open_questions": 0,
@@ -3486,12 +3486,12 @@
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 129.8,
-      "peak_mem_gb": 12.06
+      "s_per_audio_hour": 129.9,
+      "peak_mem_gb": 8.91
     },
     "reduce": {
-      "s_per_audio_hour": 276.8,
-      "peak_mem_gb": 5.92
+      "s_per_audio_hour": 276.6,
+      "peak_mem_gb": 9.48
     },
     "translate": {
       "s_per_audio_hour": 0.0,
@@ -3502,32 +3502,27 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 880.4,
+      "s_per_audio_hour": 880.3,
       "peak_mem_gb": 16.83
     }
   },
   "citation_errors": [
-    -163.66,
     -3.29,
     -2.5,
-    -2.32,
-    -2.31,
-    -2.22,
-    -2.19,
-    -1.68,
-    -1.44,
-    -1.44,
     -0.96,
     -0.87,
     -0.54,
     -0.52,
+    -0.46,
+    -0.45,
     -0.42,
     -0.4,
+    -0.33,
     -0.32,
     -0.2,
-    -0.15,
     -0.14,
     -0.14,
+    -0.03,
     -0.03,
     -0.02,
     -0.02,
@@ -3542,6 +3537,7 @@
     0.1,
     0.18,
     0.2,
+    0.22,
     0.24,
     0.34,
     0.35,
@@ -3559,6 +3555,7 @@
     0.82,
     0.84,
     0.84,
+    0.84,
     0.87,
     0.94,
     0.95,
@@ -3571,8 +3568,11 @@
     1.44,
     1.55,
     1.95,
+    1.99,
     2.5,
-    3.42
+    3.42,
+    3.47,
+    4.54
   ],
   "judge": {
     "loaded": false,

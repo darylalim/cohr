@@ -2214,9 +2214,9 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
 5. **Japanese ビクター** isn't matched to Victor (no final r); Japanese owners in Japanese
    notes aren't in any set.
 6. ~~**Map's ownerless "End of next week" dues**~~: dropped from the notes in Phase 8b
-   (D40: 34 unsaid, 4 placeholders; 1 of AMI's 39 left); Map still writes them (8b's "Open").
-7. **Ask on the regenerated long-en**: 77.8% (was 94.4% on the old audio); the 4 misses
-   are actions answered from the wrong part. Not caused by 6e-2; check with Ask ranking.
+   (D40: 34 unsaid, 4 placeholders; 1 of AMI's 39 left), and from map.json in Phase 8c (D41).
+7. ~~**Ask on the regenerated long-en**~~: done in Phase 8c (D41, best-span placement and
+   Map's dates and dues checked; 77.8 → 88.9%). Left over: see 8c's "Open".
 8. Carry-overs 5–7 from 6e-1: Japanese chunk-start and dense-segment drops, eval-only gaps,
    Ask near-miss (55.6% on full).
 9. ~~The 1.0.0 bump~~: done on request (`uv version --bump major`, pyproject + uv.lock;
@@ -2441,3 +2441,56 @@ Branch `phase-8b-made-up-tasks`. Post-v1 items 1 and 6; D40.
 - Steer added after review: the Map-values fix goes on Map's items (map.json) rather than only
   on Ask's snippets, so every reader sees one value and 8b's "1 November" task is reached too
   (user).
+
+## 2026-10-28 · Phase 8c: Ask on long meetings
+Branch `phase-8c-ask-long`. Post-v1 item 7; D41.
+- Step 0 (stored runs and cached replies, no models): ranking isn't the cause (rank 0, 0, 0,
+  2). a-f26: `<co>Tom</co>` then the task, both citing seg 6; the first span placed it at
+  Tom's first chunk (−197.7 s). a-f82: Map wrote "November 1" three times in seg 26 (said
+  "11 November"); the number guard kept it because the segment says 1 elsewhere. a-f61: 6 of
+  the 9 "end of next week" Map lines sent were owner-less copies of map.md's example. a-f15:
+  "Oma … lunch" is in seg 4, where Map wrote no task and which wasn't sent.
+- Multi-span claims: 33 in the cached Ask replies (7 placing > 15 s apart), 179 of 541
+  one-pass notes claims (139 apart, mostly AMI one-word spans like "meeting"). Replayed
+  (rebuild matched the stored notes item for item): best span fixes a-f26 and lifts clean-en
+  citations 93.75 → 100%, nothing drops on any item.
+- Map's dues checked on every stored run: fires only on long-en's 7 copies, "November 1" and
+  conflict-de's made-up "Do. 4:44" (said "end of next week"); AMI 44 of 45 (D40's drops).
+  The date check fires only on seg 26's three "November 1"s.
+- Fixes: `reduce.best_span` (Refine takes every span citing the segment; one rule for
+  `resolve`, `pass2_resolver` and Ask). `mapper.guard_dates` after the number guard:
+  `dues.check_dates` repairs a date one digit edit from exactly one said date of its month,
+  else flags it; `dues.due_said` (shared with `reduce.guard_dues`) drops an unsaid due.
+  MapFile v5 (`dropped_dues`). map.md's example left as is: the check removes every copy.
+- Map reproduced its stored output field for field on every item at the same seed (diffed
+  against copies of the runs, outside the guarded fields). The new field moves every Ask
+  cache key (`sources_hash`), so all answers were re-asked.
+
+| | before | after |
+|---|---|---|
+| long-en Ask accuracy / citation | 77.8% / 93.3% | **88.9% / 100%** |
+| long-en made-up items | 7 | **4** |
+| long-en support rate | 79.4% | **82.0%** |
+| long-en recall, notes citation accuracy | 67.5%, 98.1% | unchanged |
+| quick citation accuracy | 98.4% | **100%** (clean-en 93.75 → 100) |
+| quick other metrics, Ask | — | identical (76 answers re-asked) |
+| lang seed 1 | — | identical but conflict-de support: 1 partial → no |
+
+- Runs: quick (Ask and judge), lang seed 1 `--no-ask`, long-en (Ask and judge); Map re-ran
+  by the format bump (+145 s on long-en). `baseline.json` and `baseline-long.json`
+  rewritten on purpose; `baseline-lang.json` unchanged.
+
+### Open
+- a-f15 stays a miss: ASR wrote "Oma", Map has no task in seg 4, so it isn't sent. Only Map
+  recall reaches it.
+- a-f61 still answers Maria's task: the copies are gone, but 4 real "end of next week" tasks
+  are sent (Maria ×2, Omar, Grace). An Ask prompt rule ("answer for the person named") is the
+  remaining candidate; it moves every cached answer.
+- long-en `ask_xlang_history` 1 → 0: one question. a-f4's answer changed wording (its documents
+  lost copied dues), so de-history's history changed; both before and after R7B listed every
+  metric instead of answering, and the old list happened to include 4,550.
+- conflict-de: with Map's made-up due gone, R7B wrote Tom's task without "bis Ende nächsten
+  Woche" and the judge called the shorter German claim unsupported (its phrase "not in the
+  cited text").
+- `pass2_group` 0 → 5 on long-en (R7B's new pass-2 spans matched no pass-1 claim); notes
+  citation accuracy unchanged.

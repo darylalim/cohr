@@ -5,7 +5,8 @@ notes came back in English). Invalid JSON is retried once; after that the raw te
 summary with `raw: true`, so one bad segment never fails the stage.
 
 The number guard then checks every number Map wrote with digits against the segment's own
-transcript and slide text, and repairs or flags the ones that aren't there (§5.5, D20).
+transcript and slide text, and repairs or flags the ones that aren't there (§5.5, D20); then
+dates and dues are checked against what the segment says (8c, D41).
 """
 
 import json
@@ -13,7 +14,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from cohr import schemas
+from cohr import dues, schemas
 from cohr.config import language_name, load_prompt
 from cohr.fuse import slide_text
 from cohr.numbers import (
@@ -226,6 +227,59 @@ def guard_numbers(
             "open_questions": fix_all(notes.open_questions),
             "number_repairs": repairs,
             "unverified_numbers": list(dict.fromkeys(unverified)),
+        }
+    )
+
+
+# --- dates and dues (pure, §5.5, 8c) --------------------------------------------------------
+
+
+def guard_dates(
+    notes: SegmentNotes, source_text: str, notes_language: str, source_language: str
+) -> SegmentNotes:
+    """Map's dates and dues against the segment's transcript and slide text (D41). English
+    notes of an English meeting: a date the segment doesn't say is repaired when one said
+    date of its month is a digit edit away ("November 1" → "November 11"), else flagged
+    (`dues.check_dates`); other languages' dates are left to the number guard. Then a due
+    the segment doesn't say is dropped (`dues.due_said`, as Reduce does on the final notes,
+    D40): Map copies its prompt's example due ("End of next week") onto tasks that have
+    none, and Ask's documents showed it next to the real ones (8c a-f61)."""
+    if notes.raw:
+        return notes
+    repairs = list(notes.number_repairs)
+    unverified = list(notes.unverified_numbers)
+    said_dates = dues.dates_in(source_text)
+    english = notes_language == source_language == "en"
+
+    def fix(text: str) -> str:
+        if not english:
+            return text
+        fixed, r, u = dues.check_dates(text, said_dates)
+        repairs.extend(NumberRepair(original=a, repaired=b) for a, b in r)
+        unverified.extend(u)
+        return fixed
+
+    def fix_all(texts: list[str]) -> list[str]:
+        return [fix(t) for t in texts]
+
+    dropped: list[str] = []
+    actions = []
+    for a in notes.action_items:
+        a = a.model_copy(update={"task": fix(a.task), "due": a.due and fix(a.due)})
+        if a.due and not dues.due_said(a.due, source_text, notes_language, source_language):
+            dropped.append(a.due)
+            a = a.model_copy(update={"due": None})
+        actions.append(a)
+    return notes.model_copy(
+        update={
+            "summary": fix(notes.summary),
+            "key_points": fix_all(notes.key_points),
+            "decisions": fix_all(notes.decisions),
+            "action_items": actions,
+            "open_questions": fix_all(notes.open_questions),
+            "number_repairs": repairs,
+            "unverified_numbers": list(dict.fromkeys(unverified)),
+            "dropped_dues": dropped,
         }
     )
 
@@ -481,8 +535,20 @@ def run_stage(ctx: StageContext) -> None:
                     )
                     days = source_days(seg.transcript_text, seg_slides)
                     seg_notes = guard_numbers(seg_notes, sources, ctx.config.notes_language, days)
+                    seg_notes = guard_dates(
+                        seg_notes,
+                        "\n".join([seg.transcript_text, *seg_slides]),
+                        ctx.config.notes_language,
+                        ctx.config.source_language,
+                    )
                     for fix in seg_notes.number_repairs:
                         ctx.log.info("map: segment %d %s → %s", k, fix.original, fix.repaired)
+                    if seg_notes.dropped_dues:
+                        ctx.log.info(
+                            "map: segment %d dues not said, dropped: %s",
+                            k,
+                            ", ".join(seg_notes.dropped_dues),
+                        )
                     if seg_notes.unverified_numbers:
                         ctx.log.warning(
                             "map: segment %d numbers in no source: %s",
