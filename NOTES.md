@@ -2640,3 +2640,18 @@ Branch `phase-8e-map-recall`. 8d's "Open"; D43.
 - The 5 long-en made-up items from 8b/8d remain (seg 25's two are Map writing filler as tasks).
 
 - 1.6.0 bump: done 2026-10-29 on request (release-1.6.0).
+
+## 2026-10-29 · Phase 8f kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 8f" and a §9 line: missed decisions. Picked over
+  long-en numbers (77.5%) and made-up items (7), which show only on the 40 min long set, and
+  the Japanese items (4, 5, 10): decisions are the weakest kind in every set (quick 75%,
+  long-en 70%, lang 21/28 judge-covered) after 8b–8e took action recall to 90–100%.
+- Kickoff check on the stored runs (CLAUDE.md lesson): of quick seed 0's 4 misses and
+  long-en's 6, 7 are in no map.json, clean-en f2 is a Map key point, long-en f49 a Map
+  decision the notes lost, and long-en f55 is ASR ("PostGIS"). All are planted in three
+  cue forms; a scan of those against each segment's Map decisions flags exactly the English
+  misses. noisy-en f3 and slide-conflict-en f2 are missed at seeds 0–3, so unlike 8e a
+  prompt change isn't ruled out.
+- AMI has 6 such sentences in 5 meetings, none a missed decision (4 already in Map, 2 refer
+  back), so a cue rule fits the generator; the prompt asks for must-not-fire tests from real
+  speech. lang misses need a hand read of map.json (Map writes the notes language).
