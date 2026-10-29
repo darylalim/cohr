@@ -24,7 +24,7 @@ from typing import Any, Literal, NamedTuple
 from cohr import dues, names, numbers, schemas
 from cohr.config import language_name, load_prompt
 from cohr.fts import fold_digits
-from cohr.fuse import overlap, slide_text, tokens
+from cohr.fuse import match_score, overlap, slide_text, tokens
 from cohr.mapper import clock, fill
 from cohr.pipeline import Stage, StageContext
 from cohr.schemas import (
@@ -298,7 +298,8 @@ class Anchors(NamedTuple):
 
     def hits(self, text: str, source_language: str) -> int:
         said = numbers.source_numbers_in(fold_digits(text), source_language)
-        return len(self.values & said) + bool(self.owner and names.said_in(self.owner, text))
+        owner = bool(self.owner and names.said_folded(self.owner, text))
+        return len(self.values & said) + owner
 
 
 def span_anchors(span: str, items: Sequence[TranscriptItem], notes_language: str) -> Anchors:
@@ -405,11 +406,6 @@ def _known(value: str | None) -> str | None:
     return None if value.casefold() in _UNKNOWN else value
 
 
-def _match_score(a: str, b: str) -> float:
-    ta, tb = set(tokens(a)), set(tokens(b))
-    return len(ta & tb) / min(len(ta), len(tb)) if ta and tb else 0.0
-
-
 def filed_task(claim: Claim, map_notes: Mapping[int, SegmentNotes]) -> bool:
     """A decision that is one of Map's tasks: it matches an action item of a cited segment at
     ACTION_MATCH_MIN and better than any of those segments' Map decisions (AMI ES2004b: "The
@@ -420,10 +416,10 @@ def filed_task(claim: Claim, map_notes: Mapping[int, SegmentNotes]) -> bool:
     cited = [map_notes[c.id] for c in claim.citations if c.kind == "seg" and c.id in map_notes]
     task, owned = 0.0, False
     for a in (a for n in cited for a in n.action_items):
-        score = _match_score(claim.text, a.task)
+        score = match_score(claim.text, a.task)
         if score > task or (score == task and a.owner):
             task, owned = score, bool(a.owner)
-    decided = max((_match_score(claim.text, d) for n in cited for d in n.decisions), default=0)
+    decided = max((match_score(claim.text, d) for n in cited for d in n.decisions), default=0)
     return task >= ACTION_MATCH_MIN and (task > decided or (task == decided and owned))
 
 
@@ -496,11 +492,121 @@ def move_vague_tasks(doc: NotesDoc) -> tuple[NotesDoc, list[str]]:
     return doc.model_copy(update={"sections": sections}), [c.text for c in moved]
 
 
+def _map_owner(claim: Claim, map_notes: Mapping[int, SegmentNotes]) -> str | None:
+    """The owner of the cited segments' Map task that `claim` matches best (≥
+    ACTION_MATCH_MIN); None when that task has none, or tasks tie with different owners."""
+    scored = [
+        (match_score(claim.text, a.task), _known(a.owner))
+        for c in claim.citations
+        if c.kind == "seg" and c.id in map_notes
+        for a in map_notes[c.id].action_items
+    ]
+    best = max((s for s, _ in scored), default=0.0)
+    owners = {o for s, o in scored if s == best}
+    if best < ACTION_MATCH_MIN or len(owners) != 1:
+        return None
+    return owners.pop()
+
+
+def owned_span(owner: str, task: str) -> str:
+    """A task's text as Refine reads it, so its owner anchors the citation in any language
+    (D39: conflict-de's German task placed at its segment's start without it, −223 s)."""
+    return f"[owner: {owner}] {task}"
+
+
+def fill_owners(
+    doc: NotesDoc, map_notes: Mapping[int, SegmentNotes], refine: Refine
+) -> tuple[NotesDoc, list[str]]:
+    """D42: an action item R7B wrote as `[owner: ?]` takes the owner of the Map task it states
+    (conflict-de: "Erstellung des Einstellungsplans" is Tom's Map task), and its segment
+    citations are placed again with the owner. When another item already gives that owner the
+    same task (ACTION_MATCH_MIN), the citations go there instead: long-en's pass 2 wrote
+    Laura's board presentation twice, once as `[owner: ?]`. The fills, "Tom: …"."""
+    filled: list[str] = []
+    items = list(doc.sections.action_items)
+    merged: set[int] = set()
+    for k, item in enumerate(doc.sections.action_items):
+        if item.owner is not None or not (owner := _map_owner(item, map_notes)):
+            continue
+        filled.append(f"{owner}: {item.text}")
+        same = [
+            i
+            for i, other in enumerate(items)
+            if i != k
+            and i not in merged
+            and (other.owner or "").casefold() == owner.casefold()
+            and match_score(other.text, item.text) >= ACTION_MATCH_MIN
+        ]
+        if same:
+            other = items[same[0]]
+            new = [c for c in item.citations if c not in other.citations]
+            items[same[0]] = other.model_copy(update={"citations": [*other.citations, *new]})
+            merged.add(k)
+            continue
+        span = owned_span(owner, item.text)
+        citations = [
+            c.model_copy(update={"t": refine(c.id, [span])}) if c.kind == "seg" else c
+            for c in item.citations
+        ]
+        items[k] = item.model_copy(update={"owner": owner, "citations": citations})
+    kept = [item for i, item in enumerate(items) if i not in merged]
+    sections = doc.sections.model_copy(update={"action_items": kept})
+    return doc.model_copy(update={"sections": sections}), filled
+
+
+def _first_seg(claim: Claim) -> int | None:
+    return min((c.id for c in claim.citations if c.kind == "seg"), default=None)
+
+
+def add_lost_tasks(
+    doc: NotesDoc,
+    map_notes: Mapping[int, SegmentNotes],
+    segments: Sequence[Segment],
+    texts: Sequence[str],
+    refine: Refine,
+) -> tuple[NotesDoc, list[str]]:
+    """D42: a Map task with an owner said in its segment that no action item or decision of
+    the notes states (ACTION_MATCH_MIN) is added, citing its segment, before the first item
+    citing a later one. R7B drops some although its prompt keeps every task: pass 2 lost
+    long-en's "Summarize competitor research" (Grace) that pass 1 had, and clean-ar's one-pass
+    reply Tom's video. Owner-less Map tasks are left to R7B (AMI writes decided designs as
+    tasks). The additions, "Grace: …"."""
+    by_seg = {s.seg_id: s for s in segments}
+    items = list(doc.sections.action_items)
+    stated = [c.text for c in [*items, *doc.sections.decisions]]
+    added: list[str] = []
+    for seg_id in sorted(map_notes):
+        if seg_id not in by_seg:
+            continue
+        for a in map_notes[seg_id].action_items:
+            owner = _known(a.owner)
+            if not owner or any(match_score(a.task, t) >= ACTION_MATCH_MIN for t in stated):
+                continue
+            if not names.said_folded(names.restore(owner, texts), by_seg[seg_id].transcript_text):
+                continue
+            task = ActionItem(
+                text=a.task,
+                citations=cite([(("seg", seg_id), owned_span(owner, a.task))], refine),
+                owner=owner,
+                due=_known(a.due),
+            )
+            later = [
+                i for i, it in enumerate(items) if (s := _first_seg(it)) is not None and s > seg_id
+            ]
+            items.insert(later[0] if later else len(items), task)
+            stated.append(a.task)
+            added.append(f"{owner}: {a.task}")
+    if not added:
+        return doc, []
+    sections = doc.sections.model_copy(update={"action_items": items})
+    return doc.model_copy(update={"sections": sections}), added
+
+
 def add_task(items: list[ActionItem], task: ActionItem) -> None:
     """Append a moved decision; when an action item already states it (ACTION_MATCH_MIN),
     add its citations there instead of listing the task twice."""
     for i, item in enumerate(items):
-        if _match_score(item.text, task.text) >= ACTION_MATCH_MIN:
+        if match_score(item.text, task.text) >= ACTION_MATCH_MIN:
             new = [c for c in task.citations if c not in item.citations]
             items[i] = item.model_copy(update={"citations": [*item.citations, *new]})
             return
@@ -524,7 +630,7 @@ def action_item(claim: Claim, map_notes: Mapping[int, SegmentNotes]) -> ActionIt
     ]
     best, score = None, 0.0
     for a in candidates:
-        s = _match_score(claim.text, a.task)
+        s = match_score(claim.text, a.task)
         if s > score:
             best, score = a, s
     owner, due = (best.owner, best.due) if best and score >= ACTION_MATCH_MIN else (None, None)
@@ -704,7 +810,7 @@ def span_targets(span: str, group: PassOne, known: set[Target]) -> tuple[list[Ta
     text = _MARKER.sub("", span)
     best, score = None, 0.0
     for claim in group.claims:
-        s = _match_score(text, claim.text)
+        s = match_score(text, claim.text)
         if s > score:
             best, score = claim, s
     if best is not None and score >= CLAIM_MATCH_MIN:
@@ -980,6 +1086,12 @@ def run_stage(ctx: StageContext) -> None:
                 language,
             )
     texts = [s.transcript_text for s in segments] + [slide_text(s) for s in slides]
+    doc, filled = fill_owners(doc, map_notes, refine)
+    if filled:
+        ctx.log.info("reduce: owners from Map's tasks: %s", "; ".join(filled))
+    doc, added = add_lost_tasks(doc, map_notes, segments, texts, refine)
+    if added:
+        ctx.log.info("reduce: Map's tasks the notes lost, added: %s", "; ".join(added))
     doc, restored = restore_owners(doc, texts)
     if restored:
         ctx.log.info("reduce: owners in the meeting's spelling: %s", ", ".join(restored))

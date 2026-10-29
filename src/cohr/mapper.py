@@ -14,9 +14,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-from cohr import dues, schemas
+from cohr import dues, names, schemas
 from cohr.config import language_name, load_prompt
-from cohr.fuse import slide_text
+from cohr.fuse import match_score, slide_text
 from cohr.numbers import (
     SCALE,
     WRITTEN,
@@ -284,6 +284,74 @@ def guard_dates(
     )
 
 
+# --- owners (pure, §5.5, 8d) ----------------------------------------------------------------
+
+TASK_MATCH_MIN = 0.6  # Reduce's ACTION_MATCH_MIN: a decision a Map task already states
+_BY_DUE = re.compile(r"\bby\s+(?P<due>[^.,;!?]+?)\s*[.!]?$", re.I)
+
+
+def _capital(text: str) -> str:
+    return text[:1].upper() + text[1:]
+
+
+def guard_owners(
+    notes: SegmentNotes,
+    transcript: str,
+    said: set[str],
+    notes_language: str,
+    source_language: str,
+) -> tuple[SegmentNotes, list[str]]:
+    """Tasks Map wrote without their owner (D42), English notes only; the changes, for the run
+    log. A decision saying a person said in the segment will do something ("Tom will update the
+    pricing page by the 2nd of November") becomes that person's action item, unless a Map task
+    there already states it; its due only if the segment says it (`dues.due_said`). A task with
+    no owner gets one from its own text ("Laura will clean up the shared drive …") or, in an
+    English meeting, from the segment's sentence that matches it best, when that sentence gives
+    it to one person and names no one else ("Maria, can you prepare the customer survey …?").
+    Never from a neighbouring task (map.md's rule). `said`: `names.said_names` of the whole
+    meeting, accents folded."""
+    if notes.raw or notes_language != "en":
+        return notes, []
+    changes: list[str] = []
+    actions = list(notes.action_items)
+    decisions: list[str] = []
+    for d in notes.decisions:
+        found = names.subject_task(d, said)
+        if (
+            found is None
+            or not names.said_folded(found[0], transcript)
+            or any(match_score(d, a.task) >= TASK_MATCH_MIN for a in actions)
+        ):
+            decisions.append(d)
+            continue
+        owner, rest = found
+        m = _BY_DUE.search(rest)
+        due = m["due"] if m else None
+        if due and not dues.due_said(due, transcript, notes_language, source_language):
+            due = None
+        actions.append(MapActionItem(owner=owner, task=_capital(rest), due=due))
+        changes.append(f"decision → task: {owner}: {rest}")
+    sentences = _SENTENCE_END.split(transcript) if source_language == "en" else []
+    for i, a in enumerate(actions):
+        if a.owner:
+            continue
+        owner, task = None, a.task
+        if found := names.subject_task(a.task, said):
+            if names.said_folded(found[0], transcript):
+                owner, task = found[0], _capital(found[1])
+        elif sentences:
+            # ties: the longer sentence ("Criteria." matches a task's one shared word fully)
+            best = max(sentences, key=lambda s: (match_score(a.task, s), len(s)))
+            if match_score(a.task, best) >= TASK_MATCH_MIN:
+                owner = names.addressee(best, said)
+        if owner:
+            actions[i] = a.model_copy(update={"owner": owner, "task": task})
+            changes.append(f"owner from the segment: {owner}: {task}")
+    if not changes:
+        return notes, []
+    return notes.model_copy(update={"decisions": decisions, "action_items": actions}), changes
+
+
 # --- speech/slide conflicts (pure, §5.5) --------------------------------------------------
 
 _LABEL_WORD = re.compile(r"[^\W\d_]{3,}")
@@ -504,6 +572,7 @@ def run_stage(ctx: StageContext) -> None:
     retry = f"{prompt}\n\n{load_prompt('map_retry')}"
     notes: list[SegmentNotes] = []
     retried = failed = 0
+    said = {names.fold(n) for n in names.said_names(s.transcript_text for s in segments)}
     if segments:
         with ctx.model("map") as lm:
             for k, seg in enumerate(segments):
@@ -570,6 +639,15 @@ def run_stage(ctx: StageContext) -> None:
                         ctx.log.info(
                             "map: segment %d %s: said %s, slide %s", k, c.label, c.spoken, c.slide
                         )
+                seg_notes, owners = guard_owners(
+                    seg_notes,
+                    seg.transcript_text,
+                    said,
+                    ctx.config.notes_language,
+                    ctx.config.source_language,
+                )
+                for change in owners:
+                    ctx.log.info("map: segment %d %s", k, change)
                 notes.append(seg_notes)
     ctx.log.info("map: %d segments, %d retried, %d kept as raw text", len(notes), retried, failed)
     schemas.save(ctx.run_dir, MapFile(target_language=ctx.config.notes_language, notes=notes))

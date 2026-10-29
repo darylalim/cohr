@@ -1,5 +1,6 @@
 """PLAN §5.5: Map prompt filling, JSON coercion, one retry, invalid-JSON fallback, number guard."""
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -536,3 +537,111 @@ def test_guard_dates_must_not_fire_across_languages() -> None:
 def test_guard_dates_leaves_raw_segments_alone() -> None:
     notes = _dated(summary="not json by November 1", raw=True)
     assert mapper.guard_dates(notes, GRACE, "en", "en") == notes
+
+
+# --- owners (8d, D42) -----------------------------------------------------------------------
+
+SAID = {"Tom", "Maria", "Laura", "Grace", "Victor"}
+PRICING = "Tom will update the pricing page by the 2nd of November. Let me pull up the next slide."
+
+
+def test_guard_owners_makes_a_persons_decision_their_task() -> None:
+    # long-en f22: Map wrote Tom's task only as a decision; Reduce lost it.
+    tom = "Tom will update the pricing page by the 2nd of November."
+    notes = _dated(decisions=[tom, "Replace the wiki with Notion."])
+    out, changes = mapper.guard_owners(notes, PRICING, SAID, "en", "en")
+    assert out.decisions == ["Replace the wiki with Notion."]
+    assert out.action_items == [
+        MapActionItem(
+            owner="Tom",
+            task="Update the pricing page by the 2nd of November.",
+            due="the 2nd of November",
+        )
+    ]
+    assert changes == ["decision → task: Tom: update the pricing page by the 2nd of November."]
+    # a due the segment doesn't say is left out (D40)
+    out, _ = mapper.guard_owners(notes, "Tom will update the pricing page.", SAID, "en", "en")
+    assert out.action_items[0].due is None
+
+
+def test_guard_owners_reads_the_name_with_accents_and_in_another_language() -> None:
+    # xling-es f8: English notes of a Spanish meeting that says "Víctor".
+    notes = _dated(decisions=["Victor will write the notes for the next version."])
+    said = "Víctor, ¿puedes escribir las notas de la versión?"
+    out, _ = mapper.guard_owners(notes, said, SAID, "en", "es")
+    assert [(a.owner, a.task) for a in out.action_items] == [
+        ("Victor", "Write the notes for the next version.")
+    ]
+
+
+@pytest.mark.parametrize(
+    "decision",
+    [
+        "The remote control will incorporate corporate image.",  # AMI: no person
+        "Design will incorporate fashion trends.",  # AMI: not a said name
+        "We will drop the legacy export feature.",
+        "Laura will send the contract to legal by Friday.",  # a Map task states it (D33)
+        "Grace will review the audit.",  # Grace isn't said in this segment
+    ],
+)
+def test_guard_owners_must_not_move(decision: str) -> None:
+    task = MapActionItem(owner="Laura", task="Send the contract to legal by Friday", due="Friday")
+    notes = _dated(decisions=[decision], action_items=[task])
+    text = "Laura will send the contract to legal by Friday. We will drop the export."
+    assert mapper.guard_owners(notes, text, SAID, "en", "en") == (notes, [])
+
+
+def test_guard_owners_fills_an_owner_from_the_task_or_its_sentence() -> None:
+    # long-en f31: the owner inside the task; clean-sw f11: the sentence addresses Maria.
+    laura = MapActionItem(task="Laura will clean up the shared drive by the end of the month.")
+    survey = MapActionItem(
+        task="Prepare customer survey by end of next week", due="end of next week"
+    )
+    text = (
+        "Laura will clean up the shared drive by the end of the month. Okay, sounds good. "
+        "Maria, can you prepare the customer survey by the end of next week? Okay, will do."
+    )
+    out, changes = mapper.guard_owners(_dated(action_items=[laura, survey]), text, SAID, "en", "en")
+    assert [(a.owner, a.task) for a in out.action_items] == [
+        ("Laura", "Clean up the shared drive by the end of the month."),
+        ("Maria", survey.task),
+    ]
+    assert len(changes) == 2
+
+
+@pytest.mark.parametrize(
+    ("text", "notes_language", "source_language"),
+    [
+        ("Tom, can you ask Maria to prepare the customer survey by Friday?", "en", "en"),
+        ("We should prepare the customer survey by the end of the week.", "en", "en"),
+        ("The customer survey dashboard was updated on Monday.", "en", "en"),
+        ("Maria, ¿puedes preparar la encuesta?", "en", "es"),  # no English sentence to read
+        ("Maria, can you prepare the customer survey?", "de", "en"),  # German notes
+    ],
+)
+def test_guard_owners_must_not_fill(text: str, notes_language: str, source_language: str) -> None:
+    notes = _dated(action_items=[MapActionItem(task="Prepare the customer survey")])
+    assert mapper.guard_owners(notes, text, SAID, notes_language, source_language) == (notes, [])
+
+
+def test_guard_owners_leaves_raw_segments_alone() -> None:
+    notes = _dated(summary="Tom will update the page", decisions=[PRICING], raw=True)
+    assert mapper.guard_owners(notes, PRICING, SAID, "en", "en") == (notes, [])
+
+
+def test_stage_gives_tasks_their_owners(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    reply = (
+        '{"summary": "", "key_points": [], "decisions": ["Tom will update the pricing page."], '
+        '"action_items": [], "open_questions": [], "terms": []}'
+    )
+    run_dir = make_run(tmp_path, config=Config())
+    schemas.save(run_dir, SlidesFile(slides=[]))
+    seg = _seg(0, []).model_copy(update={"transcript_text": "Tom will update the pricing page."})
+    schemas.save(run_dir, SegmentsFile(segments=[seg], unaligned_slide_ids=[]))
+    lm = FakeLm([reply])
+    with caplog.at_level(logging.INFO, logger="cohr"):
+        mapper.run_stage(ctx_for(run_dir, "map", fake_manager(Config(), tmp_path, map=lm)))
+    notes = schemas.load(run_dir, MapFile).notes[0]
+    assert notes.decisions == []
+    assert notes.action_items == [MapActionItem(owner="Tom", task="Update the pricing page.")]
+    assert "decision → task: Tom" in caplog.text

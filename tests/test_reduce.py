@@ -831,7 +831,9 @@ def test_stage_flags_a_cut_reply(tmp_path: Path, caplog: pytest.LogCaptureFixtur
     reduce.run_stage(ctx_for(run_dir, "reduce", fake_manager(Config(), tmp_path, reduce=lm)))
     doc = schemas.load(run_dir, NotesDoc)
     assert doc.truncated == 1
-    assert doc.sections.decisions == [] and doc.sections.action_items == []
+    assert doc.sections.decisions == []
+    # Only Map's owned task, put back by D42: R7B's reply ended before its action items.
+    assert [(a.owner, a.text) for a in doc.sections.action_items] == [("Tom", "release notes")]
     assert "1 reply cut at reduce.max_tokens = 8192" in caplog.text
     # The cut claim is kept as written, uncited: nothing is completed or invented (§5.6).
     assert [c.text for c in doc.sections.key_points][-1] == "Retention rose"
@@ -1001,3 +1003,110 @@ def test_placeholder_dues_are_unknown() -> None:
     )
     item = reduce.action_item(claim, {})
     assert (item.owner, item.due) == ("Marketing", None)
+
+
+# --- Map's tasks in the final notes (8d, D42) -----------------------------------------------
+
+DUE_ITEMS = [
+    TranscriptItem(chunk_id=s.seg_id, t0=s.t0, t1=s.t1, text=s.transcript_text)
+    for s in DUE_SEGMENTS
+]
+
+
+def _owner_map(*tasks: tuple[int, str | None, str]) -> dict[int, SegmentNotes]:
+    out = {
+        k: SegmentNotes(
+            seg_id=k,
+            summary="",
+            key_points=[],
+            decisions=[],
+            action_items=[],
+            open_questions=[],
+            terms=[],
+        )
+        for k in (0, 1)
+    }
+    for seg_id, owner, task in tasks:
+        out[seg_id].action_items.append(MapActionItem(owner=owner, task=task))
+    return out
+
+
+def test_fill_owners_takes_the_map_tasks_owner_and_places_the_citation_again() -> None:
+    # conflict-de f12: German notes of an English meeting; R7B wrote [owner: ?].
+    refine = reduce.segment_refiner(DUE_SEGMENTS, DUE_ITEMS, 0.1, "de", "en")
+    plan = ActionItem(
+        text="Wettbewerbsanalyse zusammenfassen", citations=[Citation(kind="seg", id=1)]
+    )
+    maps = _owner_map((1, "Grace", "Wettbewerbsanalyse zusammenfassen bis 11. November"))
+    fixed, filled = reduce.fill_owners(_due_doc([plan], language="de"), maps, refine)
+    (item,) = fixed.sections.action_items
+    assert item.owner == "Grace" and filled == ["Grace: Wettbewerbsanalyse zusammenfassen"]
+    assert item.citations[0].t is not None and item.citations[0].t > 60.0  # Grace's sentence
+
+
+def test_fill_owners_merges_a_task_the_owner_already_has() -> None:
+    # long-en pass 2 wrote Laura's board presentation twice, once as [owner: ?].
+    owned = ActionItem(text="Schedule the board presentation", citations=SEG0, owner="Laura")
+    again = ActionItem(text="Schedule the board presentation by Friday", citations=SEG1)
+    other = ActionItem(text="Configure error alerts", citations=SEG1)
+    maps = _owner_map((1, "Laura", "Schedule the board presentation by Friday"))
+    fixed, filled = reduce.fill_owners(_due_doc([owned, again, other]), maps, _refine())
+    assert fixed.sections.action_items == [
+        owned.model_copy(update={"citations": [*SEG0, *SEG1]}),
+        other,
+    ]
+    assert filled == ["Laura: Schedule the board presentation by Friday"]
+
+
+@pytest.mark.parametrize(
+    "tasks",
+    [
+        [(1, None, "Wettbewerbsanalyse zusammenfassen")],  # Map has no owner either
+        [(1, "Grace", "Release-Notizen schreiben")],  # under ACTION_MATCH_MIN
+        # two Map tasks match as well, with different owners: a guess
+        [
+            (1, "Grace", "Wettbewerbsanalyse zusammenfassen"),
+            (1, "Tom", "Wettbewerbsanalyse zusammenfassen"),
+        ],
+        [(0, "Tom", "Wettbewerbsanalyse zusammenfassen")],  # a segment the item doesn't cite
+    ],
+)
+def test_fill_owners_must_not_fire(tasks: list[tuple[int, str | None, str]]) -> None:
+    plan = ActionItem(text="Wettbewerbsanalyse zusammenfassen", citations=SEG1)
+    doc = _due_doc([plan], language="de")
+    assert reduce.fill_owners(doc, _owner_map(*tasks), _refine()) == (doc, [])
+
+
+def test_add_lost_tasks_puts_back_an_owned_map_task_in_segment_order() -> None:
+    # long-en f82: pass 1 had Grace's task, pass 2 dropped it; clean-ar f17 in one pass.
+    refine = reduce.segment_refiner(DUE_SEGMENTS, DUE_ITEMS, 0.1, "en", "en")
+    tom = ActionItem(text="Finish the post mortem", citations=SEG0, owner="Tom")
+    later = ActionItem(text="Order laptops", citations=[Citation(kind="seg", id=2)], owner="Kenji")
+    maps = _owner_map((1, "Grace", "Summarise the competitor research by 11 November"))
+    texts = [s.transcript_text for s in DUE_SEGMENTS]
+    fixed, added = reduce.add_lost_tasks(_due_doc([tom, later]), maps, DUE_SEGMENTS, texts, refine)
+    items = fixed.sections.action_items
+    assert [i.owner for i in items] == ["Tom", "Grace", "Kenji"]
+    assert items[1].text == "Summarise the competitor research by 11 November"
+    assert [c.id for c in items[1].citations] == [1] and items[1].citations[0].t is not None
+    assert added == ["Grace: Summarise the competitor research by 11 November"]
+
+
+@pytest.mark.parametrize(
+    "task",
+    [
+        (1, None, "Explore battery alternatives"),  # owner-less: AMI's decided designs
+        (1, "Grace", "Summarise competitor research"),  # an action item states it
+        (1, "Laura", "Keep the onboarding checklist"),  # a decision states it
+        (1, "Nadia", "Book the venue"),  # Nadia isn't said in segment 1
+        (1, "Not specified", "Book the venue"),  # AMI's placeholder owner
+    ],
+)
+def test_add_lost_tasks_must_not_fire(task: tuple[int, str | None, str]) -> None:
+    grace = ActionItem(text="Summarise the competitor research", citations=SEG1, owner="Grace")
+    doc = _due_doc([grace])
+    keep = Claim(text="Keep the onboarding checklist", citations=SEG1)
+    doc = doc.model_copy(update={"sections": doc.sections.model_copy(update={"decisions": [keep]})})
+    texts = [s.transcript_text for s in DUE_SEGMENTS]
+    out = reduce.add_lost_tasks(doc, _owner_map(task), DUE_SEGMENTS, texts, _refine())
+    assert out == (doc, [])
