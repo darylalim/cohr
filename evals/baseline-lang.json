@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-29T11:26:47.554191-10:00",
+  "created_at": "2026-10-29T13:15:43.582311-10:00",
   "set": "lang",
-  "git_sha": "5ca8788-dirty",
+  "git_sha": "03a01f7-dirty",
   "overrides": {
     "seed": 1
   },
@@ -583,25 +583,25 @@
           "seconds": 17.29,
           "s_per_audio_hour": 177.8,
           "peak_mem_gb": 4.4,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 29.12,
-          "s_per_audio_hour": 299.4,
-          "peak_mem_gb": 9.48,
-          "reused": false
+          "seconds": 30.86,
+          "s_per_audio_hour": 317.4,
+          "peak_mem_gb": 5.92,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -615,7 +615,7 @@
         "facts_found": 12,
         "fact_recall": 0.9231,
         "citation_accuracy": 1.0,
-        "claims": 17,
+        "claims": 19,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": null,
@@ -646,13 +646,13 @@
         "recall_action": 1.0,
         "recall_number": 0.875,
         "recall_open_question": null,
-        "cited_claims": 17,
-        "support_rate": 0.8824,
+        "cited_claims": 19,
+        "support_rate": 0.8947,
         "support_partial": 1,
         "support_no": 1,
         "support_unjudged": 0,
-        "judge_covered": 2,
-        "judge_recall": 0.4
+        "judge_covered": 4,
+        "judge_recall": 0.8
       },
       "facts": [
         {
@@ -843,7 +843,7 @@
           "text": "move the weekly sync to Thursdays",
           "found": false,
           "judge_only": true,
-          "judge_covered": false,
+          "judge_covered": true,
           "section": null,
           "claim": null,
           "citation_ok": null,
@@ -882,7 +882,7 @@
           "text": "publish the roadmap to customers",
           "found": false,
           "judge_only": true,
-          "judge_covered": false,
+          "judge_covered": true,
           "section": null,
           "claim": null,
           "citation_ok": null,
@@ -1000,6 +1000,24 @@
           "reason": "The claim mentions a customer survey, which is mentioned in the transcript when Maria is assigned to prepare the customer survey."
         },
         {
+          "section": "decisions",
+          "claim": "Decision: نقل اجتماع التحديث الأسبوعي إلى يوم الخميس.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The meeting decided to move the weekly sync to Thursdays."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: نشر خارطة الطريق مع العملاء.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The decision to publish the roadmap to customers is explicitly stated in the transcript."
+        },
+        {
           "section": "action_items",
           "claim": "Action item: إرسال العقد إلى قسم القانون بحلول يوم الجمعة. (owner: Laura; due: Friday)",
           "citations": [
@@ -1092,25 +1110,25 @@
           "seconds": 14.87,
           "s_per_audio_hour": 149.6,
           "peak_mem_gb": 8.91,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 25.92,
-          "s_per_audio_hour": 260.7,
-          "peak_mem_gb": 9.5,
-          "reused": false
+          "seconds": 25.94,
+          "s_per_audio_hour": 260.9,
+          "peak_mem_gb": 5.94,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -1150,14 +1168,14 @@
         "pass2_group": 0,
         "pass2_uncited": 0,
         "translation_citations_same": 1,
-        "untranslated_claims": 4,
+        "untranslated_claims": 3,
         "recall_decision": null,
         "recall_action": 1.0,
         "recall_number": 1.0,
         "recall_open_question": null,
         "cited_claims": 21,
-        "support_rate": 0.2381,
-        "support_partial": 2,
+        "support_rate": 0.1905,
+        "support_partial": 3,
         "support_no": 14,
         "support_unjudged": 0,
         "judge_covered": 3,
@@ -1276,7 +1294,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "key_points",
-          "claim": "Revenue: $354,000 monthly (up from $134,000 last month), trend aligns with expectations.",
+          "claim": "Mapato: $354,000 kila mwezi (up kutoka $134,000 mwezi uliopita), mwenendo unaendana na matarajio.",
           "citation_ok": true,
           "t_error": -0.45,
           "slide_cited": false
@@ -1461,12 +1479,12 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Revenue: $354,000 monthly (up from $134,000 last month), trend aligns with expectations.",
+          "claim": "Key point: Mapato: $354,000 kila mwezi (up kutoka $134,000 mwezi uliopita), mwenendo unaendana na matarajio.",
           "citations": [
             "seg 0"
           ],
-          "supported": "yes",
-          "reason": "The transcript states the monthly recurring revenue is $354,000 compared with $134,000 last month, and that the trend is roughly what was expected."
+          "supported": "partial",
+          "reason": "The claim mentions a revenue figure of $354,000, which matches the cited text's monthly recurring revenue, and the increase from $134,000 is also stated in the text, though the phrase 'kila mwezi' and 'mwenendo unaendana na matarajio' are not in the text and are not verifiable from it."
         },
         {
           "section": "key_points",
@@ -1488,15 +1506,6 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Sasisho la kila wiki limehamishwa kwa Alhamisi.",
-          "citations": [
-            "seg 1"
-          ],
-          "supported": "no",
-          "reason": "The claim is in a language not present in the cited text and contains no information that matches the content of the transcript."
-        },
-        {
-          "section": "key_points",
           "claim": "Key point: Usajili mpya wa majaribio umeongezeka kutoka 2,600 mwezi uliopita hadi 4,650 mwezi huu.",
           "citations": [
             "seg 1"
@@ -1506,7 +1515,7 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Usajili wa majaribio ulionyesha msimu, lakini mwenendo ulikubaliana na matarajio.",
+          "claim": "Key point: Usajili wa majaribio ulionyesha msimu, lakini mwenendo ulioendana na matarajio.",
           "citations": [
             "seg 1"
           ],
@@ -1515,12 +1524,12 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Dashibodi ya usajili wa majaribio imesasishwa Jumatatu.",
+          "claim": "Key point: Dashibodi ya usajili wa majaribio imesasishwa siku ya Jumatatu.",
           "citations": [
             "seg 1"
           ],
           "supported": "no",
-          "reason": "The claim mentions a language or term 'Dashibodi ya usajili wa majaribio' which is not in the cited text, and 'Jumatatu' (Saturday) is not mentioned as a day for publishing the roadmap."
+          "reason": "The claim uses a language and terms not present in the cited text, and 'Dashibodi ya usajili wa majaribio' does not match any content in the transcript."
         },
         {
           "section": "decisions",
@@ -1542,12 +1551,21 @@
         },
         {
           "section": "decisions",
-          "claim": "Decision: Chapisha njia ya kuongoza kwa wateja.",
+          "claim": "Decision: Chapisha njia ya barabara kwa wateja.",
           "citations": [
             "seg 1"
           ],
           "supported": "no",
-          "reason": "The claim is in Swahili and does not correspond to any decision or fact stated in the cited text."
+          "reason": "The claim uses a language not present in the cited text and does not correspond to any decision or fact stated."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Sasisho la kila wiki limehamishwa kwa Alhamisi.",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "no",
+          "reason": "The claim uses a language that does not match the cited text, which contains no reference to 'Sasisho la kila wiki limehamishwa kwa Alhamisi'."
         },
         {
           "section": "action_items",
@@ -1640,25 +1658,25 @@
           "seconds": 11.87,
           "s_per_audio_hour": 119.4,
           "peak_mem_gb": 8.91,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 24.18,
-          "s_per_audio_hour": 243.2,
-          "peak_mem_gb": 9.48,
-          "reused": false
+          "seconds": 24.24,
+          "s_per_audio_hour": 243.8,
+          "peak_mem_gb": 5.92,
+          "reused": true
         },
         "translate": {
-          "seconds": 14.28,
-          "s_per_audio_hour": 143.6,
-          "peak_mem_gb": 8.75,
-          "reused": false
+          "seconds": 17.79,
+          "s_per_audio_hour": 179.0,
+          "peak_mem_gb": 8.74,
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -2182,25 +2200,25 @@
           "seconds": 15.05,
           "s_per_audio_hour": 151.4,
           "peak_mem_gb": 8.91,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 41.05,
-          "s_per_audio_hour": 412.9,
+          "seconds": 41.4,
+          "s_per_audio_hour": 416.4,
           "peak_mem_gb": 9.62,
-          "reused": false
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -2250,8 +2268,8 @@
         "support_partial": 1,
         "support_no": 0,
         "support_unjudged": 0,
-        "judge_covered": 4,
-        "judge_recall": 0.8
+        "judge_covered": 5,
+        "judge_recall": 1.0
       },
       "facts": [
         {
@@ -2442,7 +2460,7 @@
           "text": "move the weekly sync to Thursdays",
           "found": false,
           "judge_only": true,
-          "judge_covered": false,
+          "judge_covered": true,
           "section": null,
           "claim": null,
           "citation_ok": null,
@@ -2578,15 +2596,6 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: সাপ্তাহিক সিঙ্ক गुरुवारে স্থানান্তরিত হয়েছে।",
-          "citations": [
-            "seg 1"
-          ],
-          "supported": "yes",
-          "reason": "The meeting decided to move the weekly sync to Thursdays."
-        },
-        {
-          "section": "key_points",
           "claim": "Key point: নতুন ট্রায়াল সাইনআপ গত মাসের ২,৬০০ থেকে এই মাসের ৪,৬৫০ এ বৃদ্ধি পেয়েছে।",
           "citations": [
             "seg 1"
@@ -2605,12 +2614,12 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: ট্রায়াল সাইনআপের জন্য ড্যাশবোর্ড সোমবারে আপডেট করা হয়েছে।",
+          "claim": "Key point: ট্রায়াল সাইনআপের জন্য ড্যাশবোর্ড সোমবার আপডেট করা হয়েছে।",
           "citations": [
             "seg 1"
           ],
           "supported": "yes",
-          "reason": "The transcript states the dashboard for trial signups was updated on Monday."
+          "reason": "The dashboard for trial signups was updated on Monday."
         },
         {
           "section": "decisions",
@@ -2638,6 +2647,15 @@
           ],
           "supported": "yes",
           "reason": "The decision to publish the roadmap to customers is explicitly stated in the transcript."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: সাপ্তাহিক সিঙ্ককে বৃহস্পতিবার স্থানান্তর করা হয়েছে।",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The meeting decided to move the weekly sync to Thursdays."
         },
         {
           "section": "action_items",
@@ -2730,25 +2748,25 @@
           "seconds": 11.86,
           "s_per_audio_hour": 119.3,
           "peak_mem_gb": 8.91,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 24.17,
-          "s_per_audio_hour": 243.2,
+          "seconds": 24.27,
+          "s_per_audio_hour": 244.1,
           "peak_mem_gb": 9.48,
-          "reused": false
+          "reused": true
         },
         "translate": {
-          "seconds": 13.13,
-          "s_per_audio_hour": 132.1,
-          "peak_mem_gb": 8.75,
-          "reused": false
+          "seconds": 13.16,
+          "s_per_audio_hour": 132.4,
+          "peak_mem_gb": 8.74,
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -3276,25 +3294,25 @@
           "seconds": 11.91,
           "s_per_audio_hour": 112.6,
           "peak_mem_gb": 8.91,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 23.92,
-          "s_per_audio_hour": 226.1,
+          "seconds": 23.99,
+          "s_per_audio_hour": 226.7,
           "peak_mem_gb": 9.48,
-          "reused": false
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     },
@@ -3818,25 +3836,25 @@
           "seconds": 11.88,
           "s_per_audio_hour": 92.1,
           "peak_mem_gb": 8.9,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 22.97,
-          "s_per_audio_hour": 178.1,
+          "seconds": 23.04,
+          "s_per_audio_hour": 178.7,
           "peak_mem_gb": 9.48,
-          "reused": false
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     }
@@ -3861,7 +3879,7 @@
     "slide_alignment": null,
     "output_language_ok": 1.0,
     "translation_citations_same": 1.0,
-    "untranslated_claims": 6,
+    "untranslated_claims": 5,
     "recall_decision": null,
     "recall_action": 0.9714,
     "recall_number": 0.9107,
@@ -3874,11 +3892,11 @@
     "pass2_claim": 0,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.7714,
-    "support_partial": 9,
+    "support_rate": 0.7676,
+    "support_partial": 10,
     "support_no": 23,
     "support_unjudged": 0,
-    "judge_recall": 0.75,
+    "judge_recall": 0.8333,
     "audio_s": 2626.8
   },
   "stages": {
@@ -3907,19 +3925,19 @@
       "peak_mem_gb": 8.91
     },
     "reduce": {
-      "s_per_audio_hour": 262.2,
+      "s_per_audio_hour": 265.5,
       "peak_mem_gb": 9.62
     },
     "translate": {
-      "s_per_audio_hour": 37.6,
-      "peak_mem_gb": 8.75
+      "s_per_audio_hour": 42.4,
+      "peak_mem_gb": 8.74
     },
     "render": {
       "s_per_audio_hour": 0.0,
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 909.0,
+      "s_per_audio_hour": 917.1,
       "peak_mem_gb": 16.88
     }
   },
@@ -4013,7 +4031,7 @@
   "judge": {
     "loaded": false,
     "calls": 0,
-    "cached": 176,
+    "cached": 178,
     "seconds": 0.02,
     "s_per_audio_hour": 0.0,
     "peak_mem_gb": null

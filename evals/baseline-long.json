@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-29T11:47:20.965424-10:00",
+  "created_at": "2026-10-29T13:15:44.241975-10:00",
   "set": "long",
-  "git_sha": "5ca8788-dirty",
+  "git_sha": "03a01f7-dirty",
   "overrides": {},
   "models": {
     "vad": "mlx-community/silero-vad-v6@2ebf4a5",
@@ -31,10 +31,10 @@
       "duration_s": 7906.73,
       "metrics": {
         "facts": 80,
-        "facts_found": 63,
-        "fact_recall": 0.7875,
-        "citation_accuracy": 0.9841,
-        "claims": 109,
+        "facts_found": 68,
+        "fact_recall": 0.85,
+        "citation_accuracy": 0.9853,
+        "claims": 114,
         "uncited_claims": 0,
         "made_up_items": 7,
         "made_up_open_questions": 4,
@@ -62,7 +62,7 @@
         "translation_citations_same": null,
         "untranslated_claims": null,
         "slide_alignment": 1.0,
-        "recall_decision": 0.7,
+        "recall_decision": 0.95,
         "recall_action": 0.9,
         "recall_number": 0.775,
         "recall_open_question": 0.75,
@@ -74,8 +74,8 @@
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 0.0,
         "ask_near_miss": 1.0,
-        "cited_claims": 109,
-        "support_rate": 0.8257,
+        "cited_claims": 114,
+        "support_rate": 0.8333,
         "support_partial": 6,
         "support_no": 13,
         "support_unjudged": 0,
@@ -308,13 +308,13 @@
           "id": "f18",
           "kind": "decision",
           "text": "require two reviewers for every merge",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "decisions",
+          "claim": "Require two reviewers for every merge.",
+          "citation_ok": true,
+          "t_error": 0.17,
           "slide_cited": false
         },
         {
@@ -425,13 +425,13 @@
           "id": "f27",
           "kind": "decision",
           "text": "replace the intranet wiki with Notion",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "decisions",
+          "claim": "Replace the intranet wiki with Notion.",
+          "citation_ok": true,
+          "t_error": 0.08,
           "slide_cited": false
         },
         {
@@ -464,13 +464,13 @@
           "id": "f30",
           "kind": "decision",
           "text": "build an engineering hub in Lisbon",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "decisions",
+          "claim": "Build an engineering hub in Lisbon.",
+          "citation_ok": true,
+          "t_error": -0.69,
           "slide_cited": false
         },
         {
@@ -503,13 +503,13 @@
           "id": "f33",
           "kind": "decision",
           "text": "hire a contract designer for the redesign",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "decisions",
+          "claim": "Hire a contract designer for the redesign.",
+          "citation_ok": true,
+          "t_error": 1.22,
           "slide_cited": false
         },
         {
@@ -711,13 +711,13 @@
           "id": "f49",
           "kind": "decision",
           "text": "consolidate the design tools",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "decisions",
+          "claim": "Consolidate the design tools.",
+          "citation_ok": true,
+          "t_error": 1.34,
           "slide_cited": false
         },
         {
@@ -1893,6 +1893,33 @@
         },
         {
           "section": "decisions",
+          "claim": "Decision: Require two reviewers for every merge.",
+          "citations": [
+            "seg 4"
+          ],
+          "supported": "yes",
+          "reason": "The meeting explicitly states that 'We agreed to require two reviewers for every merge.'"
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Replace the intranet wiki with Notion.",
+          "citations": [
+            "seg 6"
+          ],
+          "supported": "yes",
+          "reason": "The meeting agreed to replace the intranet wiki with Notion."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Build an engineering hub in Lisbon.",
+          "citations": [
+            "seg 8"
+          ],
+          "supported": "yes",
+          "reason": "The meeting decided to build an engineering hub in Lisbon."
+        },
+        {
+          "section": "decisions",
           "claim": "Decision: Keep the onboarding checklist.",
           "citations": [
             "seg 9"
@@ -1911,6 +1938,15 @@
         },
         {
           "section": "decisions",
+          "claim": "Decision: Hire a contract designer for the redesign.",
+          "citations": [
+            "seg 9"
+          ],
+          "supported": "yes",
+          "reason": "The meeting explicitly states that 'we agreed to hire a contract designer for the redesign.'"
+        },
+        {
+          "section": "decisions",
           "claim": "Decision: Rebuild the Help Center search.",
           "citations": [
             "seg 11"
@@ -1926,6 +1962,15 @@
           ],
           "supported": "partial",
           "reason": "The decision to freeze new features until beta ships is mentioned, but it is only explicitly tied to the beta ship timeline, not specifically linked to both site speed and revenue metrics."
+        },
+        {
+          "section": "decisions",
+          "claim": "Decision: Consolidate the design tools.",
+          "citations": [
+            "seg 13"
+          ],
+          "supported": "yes",
+          "reason": "The meeting explicitly states that 'we decided to consolidate the design tools.'"
         },
         {
           "section": "decisions",
@@ -2794,25 +2839,25 @@
           "seconds": 148.19,
           "s_per_audio_hour": 67.5,
           "peak_mem_gb": 4.49,
-          "reused": false
+          "reused": true
         },
         "reduce": {
-          "seconds": 311.48,
-          "s_per_audio_hour": 141.8,
-          "peak_mem_gb": 10.1,
-          "reused": false
+          "seconds": 309.06,
+          "s_per_audio_hour": 140.7,
+          "peak_mem_gb": 6.54,
+          "reused": true
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": false
+          "reused": true
         }
       }
     }
@@ -2820,8 +2865,8 @@
   "summary": {
     "items": 1,
     "facts": 80,
-    "fact_recall": 0.7875,
-    "citation_accuracy": 0.9841,
+    "fact_recall": 0.85,
+    "citation_accuracy": 0.9853,
     "uncited_claims": 0,
     "made_up_items": 7,
     "made_up_open_questions": 4,
@@ -2838,7 +2883,7 @@
     "output_language_ok": 1.0,
     "translation_citations_same": null,
     "untranslated_claims": null,
-    "recall_decision": 0.7,
+    "recall_decision": 0.95,
     "recall_action": 0.9,
     "recall_number": 0.775,
     "recall_open_question": 0.75,
@@ -2850,7 +2895,7 @@
     "pass2_claim": 138,
     "pass2_group": 5,
     "pass2_uncited": 0,
-    "support_rate": 0.8257,
+    "support_rate": 0.8333,
     "support_partial": 6,
     "support_no": 13,
     "support_unjudged": 0,
@@ -2891,8 +2936,8 @@
       "peak_mem_gb": 4.49
     },
     "reduce": {
-      "s_per_audio_hour": 141.8,
-      "peak_mem_gb": 10.1
+      "s_per_audio_hour": 140.7,
+      "peak_mem_gb": 6.54
     },
     "translate": {
       "s_per_audio_hour": 0.0,
@@ -2903,8 +2948,8 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 439.3,
-      "peak_mem_gb": 10.1
+      "s_per_audio_hour": 438.2,
+      "peak_mem_gb": 8.59
     }
   },
   "citation_errors": [
@@ -2912,6 +2957,7 @@
     -0.98,
     -0.85,
     -0.81,
+    -0.69,
     -0.65,
     -0.59,
     -0.45,
@@ -2939,8 +2985,10 @@
     0.05,
     0.06,
     0.06,
+    0.08,
     0.14,
     0.15,
+    0.17,
     0.17,
     0.21,
     0.25,
@@ -2970,26 +3018,28 @@
     1.15,
     1.19,
     1.22,
+    1.22,
     1.29,
+    1.34,
     1.35,
     1.81,
     2.07,
     156.34
   ],
   "judge": {
-    "loaded": true,
-    "calls": 1,
-    "cached": 108,
-    "seconds": 3.48,
-    "s_per_audio_hour": 1.6,
-    "peak_mem_gb": 3.12
+    "loaded": false,
+    "calls": 0,
+    "cached": 114,
+    "seconds": 0.01,
+    "s_per_audio_hour": 0.0,
+    "peak_mem_gb": null
   },
   "ask": {
-    "loaded": true,
-    "calls": 24,
-    "cached": 0,
-    "seconds": 769.3,
-    "s_per_audio_hour": 350.3,
+    "loaded": false,
+    "calls": 0,
+    "cached": 24,
+    "seconds": 0.05,
+    "s_per_audio_hour": 0.0,
     "peak_mem_gb": null
   },
   "gate_items": null,

@@ -1110,3 +1110,165 @@ def test_add_lost_tasks_must_not_fire(task: tuple[int, str | None, str]) -> None
     texts = [s.transcript_text for s in DUE_SEGMENTS]
     out = reduce.add_lost_tasks(doc, _owner_map(task), DUE_SEGMENTS, texts, _refine())
     assert out == (doc, [])
+
+
+@pytest.mark.parametrize(
+    ("sentence", "what"),
+    [
+        ("We agreed to keep the onboarding checklist.", "keep the onboarding checklist"),
+        ("We decided to move the weekly sync to Thursdays.", "move the weekly sync to Thursdays"),
+        ("Okay, so the decision is to publish the roadmap.", "publish the roadmap"),
+        ("We've all agreed to ship it.", "ship it"),
+        # AMI ES2004d: the reason isn't part of the decision
+        ("We decided to use a kinetic charger, because it fits.", "use a kinetic charger"),
+    ],
+)
+def test_decision_cues_reads_what_was_decided(sentence: str, what: str) -> None:
+    assert reduce.decision_cues(f"Right. {sentence} Thanks.") == [(sentence, what)]
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "I think we all agreed on that.",  # AMI IS1009c: refers back
+        "Have we decided to move the sync?",
+        "Have we decided to move the sync.",  # ASR without the question mark
+        "We haven't decided whether to move the sync.",  # an open question
+        "We still don't know whether we should hire a designer.",
+        "We agreed last week to move the sync.",
+        "Last week we agreed to move the sync.",
+        "Did we agree on the date?",
+        "We didn't agree to anything.",
+        "Um, so I decided I'd have a look at other designs.",  # AMI ES2004b: one person's
+        "We agreed on the requirements and the target market.",  # AMI TS3003c: sums up
+    ],
+)
+def test_decision_cues_must_not_fire(sentence: str) -> None:
+    assert reduce.decision_cues(sentence) == []
+
+
+DECISION_SEGMENTS = [
+    Segment(
+        seg_id=0,
+        t0=0.0,
+        t1=60.0,
+        chunk_ids=[0, 1],
+        transcript_text="Budget is steady this quarter. "
+        "We agreed to keep the onboarding checklist.",
+        slide_ids=[],
+    ),
+    Segment(
+        seg_id=1,
+        t0=60.0,
+        t1=120.0,
+        chunk_ids=[2, 3],
+        transcript_text="Okay, so the decision is to move the weekly sync to Thursdays. "
+        "Revenue is up. Okay, so the decision is to publish the roadmap.",
+        slide_ids=[],
+    ),
+]
+DECISION_ITEMS = [
+    TranscriptItem(chunk_id=0, t0=0.0, t1=30.0, text="Budget is steady this quarter."),
+    TranscriptItem(
+        chunk_id=1, t0=30.0, t1=60.0, text="We agreed to keep the onboarding checklist."
+    ),
+    TranscriptItem(
+        chunk_id=2,
+        t0=60.0,
+        t1=90.0,
+        text="Okay, so the decision is to move the weekly sync to Thursdays. Revenue is up.",
+    ),
+    TranscriptItem(
+        chunk_id=3, t0=90.0, t1=120.0, text="Okay, so the decision is to publish the roadmap."
+    ),
+]
+
+
+def _decision_doc(
+    decisions: list[Claim], key_points: list[Claim] | None = None, language: str = "en"
+) -> NotesDoc:
+    doc = _due_doc([], language)
+    update = {"decisions": decisions, "key_points": key_points or []}
+    return doc.model_copy(update={"sections": doc.sections.model_copy(update=update)})
+
+
+def _decision_map(*decisions: tuple[int, str]) -> dict[int, SegmentNotes]:
+    out = _owner_map()
+    for seg_id, text in decisions:
+        out[seg_id].decisions.append(text)
+    return out
+
+
+def test_add_said_decisions_adds_a_lost_one_in_its_own_words_in_segment_order() -> None:
+    # noisy-en f3 (Map never wrote it, seeds 0–3), long-en f49 (pass 1 dropped it).
+    refine = reduce.segment_refiner(DECISION_SEGMENTS, DECISION_ITEMS, 0.1, "en", "en")
+    sync = Claim(text="Move the weekly sync to Thursdays", citations=SEG1)
+    roadmap = Claim(text="Publish the roadmap", citations=SEG1)
+    doc = _decision_doc([sync, roadmap])
+    fixed, added = reduce.add_said_decisions(doc, {}, DECISION_SEGMENTS, refine, "en")
+    decisions = fixed.sections.decisions
+    assert [d.text for d in decisions] == [
+        "Keep the onboarding checklist.",
+        "Move the weekly sync to Thursdays",
+        "Publish the roadmap",
+    ]
+    assert decisions[0].citations == [Citation(kind="seg", id=0, t=30.0)]
+    assert added == ["Keep the onboarding checklist."]
+
+
+def test_add_said_decisions_moves_a_key_point_that_states_only_the_decision() -> None:
+    # clean-sw f15: R7B filed Map's "Weekly sync moved to Thursdays." as a key point.
+    moved = Claim(text="Weekly sync moved to Thursdays.", citations=SEG1)
+    bundle = Claim(text="Budget steady; onboarding checklist kept as is.", citations=SEG0)
+    roadmap = Claim(text="Publish the roadmap", citations=SEG1)
+    doc = _decision_doc([roadmap], [bundle, moved])
+    fixed, added = reduce.add_said_decisions(doc, {}, DECISION_SEGMENTS, _refine(), "en")
+    assert fixed.sections.key_points == [bundle]  # clean-en f2: a bundle stays a key point
+    assert [d.text for d in fixed.sections.decisions] == [
+        "Keep the onboarding checklist.",
+        "Publish the roadmap",
+        "Weekly sync moved to Thursdays.",
+    ]
+    assert added == ["Keep the onboarding checklist.", "Weekly sync moved to Thursdays."]
+
+
+def test_add_said_decisions_must_not_fire() -> None:
+    stated = [
+        Claim(text="Keep onboarding checklist.", citations=SEG0),
+        Claim(text="Weekly sync moved to Thursdays.", citations=SEG1),
+    ]
+    task = ActionItem(text="Publish the roadmap by Friday", citations=SEG1, owner="Laura")
+    doc = _decision_doc(stated).model_copy(deep=True)
+    doc.sections.action_items.append(task)
+    assert reduce.add_said_decisions(doc, {}, DECISION_SEGMENTS, _refine(), "en") == (doc, [])
+    # a Spanish meeting: the cues are English only
+    empty = _decision_doc([])
+    assert reduce.add_said_decisions(empty, {}, DECISION_SEGMENTS, _refine(), "es") == (empty, [])
+    # no cue sentence: Map's decisions are R7B's call (AMI)
+    ami = [
+        s.model_copy(update={"transcript_text": "I think we all agreed on that."})
+        for s in DECISION_SEGMENTS
+    ]
+    maps = _decision_map((0, "Focus on one product design"))
+    assert reduce.add_said_decisions(empty, maps, ami, _refine(), "en") == (empty, [])
+
+
+def test_add_said_decisions_in_other_notes_languages_adds_map_decisions_up_to_the_cues() -> None:
+    # clean-ar: Map wrote seg 1's two decisions in Arabic; the notes have none citing seg 1.
+    refine = reduce.segment_refiner(DECISION_SEGMENTS, DECISION_ITEMS, 0.1, "ar", "en")
+    logo = Claim(text="الشعار الجديد", citations=SEG0)
+    maps = _decision_map(
+        (0, "الشعار الجديد"),
+        (0, "إعداد تقرير"),  # seg 0 has one cue and one decision citing it: nothing added
+        (1, "نقل الاجتماع"),
+        (1, "إرسال العقد"),  # Map's task: skipped
+        (1, "نشر خارطة الطريق"),
+        (1, "نشر خارطة الطريق"),  # listed twice
+    )
+    maps[1].action_items.append(MapActionItem(owner="Laura", task="إرسال العقد"))
+    doc = _decision_doc([logo], language="ar")
+    fixed, added = reduce.add_said_decisions(doc, maps, DECISION_SEGMENTS, refine, "en")
+    assert added == ["نقل الاجتماع", "نشر خارطة الطريق"]
+    assert [d.text for d in fixed.sections.decisions] == ["الشعار الجديد", *added]
+    # each at its cue: the notes cited no decision in seg 1, so every cue there was lost
+    assert [d.citations[0].t for d in fixed.sections.decisions[1:]] == [60.0, 90.0]
