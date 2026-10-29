@@ -378,6 +378,25 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   one else; never from a neighbouring task. Weekdays, months and pronouns are no one; AMI's
   "Design will …" isn't a said name ("design" is said too). Changes are logged only (no
   MapFile field: a new field would move every Ask cache key, 8c).
+- **Tasks Map never wrote (8e, D43):** after the owners, in an English meeting
+  (`map.cue_tasks`, default on). Map drops some tasks at random: which ones changes with the
+  seed (quick: Omar's hiring plan written at seed 0, dropped at 2 and 3). Python lists the
+  segment's sentences that give one person a task in a cue position (`names.addressee`, as
+  above) while no Map task there is that person's (`mapper.uncovered_cues`; owners compared
+  in the meeting's spelling, a two-word owner also by its first word). Only those go to one
+  extra Tiny Aya call per segment (`prompts/map_tasks.md`, temperature 0, no example lines),
+  which says which sentences give a task and writes each in the notes language: the model
+  tells "Tom, can you hear me?" from a task, which a verb list would only fit to the
+  generator. Python keeps the owner (the sentence's person, never the model's), completes a
+  task cut short from the sentence's own words up to its "by …" when the model's words are
+  said there (`mapper.whole_task`, English notes of an English meeting: "order laptops" →
+  "order laptops for the new starters"; rewording the prompt didn't stop it), and runs the
+  added items through Map's own number, date and due checks. Each `{"line": …}` entry of the
+  reply is read on its own (Tiny Aya closed one list with `}}}`). The run log names each
+  added task and each cue sentence the model turned down. Replies ("Okay, will do."),
+  one-letter words (ASR's "the F site") and a capitalised verb after a name (ASR's "Action
+  item for Laura Schedule …") are no one. No MapFile field; the prompt moves Map's config
+  hash. AMI addresses no one by name: no call, no change.
 - **Optional regional Map models (Phase 6, decision D18):** Cohere's regional Tiny Aya variants
   have the same size (3.35B), chat template and license (CC-BY-NC) as Global. The release
   describes their focus as Earth: Africa + West Asia, Fire: South Asia, Water: Asia-Pacific +
@@ -1294,6 +1313,11 @@ Segments aren't uneven (long-en: 261–299 s, 726–864 words each; seg 4 wrote 
 seg 6 all 3). Each is a sentence `names.addressee` already reads ("Maria, can you …", "Kenji
 will …", "Action item for Grace …"); a scan of those against each segment's Map owners reaches
 7 of the 8. AMI addresses no one by name, so it can't test a rule like that. Kickoff prompt in §21.
+Done 2026-10-29 (NOTES.md, D43). The sentences Map's owners don't cover go to one Tiny Aya call
+per segment (`mapper.uncovered_cues`, `prompts/map_tasks.md`); Python sets the owner and
+checks the values. Map's misses change with the seed; quick action recall 100% at seeds 0, 2
+and 3 (was 95/80/75%); lang seed 1 94.3 → 97.1%; long-en 70 → 90%, Ask 88.9 → 94.4%, made-up
+6 → 7 (f15's ASR name). conflict-de f6 open: the model turns Grace's sentence down in German.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2160,6 +2184,7 @@ section.
 | D40 | Dues and owner-less tasks the meeting didn't give (§5.6) | As Map and Reduce wrote them | Step 0 measurement on the stored long-en and AMI runs, offline replay, then quick, lang seed 1, long-en and AMI | Phase 8b | **Due guard + vague-task move on the final notes** (user): a due its cited segments and slides don't say is dropped, never replaced (English: words within a window, `dues.said`; other languages: digits only, in the meeting's language; uncited kept); then an English action item with no owner and no due starting Continue/Ensure/Keep/Monitor/Maintain moves to Key points. long-en made-up items 12 → 7, recall unchanged; AMI 34 unsaid dues dropped and 4 placeholders cleared (1 of 39 left), coverage unchanged; quick and lang identical. Rejected: "no owner and no due" alone (9/9 on long-en but would move 25 of AMI's 47 tasks) and an ask-cue check on the source (no signal). Map's example due left as is (post-v1). Eval: an empty due field reads a due written in the task text, so clearing a field can't turn a wrong date into a match |
 | D41 | Ask on long meetings: citation placement and Map's values in its documents (§5.5–5.7) | First span places a segment citation; Map's dates and dues as written | Step 0 on the cached Ask replies and stored notes (offline replay), then quick, lang seed 1 and long-en | Phase 8c | **Best-matching span places the citation; Map's dates repaired or flagged, unsaid dues dropped on map.json** (user: on Map's items, one value for every reader). Date repair only from exactly one said date of the same month a digit edit away, English notes of an English meeting; dues by D40's rule (`dues.due_said`). long-en Ask 77.8 → 88.9%, citation 93.3 → 100%, made-up items 7 → 4; quick citation 98.4 → 100%; lang identical but one judged claim. map.md's example kept (the check drops every copy). Rejected: Ask snippet-only fix (leaves map.json wrong), an Ask prompt rule (a-f61 left open) |
 | D42 | Missed action items: tasks Map wrote as decisions or without owners, tasks the notes lost (§5.5–5.6) | As Map and Reduce wrote them | Step 0 on the stored quick, lang and long runs (pass-1 replies are stored in notes.json), offline replay incl. AMI, then lang seed 1, quick and long-en | Phase 8d | **Python on map.json and the final notes** (user): Map's "X will …" decision → X's task when X is said in the segment; an owner-less task's owner from its own text or its best sentence's one cued person (English notes; English meeting for the sentence); an `[owner: ?]` notes item takes its Map task's owner (merged into a duplicate); an owned Map task no notes item states is added, cited with `[owner: …]` as anchor. Logged, no MapFile field (user: Ask keys move only where map.json changes). lang seed 1 action recall 80.0 → 94.3%; long-en action recall 55 → 70%, fact recall 67.5 → 71.3%, made-up 4 → 6 (owner-less pass-1 tasks pass 2 kept, not the rules: replayed without them, still 6); quick identical; AMI replay 0 changes. Rejected: a map.md prompt rule (Python reaches every Map-reachable case but conflict-de f6, a German task of an English meeting) and names anywhere in a sentence (`said_names` keeps "Okay", "Monday", "Action") |
+| D43 | Action items Map never wrote (§5.5) | As Map wrote them | Step 0 scan of the stored runs and quick at pipeline seeds 2 and 3, then quick seeds 0/2/3, lang seed 1 and long-en | Phase 8e | **Python finds the sentences, one Tiny Aya call decides** (user, over a Python-only net and a map.md rule): in an English meeting, a sentence giving one person a task in a cue position while no Map task of the segment is theirs goes to `prompts/map_tasks.md` (temperature 0, no examples, notes language); Python keeps the owner, completes a task cut short from its sentence (English notes), and runs Map's number, date and due checks. Map's misses change with the seed (quick action recall 95/80/75% at seeds 0/2/3), every one a flagged sentence, 0 false flags (AMI: no sentence names anyone). quick 100% at all three seeds; lang seed 1 94.3 → 97.1%; long-en action recall 70 → 90%, fact recall 71.3 → 78.8%, Ask 88.9 → 94.4%, made-up 6 → 7 (f15, said "Oma"). Rejected: a verb list for must-not-fire (would fit the generator), a prompt rewording for f86's short task (Tiny Aya kept it short and added the name in German) |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

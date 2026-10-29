@@ -352,6 +352,141 @@ def guard_owners(
     return notes.model_copy(update={"decisions": decisions, "action_items": actions}), changes
 
 
+# --- tasks Map never wrote (§5.5, 8e) -------------------------------------------------------
+
+
+def uncovered_cues(
+    notes: SegmentNotes, transcript: str, said: set[str], source_language: str
+) -> list[tuple[str, str]]:
+    """(person, sentence) for each sentence of an English meeting that gives one person a task
+    in a cue position ("Maria, can you …", "Kenji will …", "Action item for Grace …") while no
+    Map task of the segment is that person's (D43). Map drops some of these at random (quick
+    seeds 1–3: Omar's task at seeds 2 and 3, not 1). Whether a sentence gives a task at all
+    ("Tom, can you hear me?") is the model's call (`cue_tasks`). Owners are compared in the
+    meeting's spelling (`names.restore`: Map writes Hindi owners in Devanagari)."""
+    if notes.raw or source_language != "en":
+        return []
+    owners: set[str] = set()
+    for a in notes.action_items:
+        if a.owner:
+            owner = names.fold(names.restore(a.owner, [transcript])).casefold()
+            owners |= {owner, owner.split()[0]}  # "Omar Crews" is Omar's (long-en seg 10)
+    out: list[tuple[str, str]] = []
+    for sentence in _SENTENCE_END.split(transcript):
+        who = names.addressee(sentence, said)
+        if who and names.fold(who).casefold() not in owners:
+            out.append((who, sentence.strip()))
+    return out
+
+
+def cue_values(cues: list[tuple[str, str]], target_language: str) -> dict[str, str]:
+    return {
+        "target_language": language_name(target_language),
+        "sentences": "\n".join(f"{i}. {s}" for i, (_, s) in enumerate(cues, 1)),
+    }
+
+
+_INNER_OBJECT = re.compile(r"\{[^{}]*\}")
+
+
+_TASK_END = re.compile(r"\s+by\s+|[.?!]?\s*$", re.I)
+
+
+def whole_task(task: str, sentence: str) -> str:
+    """The sentence's own words from where `task` starts to its "by …" or end, when `task` is
+    said there word for word and stops short: Tiny Aya wrote "order laptops" for "Kenji will
+    order laptops for the new starters by the 15th of October" (long-en f86). English notes of
+    an English meeting only; otherwise, and when `task` isn't in the sentence, `task`."""
+    said = re.search(rf"\b{re.escape(task.rstrip('.'))}\b", sentence, re.I)
+    if not said:
+        return task
+    m = _TASK_END.search(sentence, said.end())
+    whole = sentence[said.start() : m.start() if m else len(sentence)]
+    return whole if len(whole) > len(said[0]) else task
+
+
+def cue_tasks(
+    cues: list[tuple[str, str]], reply: str, english: bool = False
+) -> dict[int, MapActionItem] | None:
+    """The tasks the model found, by cue index, each owned by its sentence's person (never the
+    model's guess); None when the reply has no entry `map_tasks.md` asks for. Each `{"line":
+    …}` entry is read on its own: Tiny Aya closed noisy-en's one entry with `}}}` (8e).
+    `english` (English notes of an English meeting): a task cut short is completed from its
+    sentence (`whole_task`)."""
+    entries = []
+    for m in _INNER_OBJECT.finditer(reply):
+        try:
+            entries.append(json.loads(m.group(0)))
+        except json.JSONDecodeError:
+            continue
+    entries = [e for e in entries if isinstance(e, dict) and "line" in e]
+    if not entries:
+        return None
+    out: dict[int, MapActionItem] = {}
+    seen: set[int] = set()
+    for item in entries:
+        line = item["line"]
+        if not isinstance(line, int) or not 1 <= line <= len(cues) or line in seen:
+            continue
+        seen.add(line)
+        if task := _str(item.get("task")):
+            owner, sentence = cues[line - 1]
+            task = whole_task(task, sentence) if english else task
+            due = _str(item.get("due")) or None
+            out[line - 1] = MapActionItem(owner=owner, task=task, due=due)
+    return out
+
+
+def guard_values(
+    notes: SegmentNotes,
+    transcript: str,
+    slides: list[str],
+    notes_language: str,
+    source_language: str,
+) -> SegmentNotes:
+    """The number guard, then dates and dues, against the segment's transcript and slides."""
+    sources = source_numbers(transcript, slides, source_language)
+    days = source_days(transcript, slides)
+    notes = guard_numbers(notes, sources, notes_language, days)
+    return guard_dates(notes, "\n".join([transcript, *slides]), notes_language, source_language)
+
+
+def add_cue_tasks(
+    notes: SegmentNotes,
+    tasks: list[MapActionItem],
+    transcript: str,
+    slides: list[str],
+    notes_language: str,
+    source_language: str,
+    guard: bool,
+) -> SegmentNotes:
+    """`tasks` appended to the segment's action items, through the same number, date and due
+    checks as Map's own (`guard`: `map.number_guard`)."""
+    if not tasks:
+        return notes
+    extra = SegmentNotes(
+        seg_id=notes.seg_id,
+        summary="",
+        key_points=[],
+        decisions=[],
+        action_items=tasks,
+        open_questions=[],
+        terms=[],
+    )
+    if guard:
+        extra = guard_values(extra, transcript, slides, notes_language, source_language)
+    return notes.model_copy(
+        update={
+            "action_items": [*notes.action_items, *extra.action_items],
+            "number_repairs": [*notes.number_repairs, *extra.number_repairs],
+            "unverified_numbers": list(
+                dict.fromkeys([*notes.unverified_numbers, *extra.unverified_numbers])
+            ),
+            "dropped_dues": [*notes.dropped_dues, *extra.dropped_dues],
+        }
+    )
+
+
 # --- speech/slide conflicts (pure, §5.5) --------------------------------------------------
 
 _LABEL_WORD = re.compile(r"[^\W\d_]{3,}")
@@ -570,6 +705,7 @@ def run_stage(ctx: StageContext) -> None:
     slides = {s.slide_id: s for s in schemas.load(ctx.run_dir, SlidesFile).slides}
     prompt = load_prompt("map")
     retry = f"{prompt}\n\n{load_prompt('map_retry')}"
+    cue_prompt = load_prompt("map_tasks")
     notes: list[SegmentNotes] = []
     retried = failed = 0
     said = {names.fold(n) for n in names.said_names(s.transcript_text for s in segments)}
@@ -599,14 +735,10 @@ def run_stage(ctx: StageContext) -> None:
                     ctx.log.warning("map: segment %d kept as raw text: %r", k, raw[:200])
                 seg_notes = make_notes(seg.seg_id, obj, raw)
                 if cfg.number_guard:
-                    sources = source_numbers(
-                        seg.transcript_text, seg_slides, ctx.config.source_language
-                    )
-                    days = source_days(seg.transcript_text, seg_slides)
-                    seg_notes = guard_numbers(seg_notes, sources, ctx.config.notes_language, days)
-                    seg_notes = guard_dates(
+                    seg_notes = guard_values(
                         seg_notes,
-                        "\n".join([seg.transcript_text, *seg_slides]),
+                        seg.transcript_text,
+                        seg_slides,
                         ctx.config.notes_language,
                         ctx.config.source_language,
                     )
@@ -648,6 +780,36 @@ def run_stage(ctx: StageContext) -> None:
                 )
                 for change in owners:
                     ctx.log.info("map: segment %d %s", k, change)
+                cues = uncovered_cues(
+                    seg_notes, seg.transcript_text, said, ctx.config.source_language
+                )
+                if cfg.cue_tasks and cues:
+                    reply = lm.generate(
+                        fill(cue_prompt, **cue_values(cues, ctx.config.notes_language)),
+                        max_tokens=cfg.max_tokens,
+                        temperature=0.0,
+                        seed=ctx.config.seed,
+                    )
+                    english = ctx.config.notes_language == ctx.config.source_language == "en"
+                    found = cue_tasks(cues, reply, english)
+                    if found is None:
+                        ctx.log.warning("map: segment %d cue reply not JSON: %r", k, reply[:200])
+                    for i, (_, sentence) in enumerate(cues):
+                        if a := (found or {}).get(i):
+                            ctx.log.info(
+                                "map: segment %d task from a cue: %s: %s", k, a.owner, a.task
+                            )
+                        else:
+                            ctx.log.info("map: segment %d cue, no task: %s", k, sentence)
+                    seg_notes = add_cue_tasks(
+                        seg_notes,
+                        list((found or {}).values()),
+                        seg.transcript_text,
+                        seg_slides,
+                        ctx.config.notes_language,
+                        ctx.config.source_language,
+                        cfg.number_guard,
+                    )
                 notes.append(seg_notes)
     ctx.log.info("map: %d segments, %d retried, %d kept as raw text", len(notes), retried, failed)
     schemas.save(ctx.run_dir, MapFile(target_language=ctx.config.notes_language, notes=notes))
@@ -659,6 +821,6 @@ STAGE = Stage(
     outputs=(MapFile.FILENAME,),
     format_version=MapFile.FORMAT_VERSION,
     config_keys=("seed", "target_language", "map", "models.map"),
-    prompts=("map", "map_retry"),
+    prompts=("map", "map_retry", "map_tasks"),
     models=("map",),
 )

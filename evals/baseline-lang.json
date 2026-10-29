@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-29T07:24:13.901438-10:00",
+  "created_at": "2026-10-29T11:26:47.554191-10:00",
   "set": "lang",
-  "git_sha": "8e19a86-dirty",
+  "git_sha": "5ca8788-dirty",
   "overrides": {
     "seed": 1
   },
@@ -30,10 +30,10 @@
       "duration_s": 350.12,
       "metrics": {
         "facts": 13,
-        "facts_found": 11,
-        "fact_recall": 0.8462,
+        "facts_found": 12,
+        "fact_recall": 0.9231,
         "citation_accuracy": 1.0,
-        "claims": 21,
+        "claims": 22,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": null,
@@ -61,11 +61,11 @@
         "translation_citations_same": null,
         "untranslated_claims": null,
         "recall_decision": null,
-        "recall_action": 0.6,
+        "recall_action": 0.8,
         "recall_number": 1.0,
         "recall_open_question": null,
-        "cited_claims": 21,
-        "support_rate": 0.8571,
+        "cited_claims": 22,
+        "support_rate": 0.8636,
         "support_partial": 2,
         "support_no": 1,
         "support_unjudged": 0,
@@ -129,13 +129,13 @@
           "id": "f5",
           "kind": "action",
           "text": "send the contract to legal",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "den Vertrag an die Rechtsabteilung senden",
+          "citation_ok": true,
+          "t_error": 1.44,
           "slide_cited": false
         },
         {
@@ -512,6 +512,15 @@
         },
         {
           "section": "action_items",
+          "claim": "Action item: den Vertrag an die Rechtsabteilung senden (owner: Nadia; due: 18. November)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The text states Nadia will send the contract to legal by the 18th of November."
+        },
+        {
+          "section": "action_items",
           "claim": "Action item: Veranstaltungsort für das Offsite bis Freitag buchen. (owner: Omar; due: Freitag)",
           "citations": [
             "seg 1"
@@ -571,28 +580,28 @@
           "reused": true
         },
         "map": {
-          "seconds": 16.4,
-          "s_per_audio_hour": 168.7,
+          "seconds": 17.29,
+          "s_per_audio_hour": 177.8,
           "peak_mem_gb": 4.4,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 29.72,
-          "s_per_audio_hour": 305.6,
+          "seconds": 29.12,
+          "s_per_audio_hour": 299.4,
           "peak_mem_gb": 9.48,
-          "reused": true
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -1080,28 +1089,28 @@
           "reused": true
         },
         "map": {
-          "seconds": 14.95,
-          "s_per_audio_hour": 150.4,
+          "seconds": 14.87,
+          "s_per_audio_hour": 149.6,
           "peak_mem_gb": 8.91,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 25.97,
-          "s_per_audio_hour": 261.2,
+          "seconds": 25.92,
+          "s_per_audio_hour": 260.7,
           "peak_mem_gb": 9.5,
-          "reused": true
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -1628,28 +1637,28 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.9,
-          "s_per_audio_hour": 119.7,
+          "seconds": 11.87,
+          "s_per_audio_hour": 119.4,
           "peak_mem_gb": 8.91,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 24.23,
-          "s_per_audio_hour": 243.8,
+          "seconds": 24.18,
+          "s_per_audio_hour": 243.2,
           "peak_mem_gb": 9.48,
-          "reused": true
+          "reused": false
         },
         "translate": {
-          "seconds": 14.36,
-          "s_per_audio_hour": 144.5,
+          "seconds": 14.28,
+          "s_per_audio_hour": 143.6,
           "peak_mem_gb": 8.75,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -2170,28 +2179,28 @@
           "reused": true
         },
         "map": {
-          "seconds": 15.11,
-          "s_per_audio_hour": 152.0,
+          "seconds": 15.05,
+          "s_per_audio_hour": 151.4,
           "peak_mem_gb": 8.91,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 41.23,
-          "s_per_audio_hour": 414.8,
+          "seconds": 41.05,
+          "s_per_audio_hour": 412.9,
           "peak_mem_gb": 9.62,
-          "reused": true
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -2718,28 +2727,28 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.92,
-          "s_per_audio_hour": 119.9,
+          "seconds": 11.86,
+          "s_per_audio_hour": 119.3,
           "peak_mem_gb": 8.91,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 24.22,
-          "s_per_audio_hour": 243.6,
+          "seconds": 24.17,
+          "s_per_audio_hour": 243.2,
           "peak_mem_gb": 9.48,
-          "reused": true
+          "reused": false
         },
         "translate": {
-          "seconds": 13.21,
-          "s_per_audio_hour": 132.9,
+          "seconds": 13.13,
+          "s_per_audio_hour": 132.1,
           "peak_mem_gb": 8.75,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -3264,28 +3273,28 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.98,
-          "s_per_audio_hour": 113.2,
+          "seconds": 11.91,
+          "s_per_audio_hour": 112.6,
           "peak_mem_gb": 8.91,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 23.97,
-          "s_per_audio_hour": 226.5,
+          "seconds": 23.92,
+          "s_per_audio_hour": 226.1,
           "peak_mem_gb": 9.48,
-          "reused": true
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     },
@@ -3806,28 +3815,28 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.95,
-          "s_per_audio_hour": 92.7,
+          "seconds": 11.88,
+          "s_per_audio_hour": 92.1,
           "peak_mem_gb": 8.9,
-          "reused": true
+          "reused": false
         },
         "reduce": {
-          "seconds": 23.02,
-          "s_per_audio_hour": 178.5,
+          "seconds": 22.97,
+          "s_per_audio_hour": 178.1,
           "peak_mem_gb": 9.48,
-          "reused": true
+          "reused": false
         },
         "translate": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         },
         "render": {
           "seconds": 0.0,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
-          "reused": true
+          "reused": false
         }
       }
     }
@@ -3835,8 +3844,8 @@
   "summary": {
     "items": 7,
     "facts": 91,
-    "fact_recall": 0.9231,
-    "citation_accuracy": 0.9881,
+    "fact_recall": 0.9341,
+    "citation_accuracy": 0.9882,
     "uncited_claims": 0,
     "made_up_items": 0,
     "made_up_open_questions": 0,
@@ -3854,7 +3863,7 @@
     "translation_citations_same": 1.0,
     "untranslated_claims": 6,
     "recall_decision": null,
-    "recall_action": 0.9429,
+    "recall_action": 0.9714,
     "recall_number": 0.9107,
     "recall_open_question": null,
     "map_numbers_repaired": 21,
@@ -3865,7 +3874,7 @@
     "pass2_claim": 0,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.7698,
+    "support_rate": 0.7714,
     "support_partial": 9,
     "support_no": 23,
     "support_unjudged": 0,
@@ -3894,15 +3903,15 @@
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 129.1,
+      "s_per_audio_hour": 129.8,
       "peak_mem_gb": 8.91
     },
     "reduce": {
-      "s_per_audio_hour": 263.6,
+      "s_per_audio_hour": 262.2,
       "peak_mem_gb": 9.62
     },
     "translate": {
-      "s_per_audio_hour": 37.8,
+      "s_per_audio_hour": 37.6,
       "peak_mem_gb": 8.75
     },
     "render": {
@@ -3910,7 +3919,7 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 909.9,
+      "s_per_audio_hour": 909.0,
       "peak_mem_gb": 16.88
     }
   },
@@ -3993,6 +4002,7 @@
     1.09,
     1.17,
     1.29,
+    1.44,
     1.99,
     1.99,
     1.99,
@@ -4003,7 +4013,7 @@
   "judge": {
     "loaded": false,
     "calls": 0,
-    "cached": 175,
+    "cached": 176,
     "seconds": 0.02,
     "s_per_audio_hour": 0.0,
     "peak_mem_gb": null

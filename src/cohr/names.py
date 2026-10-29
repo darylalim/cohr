@@ -87,6 +87,9 @@ _NOT_PEOPLE = {
     *["i", "i'm", "i'll", "i'd", "i've"],
     *["we", "you", "he", "she", "they", "it", "there", "this", "that"],
     *["nobody", "everyone", "everybody", "someone", "somebody"],
+    # replies and fillers that start a sentence: "Okay, will do." is no one's task (8e)
+    *["okay", "ok", "yes", "yeah", "yep", "no", "sure", "thanks", "thank", "sorry", "right"],
+    *["great", "good", "well", "alright", "hi", "hello", "hey", "please", "action"],
 }
 _PERSON = r"[A-Z][\w’'-]*(?: [A-Z][\w’'-]*)?"
 # "Tom will update …", "Laura to send …": Map's way of writing a task as a decision or a task
@@ -110,7 +113,9 @@ def person(name: str, said: set[str]) -> bool:
     """`name` is someone in the meeting: each word a said name (`said_names`, accents folded),
     not a weekday, month or pronoun ("Design will …" on AMI is no one: "design" is said too)."""
     words = name.split()
-    return bool(words) and all(fold(w) in said and w.casefold() not in _NOT_PEOPLE for w in words)
+    return bool(words) and all(
+        len(w) > 1 and fold(w) in said and w.casefold() not in _NOT_PEOPLE for w in words
+    )  # one letter is no one: ASR's "the F site" for "the offsite" (8e)
 
 
 def subject_task(text: str, said: set[str]) -> tuple[str, str] | None:
@@ -127,13 +132,23 @@ def addressee(sentence: str, said: set[str]) -> str | None:
     …?"); None when it names nobody there, or names anyone else ("Tom, can you ask Maria …"):
     the owner would be a guess."""
     sentence = sentence.strip()
-    cued = {m["name"] for c in _CUES if (m := c.search(sentence)) and person(m["name"], said)}
+    cued: dict[str, str] = {}  # the person → the words the cue took
+    for c in _CUES:
+        if (m := c.search(sentence)) and person(name := _first_name(m["name"], said), said):
+            cued[name] = m["name"]
     if len(cued) != 1:
         return None
-    (name,) = cued
+    ((name, taken),) = cued.items()
     rest = _WORD.findall(sentence)[1:]  # the first word is capitalised anyway ("Okay", "Action")
-    others = {w for w in rest if w[0].isupper() and person(w, said) and w not in name.split()}
+    others = {w for w in rest if w[0].isupper() and person(w, said) and w not in taken.split()}
     return None if others else name
+
+
+def _first_name(name: str, said: set[str]) -> str:
+    """The first word of a two-word name when it is a person alone: ASR drops the colon of
+    "Action item for Laura: schedule …" and capitalises the verb ("Laura Schedule", 8e)."""
+    first = name.split()[0]
+    return first if person(first, said) else name
 
 
 def said_folded(name: str, text: str) -> bool:
