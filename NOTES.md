@@ -2229,6 +2229,8 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
    release); its merge to main tags v1.0.0 and attaches the wheel and sdist.
 10. **Japanese chunks without punctuation** (8a): a citation on the right chunk lands at its
     start when Transcribe wrote no 。 before the moment (xling-ja MARIA, −21.8 s).
+11. ~~**Missed decisions**~~: done in Phase 8f (D44, cue sentences → decisions after Reduce;
+    quick 100% at seeds 0–3, long-en 70 → 95%, lang 21 → 24/28). Left over: see 8f's "Open".
 
 ## 2026-10-14 · Phase 7 kickoff prompt (no code)
 - PLAN §21 "Kickoff prompt for Phase 7": cross-meeting search from §13. Step 0 checks the
@@ -2655,3 +2657,60 @@ Branch `phase-8e-map-recall`. 8d's "Open"; D43.
 - AMI has 6 such sentences in 5 meetings, none a missed decision (4 already in Map, 2 refer
   back), so a cue rule fits the generator; the prompt asks for must-not-fire tests from real
   speech. lang misses need a hand read of map.json (Map writes the notes language).
+
+## 2026-10-29 · Phase 8f: missed decisions
+Branch `phase-8f-decisions`. D44.
+- Step 0 (no models): the cue scan on all 17 stored runs flags exactly the English misses, 0
+  elsewhere; every cue in the generated sets is a planted decision. 6 of the 18 misses were
+  Reduce's, not Map's: long-en f49 (pass 1's group reply has no decision citing seg 13),
+  clean-sw/bn f15 (Map's English "Weekly sync moved to Thursdays." filed as a key point),
+  clean-ar f15/f18 (Map has both in Arabic; the notes kept no seg-1 decision). clean-en f2 is
+  in a bundled Map key point. Map never wrote noisy-en f3, slide-conflict-en f2/f14, long-en
+  f18/f27/f30/f33, conflict-de f2/f14 and clean-ar f12. long-en f55 is ASR ("PostGIS").
+- AMI: the three cue forms occur once in 5 meetings (ES2004d's kinetic charger, already a Map
+  and notes decision). Real speech says "we decided upon …", "we decided that …", "Do we agree
+  on that?", "I think we all agreed on that.": a rule keyed to the forms fits the generator, so
+  it only adds where a cue is uncovered, and AMI is its must-not-fire evidence.
+- Re-adding every Map decision the notes lack would add 8 AMI items (several not decisions:
+  "Discuss the feasibility of kinetic energy…") and long-en's "Leave Bitcoin acceptance
+  decision open": Map's decisions list holds tasks and open questions too. Rejected.
+- Fix (user: Python over a model call or map.md change): `reduce.decision_cues` +
+  `reduce.add_said_decisions`, after `add_lost_tasks`. English notes: the sentence's own words,
+  or the key point that states only the decision moves; a bundle stays. Other notes languages:
+  the segment's unstated Map decisions up to its cue count, skipping Map's tasks and open
+  questions. Code only: `--rerun reduce`, REDUCE_HASH and Ask keys unchanged.
+- Found in the replay: in Arabic notes Refine has nothing to match, so both clean-ar additions
+  sat at seg 1's start (roadmap 55 s early). When no decision cited the segment, each addition
+  now takes its cue sentence's time (297.8 s, 346.0 s).
+- The offline replay on the stored notes.json (the steps after it don't touch Decisions or Key
+  points) matched the eval runs item for item.
+
+| | before | after |
+|---|---|---|
+| quick decisions, seeds 0 / 1 / 2 / 3 | 75 / 81.25 / 81.25 / 87.5% | **100 / 100 / 100 / 100%** |
+| quick seed 0 fact recall, Ask, citation accuracy | 91.2%, 98.1%, 100% | **97.1%**, 98.1%, 100% |
+| quick made-up items, seeds 0–3 | 0 / 0 / 1 / 0 | same |
+| quick open questions, seeds 0–3 | 100 / 80 / 80 / 100% | same |
+| lang seed 1 judge-covered decisions, judge recall | 21/28, 75.0% | **24/28, 83.3%** |
+| lang fact recall, citation accuracy | 93.4%, 98.8% | same |
+| long-en decisions, fact recall | 70%, 78.8% | **95%, 85.0%** |
+| long-en Ask, citation accuracy, made-up, wrong owner/due | 94.4%, 98.4%, 7, 2 | 94.4%, 98.5%, 7, 2 |
+| AMI | — | replay: 0 changes (no AMI run) |
+
+- Runs: quick seeds 1–3 `--rerun reduce --no-ask --no-judge`, quick seed 0 with Ask and the
+  judge, lang seed 1 `--no-ask`, long-en, each `--rerun reduce`; then each `--update-baseline`.
+  All three baselines rewritten on purpose (decisions the notes lost are now added). quick
+  seed 1's action recall 95 → 100% predates this change (its earlier report was before 8e's fix).
+- Cost: none (no model call).
+
+### Open
+- conflict-de f2/f14 and clean-ar f12: Map never wrote them, and in German/Arabic notes Python
+  can't tell which English cue is uncovered (a model call could; Tiny Aya misjudged German cue
+  sentences in 8e).
+- clean-sw f15: the English notes have it; Tiny Aya translated "sync" as "sasisho" (update) and
+  the judge didn't count it. Translation, beta language.
+- long-en f55: ASR ("PostGIS" for Postgres), counted as made-up too.
+- Real meetings' decision forms ("we decided upon/that …") are left to Map and R7B.
+- Seed-1 "before" in the table is 8e's mid-phase report; spare copy of the pre-8f stored runs in
+  evals/data/runs-pre-8f (gitignored, safe to delete).
+

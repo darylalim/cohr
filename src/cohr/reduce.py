@@ -91,6 +91,20 @@ _UNKNOWN = {
 # A task that only says to keep doing something (D40, 8b): moved to Key points when it has no
 # owner and no due.
 _VAGUE_TASK = re.compile(r"(?:continue|ensure|keep|monitor|maintain)\b", re.I)
+# D44: a sentence that states a decision ("We agreed to …", "OK, so the decision is to …").
+# Without "to" it refers back or sums up ("I think we all agreed on that.", AMI IS1009c).
+_DECISION_CUE = re.compile(
+    r"\b(?:we(?:'ve|\s+have)?\s+(?:all\s+|also\s+)?(?:decided|agreed)|the\s+decision\s+is)\s+to\s+"
+    r"(?P<what>.+?)(?:,?\s+because\b.*)?[.!]*$",
+    re.I,
+)
+# Not a decision made here: asked ("Have we decided to …"), denied, or an earlier meeting's
+# ("We agreed last week to …" has no cue; "Last week we agreed to …" does).
+_NOT_DECIDED = re.compile(
+    r"^\W*(?:have|did|do|should|shall|can)\b|\b(?:not|never|whether)\b|n't\b|"
+    r"\b(?:last|previous)\s+(?:week|time|meeting|month)\b|\b(?:earlier|previously)\b",
+    re.I,
+)
 
 
 class ReduceTooLong(RuntimeError):
@@ -602,6 +616,120 @@ def add_lost_tasks(
     return doc.model_copy(update={"sections": sections}), added
 
 
+def decision_cues(transcript: str) -> list[tuple[str, str]]:
+    """(sentence, what was decided) for each sentence of an English transcript that states a
+    decision in a cue form (`_DECISION_CUE`): "We agreed to keep the onboarding checklist." →
+    "keep the onboarding checklist". Questions, denials and earlier meetings' decisions are
+    not cues (`_NOT_DECIDED`)."""
+    out: list[tuple[str, str]] = []
+    for sentence in _SENTENCE.findall(transcript):
+        sentence = sentence.strip()
+        if sentence.endswith("?") or _NOT_DECIDED.search(sentence):
+            continue
+        if m := _DECISION_CUE.search(sentence):
+            out.append((sentence, m["what"].strip()))
+    return out
+
+
+def _states_only(claim: str, what: str) -> bool:
+    """`claim` says `what` and little else: most of its tokens are `what`'s."""
+    tc = set(tokens(claim))
+    return bool(tc) and len(tc & set(tokens(what))) / len(tc) >= ACTION_MATCH_MIN
+
+
+def _cites(claim: Claim, seg_id: int) -> bool:
+    return any(c.kind == "seg" and c.id == seg_id for c in claim.citations)
+
+
+def _insert_by_seg(items: list[Claim], claim: Claim, seg_id: int) -> None:
+    later = [i for i, it in enumerate(items) if (s := _first_seg(it)) is not None and s > seg_id]
+    items.insert(later[0] if later else len(items), claim)
+
+
+def add_said_decisions(
+    doc: NotesDoc,
+    map_notes: Mapping[int, SegmentNotes],
+    segments: Sequence[Segment],
+    refine: Refine,
+    source_language: str,
+) -> tuple[NotesDoc, list[str]]:
+    """D44: a decision the meeting states in a cue form (`decision_cues`) that no decision or
+    action item of the notes states (ACTION_MATCH_MIN) is added, citing its segment, before
+    the first decision citing a later one. Map never wrote some (noisy-en "keep the onboarding
+    checklist" at seeds 0–3), and R7B lost others Map had (long-en f49 in pass 1, clean-sw's
+    "Weekly sync moved to Thursdays." filed as a key point). English meetings only.
+    English notes: a key point that states only the decision moves to Decisions; otherwise the
+    sentence's own words are the decision ("Keep the onboarding checklist."). Other notes
+    languages can't be compared with the sentence, so a segment with more cues than decisions
+    citing it gets its Map decisions the notes don't state, up to the difference; Map
+    decisions that are its tasks or open questions are skipped (clean-ar lost both of seg 1's).
+    The additions, as written."""
+    if source_language != "en":
+        return doc, []
+    decisions = list(doc.sections.decisions)
+    key_points = list(doc.sections.key_points)
+    stated = [c.text for c in [*decisions, *doc.sections.action_items]]
+    added: list[str] = []
+    for seg in sorted(segments, key=lambda s: s.seg_id):
+        cues = decision_cues(seg.transcript_text)
+        if not cues:
+            continue
+        if doc.language != "en":
+            # No decision cites the segment: every cue is one the notes lost, and Map lists
+            # them in the order said, so each addition is placed at its cue (clean-ar's
+            # roadmap is 55 s after seg 1's start). Otherwise at the segment's start.
+            uncited = not any(_cites(d, seg.seg_id) for d in decisions)
+            new = _lost_map_decisions(seg.seg_id, len(cues), decisions, stated, map_notes)
+            for k, text in enumerate(new):
+                span = cues[k][0] if uncited else text
+                claim = Claim(text=text, citations=cite([(("seg", seg.seg_id), span)], refine))
+                _insert_by_seg(decisions, claim, seg.seg_id)
+            stated += new
+            added += new
+            continue
+        for sentence, what in cues:
+            if any(match_score(what, t) >= ACTION_MATCH_MIN for t in stated):
+                continue
+            point = next((k for k in key_points if _states_only(k.text, what)), None)
+            if point is not None:
+                key_points.remove(point)
+                claim = point
+            else:
+                text = what[0].upper() + what[1:] + "."
+                claim = Claim(text=text, citations=cite([(("seg", seg.seg_id), sentence)], refine))
+            _insert_by_seg(decisions, claim, seg.seg_id)
+            stated.append(claim.text)
+            added.append(claim.text)
+    if not added:
+        return doc, []
+    sections = doc.sections.model_copy(update={"decisions": decisions, "key_points": key_points})
+    return doc.model_copy(update={"sections": sections}), added
+
+
+def _lost_map_decisions(
+    seg_id: int,
+    cues: int,
+    decisions: Sequence[Claim],
+    stated: Sequence[str],
+    map_notes: Mapping[int, SegmentNotes],
+) -> list[str]:
+    """Up to `cues` minus the decisions citing the segment: its Map decisions in Map's order
+    that no notes decision or action item states and that aren't Map's tasks or open
+    questions of the segment."""
+    notes = map_notes.get(seg_id)
+    citing = sum(_cites(d, seg_id) for d in decisions)
+    if notes is None or notes.raw or cues <= citing:
+        return []
+    other = [*stated, *(a.task for a in notes.action_items), *notes.open_questions]
+    out: list[str] = []
+    for text in dict.fromkeys(notes.decisions):
+        if len(out) == cues - citing:
+            break
+        if not any(match_score(text, t) >= ACTION_MATCH_MIN for t in [*other, *out]):
+            out.append(text)
+    return out
+
+
 def add_task(items: list[ActionItem], task: ActionItem) -> None:
     """Append a moved decision; when an action item already states it (ACTION_MATCH_MIN),
     add its citations there instead of listing the task twice."""
@@ -1092,6 +1220,9 @@ def run_stage(ctx: StageContext) -> None:
     doc, added = add_lost_tasks(doc, map_notes, segments, texts, refine)
     if added:
         ctx.log.info("reduce: Map's tasks the notes lost, added: %s", "; ".join(added))
+    doc, decided = add_said_decisions(doc, map_notes, segments, refine, ctx.config.source_language)
+    if decided:
+        ctx.log.info("reduce: decisions the meeting stated, added: %s", "; ".join(decided))
     doc, restored = restore_owners(doc, texts)
     if restored:
         ctx.log.info("reduce: owners in the meeting's spelling: %s", ", ".join(restored))

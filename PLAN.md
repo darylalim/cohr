@@ -474,6 +474,18 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   `[owner: …] task` span, so the owner anchors it in another language (D39); the anchors
   compare names with accents folded. Owner-less Map tasks are never added (AMI writes decided
   designs as tasks).
+- **Decisions the notes lose (8f, D44):** after Map's lost tasks, in an English meeting. A
+  sentence stating a decision in a cue form ("We decided to …", "We agreed to …", "the decision
+  is to …"; not a question, a denial, "whether", or an earlier meeting's) that no decision or
+  action item states (≥ 0.6) becomes a decision citing its segment, in segment order. English
+  notes: a key point that states only that decision moves to Decisions (R7B filed one there);
+  otherwise the sentence's own words are the decision ("Keep the onboarding checklist."), and a
+  bundled key point stays. Other notes languages can't be compared with the sentence: a segment
+  with more cues than decisions citing it gets its Map decisions the notes don't state, up to
+  the difference, skipping Map's tasks and open questions; when no decision cited the segment,
+  each is placed at its cue sentence (Map lists them in the order said). Without "to" a cue
+  refers back or sums up (AMI: "I think we all agreed on that."); real meetings decide in other
+  words too, and those stay R7B's and Map's.
 - **Cut replies (6e-2, D32):** a reply that stopped at `reduce.max_tokens` without
   `<|END_RESPONSE|>` (mlx-lm's finish reason) is counted in `NotesDoc.truncated`, logged and
   shown on the Notes page. It is never retried (temperature 0 would write the same start) or
@@ -1324,6 +1336,12 @@ phase has looked at them. Of quick seed 0's 4 misses and long-en's 6, 7 are in n
 1 is a Map key point and 1 a Map decision that the notes lost; long-en f55 is ASR's "PostGIS"
 for Postgres. noisy-en f3 and slide-conflict-en f2 are missed at every seed 0–3. Kickoff
 prompt in §21.
+Done 2026-10-29 (NOTES.md, D44). 6 of the 18 misses were Reduce's (pass 1 dropped long-en
+f49; R7B filed clean-sw/bn's as a key point; clean-ar's notes kept no seg-1 decision). One
+Python step after Reduce (`reduce.add_said_decisions`): cue sentences no decision states
+become decisions (English notes), or a segment's Map decisions up to its cue count (other
+notes languages). quick decisions 100% at seeds 0–3 (was 75/81/81/88%); long-en 70 → 95%,
+fact recall 78.8 → 85.0%; lang judge-covered 21 → 24/28; made-up items unchanged; AMI 0 changes.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2191,6 +2209,7 @@ section.
 | D41 | Ask on long meetings: citation placement and Map's values in its documents (§5.5–5.7) | First span places a segment citation; Map's dates and dues as written | Step 0 on the cached Ask replies and stored notes (offline replay), then quick, lang seed 1 and long-en | Phase 8c | **Best-matching span places the citation; Map's dates repaired or flagged, unsaid dues dropped on map.json** (user: on Map's items, one value for every reader). Date repair only from exactly one said date of the same month a digit edit away, English notes of an English meeting; dues by D40's rule (`dues.due_said`). long-en Ask 77.8 → 88.9%, citation 93.3 → 100%, made-up items 7 → 4; quick citation 98.4 → 100%; lang identical but one judged claim. map.md's example kept (the check drops every copy). Rejected: Ask snippet-only fix (leaves map.json wrong), an Ask prompt rule (a-f61 left open) |
 | D42 | Missed action items: tasks Map wrote as decisions or without owners, tasks the notes lost (§5.5–5.6) | As Map and Reduce wrote them | Step 0 on the stored quick, lang and long runs (pass-1 replies are stored in notes.json), offline replay incl. AMI, then lang seed 1, quick and long-en | Phase 8d | **Python on map.json and the final notes** (user): Map's "X will …" decision → X's task when X is said in the segment; an owner-less task's owner from its own text or its best sentence's one cued person (English notes; English meeting for the sentence); an `[owner: ?]` notes item takes its Map task's owner (merged into a duplicate); an owned Map task no notes item states is added, cited with `[owner: …]` as anchor. Logged, no MapFile field (user: Ask keys move only where map.json changes). lang seed 1 action recall 80.0 → 94.3%; long-en action recall 55 → 70%, fact recall 67.5 → 71.3%, made-up 4 → 6 (owner-less pass-1 tasks pass 2 kept, not the rules: replayed without them, still 6); quick identical; AMI replay 0 changes. Rejected: a map.md prompt rule (Python reaches every Map-reachable case but conflict-de f6, a German task of an English meeting) and names anywhere in a sentence (`said_names` keeps "Okay", "Monday", "Action") |
 | D43 | Action items Map never wrote (§5.5) | As Map wrote them | Step 0 scan of the stored runs and quick at pipeline seeds 2 and 3, then quick seeds 0/2/3, lang seed 1 and long-en | Phase 8e | **Python finds the sentences, one Tiny Aya call decides** (user, over a Python-only net and a map.md rule): in an English meeting, a sentence giving one person a task in a cue position while no Map task of the segment is theirs goes to `prompts/map_tasks.md` (temperature 0, no examples, notes language); Python keeps the owner, completes a task cut short from its sentence (English notes), and runs Map's number, date and due checks. Map's misses change with the seed (quick action recall 95/80/75% at seeds 0/2/3), every one a flagged sentence, 0 false flags (AMI: no sentence names anyone). quick 100% at all three seeds; lang seed 1 94.3 → 97.1%; long-en action recall 70 → 90%, fact recall 71.3 → 78.8%, Ask 88.9 → 94.4%, made-up 6 → 7 (f15, said "Oma"). Rejected: a verb list for must-not-fire (would fit the generator), a prompt rewording for f86's short task (Tiny Aya kept it short and added the name in German) |
+| D44 | Missed decisions: Map never wrote them, or Reduce lost Map's (§5.6) | As Map and Reduce wrote them | Step 0 scan of every stored run (AMI included), lang map.json read by hand, pass-1 replies; offline replay of the stored notes.json; then quick seeds 0–3, lang seed 1 with the judge, long-en | Phase 8f | **Python after Reduce** (`reduce.add_said_decisions`, user, over a D43-style call, a map.md change and re-adding every lost Map decision): in an English meeting a cue sentence ("We decided/agreed to …", "the decision is to …"; not asked, denied, "whether" or an earlier meeting's) no notes decision or action item states becomes a decision in its own words, or its key point moves to Decisions (English notes); other notes languages get the segment's unstated Map decisions up to its cue count, placed at the cues when no decision cited the segment. No prompt or MapFile change (Ask keys and REDUCE_HASH stay). quick decisions 75/81/81/88 → 100% at seeds 0–3, fact recall 91.2 → 97.1% (seed 0); long-en 70 → 95%, fact recall 78.8 → 85.0%; lang judge-covered 21 → 24/28; made-up items and Ask unchanged; AMI: 1 cue, already a decision, 0 changes. Rejected: re-adding every Map decision the notes lack (8 on AMI, several not decisions, plus long-en's "Leave Bitcoin acceptance decision open"), a map.md change (the net catches the misses at every seed), a model call for the 3 Map never wrote in de/ar notes (Tiny Aya misjudged cue sentences in German in 8e) |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).
