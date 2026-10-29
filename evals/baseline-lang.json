@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-28T06:50:51.221586-10:00",
+  "created_at": "2026-10-29T07:24:13.901438-10:00",
   "set": "lang",
-  "git_sha": "0a2306c-dirty",
+  "git_sha": "8e19a86-dirty",
   "overrides": {
     "seed": 1
   },
@@ -30,8 +30,8 @@
       "duration_s": 350.12,
       "metrics": {
         "facts": 13,
-        "facts_found": 10,
-        "fact_recall": 0.7692,
+        "facts_found": 11,
+        "fact_recall": 0.8462,
         "citation_accuracy": 1.0,
         "claims": 21,
         "uncited_claims": 0,
@@ -61,13 +61,13 @@
         "translation_citations_same": null,
         "untranslated_claims": null,
         "recall_decision": null,
-        "recall_action": 0.4,
+        "recall_action": 0.6,
         "recall_number": 1.0,
         "recall_open_question": null,
         "cited_claims": 21,
         "support_rate": 0.8571,
-        "support_partial": 3,
-        "support_no": 0,
+        "support_partial": 2,
+        "support_no": 1,
         "support_unjudged": 0,
         "judge_covered": 4,
         "judge_recall": 0.6667
@@ -220,13 +220,13 @@
           "id": "f12",
           "kind": "action",
           "text": "draft the hiring plan",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "Erstellung des Einstellungsplans",
+          "citation_ok": true,
+          "t_error": 0.24,
           "slide_cited": false
         },
         {
@@ -503,12 +503,12 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Erstellung des Einstellungsplans bis Ende nächsten Woche",
+          "claim": "Action item: Erstellung des Einstellungsplans (owner: Tom)",
           "citations": [
             "seg 0"
           ],
-          "supported": "partial",
-          "reason": "The claim translates a German phrase to English, but the cited text states 'Tom will draft the hiring plan by the end of next week', which matches the action and timeline."
+          "supported": "no",
+          "reason": "The cited text states 'Tom will draft the hiring plan by the end of next week.'"
         },
         {
           "section": "action_items",
@@ -571,15 +571,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 15.51,
-          "s_per_audio_hour": 159.4,
-          "peak_mem_gb": 7.54,
+          "seconds": 16.4,
+          "s_per_audio_hour": 168.7,
+          "peak_mem_gb": 4.4,
           "reused": true
         },
         "reduce": {
-          "seconds": 31.09,
-          "s_per_audio_hour": 319.7,
-          "peak_mem_gb": 5.92,
+          "seconds": 29.72,
+          "s_per_audio_hour": 305.6,
+          "peak_mem_gb": 9.48,
           "reused": true
         },
         "translate": {
@@ -603,10 +603,10 @@
       "duration_s": 357.88,
       "metrics": {
         "facts": 13,
-        "facts_found": 11,
-        "fact_recall": 0.8462,
+        "facts_found": 12,
+        "fact_recall": 0.9231,
         "citation_accuracy": 1.0,
-        "claims": 16,
+        "claims": 17,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": null,
@@ -634,11 +634,11 @@
         "translation_citations_same": null,
         "untranslated_claims": null,
         "recall_decision": null,
-        "recall_action": 0.8,
+        "recall_action": 1.0,
         "recall_number": 0.875,
         "recall_open_question": null,
-        "cited_claims": 16,
-        "support_rate": 0.875,
+        "cited_claims": 17,
+        "support_rate": 0.8824,
         "support_partial": 1,
         "support_no": 1,
         "support_unjudged": 0,
@@ -858,13 +858,13 @@
           "id": "f17",
           "kind": "action",
           "text": "record the onboarding video",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "تسجيل فيديو التوجيه بحلول يوم الاثنين.",
+          "citation_ok": true,
+          "t_error": 0.58,
           "slide_cited": false
         },
         {
@@ -1029,6 +1029,15 @@
           "reason": "The cited text states Maria will prepare the customer survey by the end of next week."
         },
         {
+          "section": "action_items",
+          "claim": "Action item: تسجيل فيديو التوجيه بحلول يوم الاثنين. (owner: Tom; due: Monday)",
+          "citations": [
+            "seg 1"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states Tom is to record the onboarding video by Monday."
+        },
+        {
           "section": "open_questions",
           "claim": "Open question: هل سيتم تقديم نسخة من الجهاز اللوحي؟",
           "citations": [
@@ -1071,15 +1080,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 14.83,
-          "s_per_audio_hour": 149.2,
-          "peak_mem_gb": 12.06,
+          "seconds": 14.95,
+          "s_per_audio_hour": 150.4,
+          "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 26.29,
-          "s_per_audio_hour": 264.4,
-          "peak_mem_gb": 5.94,
+          "seconds": 25.97,
+          "s_per_audio_hour": 261.2,
+          "peak_mem_gb": 9.5,
           "reused": true
         },
         "translate": {
@@ -1103,8 +1112,8 @@
       "duration_s": 357.88,
       "metrics": {
         "facts": 13,
-        "facts_found": 12,
-        "fact_recall": 0.9231,
+        "facts_found": 13,
+        "fact_recall": 1.0,
         "citation_accuracy": 1.0,
         "claims": 21,
         "uncited_claims": 0,
@@ -1134,7 +1143,7 @@
         "translation_citations_same": 1,
         "untranslated_claims": 4,
         "recall_decision": null,
-        "recall_action": 0.8,
+        "recall_action": 1.0,
         "recall_number": 1.0,
         "recall_open_question": null,
         "cited_claims": 21,
@@ -1280,13 +1289,13 @@
           "id": "f11",
           "kind": "action",
           "text": "prepare the customer survey",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "Andaa utafiti wa wateja ifikapo mwisho wa wiki ijayo.",
+          "citation_ok": true,
+          "t_error": 0.87,
           "slide_cited": false
         },
         {
@@ -1362,7 +1371,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "action_items",
-          "claim": "Rekodi video ya kujiunga ifikapo Jumatatu.",
+          "claim": "Rekodi video ya kuingia ifikapo Jumatatu.",
           "citation_ok": true,
           "t_error": 0.58,
           "slide_cited": false
@@ -1560,7 +1569,7 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Andaa utafiti wa wateja ifikapo mwisho wa wiki ijayo. (due: Mwisho wa wiki ijayo)",
+          "claim": "Action item: Andaa utafiti wa wateja ifikapo mwisho wa wiki ijayo. (owner: Maria; due: Mwisho wa wiki ijayo)",
           "citations": [
             "seg 0"
           ],
@@ -1569,12 +1578,12 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: Rekodi video ya kujiunga ifikapo Jumatatu. (owner: Tom; due: Jumatatu)",
+          "claim": "Action item: Rekodi video ya kuingia ifikapo Jumatatu. (owner: Tom; due: Jumatatu)",
           "citations": [
             "seg 1"
           ],
           "supported": "no",
-          "reason": "The cited text mentions an action item for Tom to record the onboarding video by Monday, not on Jumatatu (Saturday), and the claim uses a different language and incorrect date."
+          "reason": "The cited text mentions an action item for Tom to record the onboarding video by Monday, not a video for Rekodi or on Jumatatu."
         },
         {
           "section": "open_questions",
@@ -1619,20 +1628,20 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.82,
-          "s_per_audio_hour": 118.9,
-          "peak_mem_gb": 12.06,
+          "seconds": 11.9,
+          "s_per_audio_hour": 119.7,
+          "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 24.42,
-          "s_per_audio_hour": 245.6,
-          "peak_mem_gb": 5.92,
+          "seconds": 24.23,
+          "s_per_audio_hour": 243.8,
+          "peak_mem_gb": 9.48,
           "reused": true
         },
         "translate": {
-          "seconds": 20.09,
-          "s_per_audio_hour": 202.1,
+          "seconds": 14.36,
+          "s_per_audio_hour": 144.5,
           "peak_mem_gb": 8.75,
           "reused": true
         },
@@ -2161,14 +2170,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 14.99,
-          "s_per_audio_hour": 150.8,
-          "peak_mem_gb": 12.06,
+          "seconds": 15.11,
+          "s_per_audio_hour": 152.0,
+          "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 41.12,
-          "s_per_audio_hour": 413.7,
+          "seconds": 41.23,
+          "s_per_audio_hour": 414.8,
           "peak_mem_gb": 9.62,
           "reused": true
         },
@@ -2193,8 +2202,8 @@
       "duration_s": 357.88,
       "metrics": {
         "facts": 13,
-        "facts_found": 12,
-        "fact_recall": 0.9231,
+        "facts_found": 13,
+        "fact_recall": 1.0,
         "citation_accuracy": 1.0,
         "claims": 21,
         "uncited_claims": 0,
@@ -2224,7 +2233,7 @@
         "translation_citations_same": 1,
         "untranslated_claims": 2,
         "recall_decision": null,
-        "recall_action": 0.8,
+        "recall_action": 1.0,
         "recall_number": 1.0,
         "recall_open_question": null,
         "cited_claims": 21,
@@ -2296,7 +2305,7 @@
           "judge_only": false,
           "judge_covered": null,
           "section": "action_items",
-          "claim": "পরবর্তী সপ্তাহের শেষের মধ্যে নিয়োগ পরিকল্পনা তৈরি করুন।",
+          "claim": "পরবর্তী সপ্তাহের শেষের মধ্যে নিয়োগ পরিকল্পনা খসড়া করুন।",
           "citation_ok": true,
           "t_error": 0.35,
           "slide_cited": false
@@ -2370,13 +2379,13 @@
           "id": "f11",
           "kind": "action",
           "text": "prepare the customer survey",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "পরবর্তী সপ্তাহের শেষের মধ্যে গ্রাহক সার্ভে প্রস্তুত করুন।",
+          "citation_ok": true,
+          "t_error": 0.87,
           "slide_cited": false
         },
         {
@@ -2632,7 +2641,7 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: পরবর্তী সপ্তাহের শেষের মধ্যে নিয়োগ পরিকল্পনা তৈরি করুন। (owner: Omar; due: পরবর্তী সপ্তাহের শেষ)",
+          "claim": "Action item: পরবর্তী সপ্তাহের শেষের মধ্যে নিয়োগ পরিকল্পনা খসড়া করুন। (owner: Omar; due: পরবর্তী সপ্তাহের শেষ)",
           "citations": [
             "seg 0"
           ],
@@ -2650,12 +2659,12 @@
         },
         {
           "section": "action_items",
-          "claim": "Action item: পরবর্তী সপ্তাহের শেষের মধ্যে গ্রাহক সার্ভে প্রস্তুত করুন। (due: পরবর্তী সপ্তাহের শেষ)",
+          "claim": "Action item: পরবর্তী সপ্তাহের শেষের মধ্যে গ্রাহক সার্ভে প্রস্তুত করুন। (owner: Maria; due: পরবর্তী সপ্তাহের শেষ)",
           "citations": [
             "seg 0"
           ],
           "supported": "yes",
-          "reason": "The action item for the customer survey is assigned to Maria to prepare it by the end of next week."
+          "reason": "The cited text states Maria will prepare the customer survey by the end of next week."
         },
         {
           "section": "action_items",
@@ -2709,20 +2718,20 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.82,
-          "s_per_audio_hour": 118.9,
-          "peak_mem_gb": 12.06,
+          "seconds": 11.92,
+          "s_per_audio_hour": 119.9,
+          "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 24.26,
-          "s_per_audio_hour": 244.0,
+          "seconds": 24.22,
+          "s_per_audio_hour": 243.6,
           "peak_mem_gb": 9.48,
           "reused": true
         },
         "translate": {
-          "seconds": 12.93,
-          "s_per_audio_hour": 130.0,
+          "seconds": 13.21,
+          "s_per_audio_hour": 132.9,
           "peak_mem_gb": 8.75,
           "reused": true
         },
@@ -2741,8 +2750,8 @@
       "duration_s": 380.9,
       "metrics": {
         "facts": 13,
-        "facts_found": 12,
-        "fact_recall": 0.9231,
+        "facts_found": 13,
+        "fact_recall": 1.0,
         "citation_accuracy": 1.0,
         "claims": 19,
         "uncited_claims": 0,
@@ -2772,7 +2781,7 @@
         "translation_citations_same": null,
         "untranslated_claims": null,
         "recall_decision": null,
-        "recall_action": 0.8,
+        "recall_action": 1.0,
         "recall_number": 1.0,
         "recall_open_question": null,
         "cited_claims": 19,
@@ -2879,13 +2888,13 @@
           "id": "f8",
           "kind": "action",
           "text": "escribir las notas de la versión",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
+          "section": "action_items",
+          "claim": "Write the notes for the next version",
+          "citation_ok": true,
+          "t_error": 1.29,
           "slide_cited": false
         },
         {
@@ -3160,15 +3169,6 @@
         },
         {
           "section": "decisions",
-          "claim": "Decision: Victor will write the notes for the next version",
-          "citations": [
-            "seg 0"
-          ],
-          "supported": "yes",
-          "reason": "Víctor was asked to write the notes for the version"
-        },
-        {
-          "section": "decisions",
           "claim": "Decision: Maintain the welcome list",
           "citations": [
             "seg 0"
@@ -3202,6 +3202,15 @@
           ],
           "supported": "yes",
           "reason": "María is assigned to prepare the customer survey for the end of next week."
+        },
+        {
+          "section": "action_items",
+          "claim": "Action item: Write the notes for the next version (owner: Victor)",
+          "citations": [
+            "seg 0"
+          ],
+          "supported": "yes",
+          "reason": "The transcript assigns the task of writing notes for the next version to Victor."
         },
         {
           "section": "action_items",
@@ -3255,14 +3264,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.89,
-          "s_per_audio_hour": 112.4,
-          "peak_mem_gb": 12.06,
+          "seconds": 11.98,
+          "s_per_audio_hour": 113.2,
+          "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 24.35,
-          "s_per_audio_hour": 230.1,
+          "seconds": 23.97,
+          "s_per_audio_hour": 226.5,
           "peak_mem_gb": 9.48,
           "reused": true
         },
@@ -3797,14 +3806,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.84,
-          "s_per_audio_hour": 91.8,
-          "peak_mem_gb": 12.05,
+          "seconds": 11.95,
+          "s_per_audio_hour": 92.7,
+          "peak_mem_gb": 8.9,
           "reused": true
         },
         "reduce": {
-          "seconds": 22.96,
-          "s_per_audio_hour": 178.0,
+          "seconds": 23.02,
+          "s_per_audio_hour": 178.5,
           "peak_mem_gb": 9.48,
           "reused": true
         },
@@ -3826,8 +3835,8 @@
   "summary": {
     "items": 7,
     "facts": 91,
-    "fact_recall": 0.8681,
-    "citation_accuracy": 0.9873,
+    "fact_recall": 0.9231,
+    "citation_accuracy": 0.9881,
     "uncited_claims": 0,
     "made_up_items": 0,
     "made_up_open_questions": 0,
@@ -3845,7 +3854,7 @@
     "translation_citations_same": 1.0,
     "untranslated_claims": 6,
     "recall_decision": null,
-    "recall_action": 0.8,
+    "recall_action": 0.9429,
     "recall_number": 0.9107,
     "recall_open_question": null,
     "map_numbers_repaired": 21,
@@ -3856,9 +3865,9 @@
     "pass2_claim": 0,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.7681,
-    "support_partial": 10,
-    "support_no": 22,
+    "support_rate": 0.7698,
+    "support_partial": 9,
+    "support_no": 23,
     "support_unjudged": 0,
     "judge_recall": 0.75,
     "audio_s": 2626.8
@@ -3885,15 +3894,15 @@
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 127.0,
-      "peak_mem_gb": 12.06
+      "s_per_audio_hour": 129.1,
+      "peak_mem_gb": 8.91
     },
     "reduce": {
-      "s_per_audio_hour": 266.5,
+      "s_per_audio_hour": 263.6,
       "peak_mem_gb": 9.62
     },
     "translate": {
-      "s_per_audio_hour": 45.3,
+      "s_per_audio_hour": 37.8,
       "peak_mem_gb": 8.75
     },
     "render": {
@@ -3901,7 +3910,7 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 918.2,
+      "s_per_audio_hour": 909.9,
       "peak_mem_gb": 16.88
     }
   },
@@ -3945,12 +3954,14 @@
     0.22,
     0.22,
     0.22,
+    0.24,
     0.35,
     0.35,
     0.35,
     0.35,
     0.39,
     0.39,
+    0.58,
     0.58,
     0.58,
     0.58,
@@ -3969,6 +3980,8 @@
     0.84,
     0.87,
     0.87,
+    0.87,
+    0.87,
     0.89,
     0.91,
     0.92,
@@ -3979,6 +3992,7 @@
     1.07,
     1.09,
     1.17,
+    1.29,
     1.99,
     1.99,
     1.99,
@@ -3989,7 +4003,7 @@
   "judge": {
     "loaded": false,
     "calls": 0,
-    "cached": 174,
+    "cached": 175,
     "seconds": 0.02,
     "s_per_audio_hour": 0.0,
     "peak_mem_gb": null
