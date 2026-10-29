@@ -357,6 +357,16 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   the 4b-1 eval saw `2024-11-24` for "November 24th"). `map.md` says to take owner and due only
   from the task's own sentence, never to write numeric dates or add a year, and to copy numbers
   digit for digit. One bad segment never fails the stage.
+- **Dates and dues (8c, D41):** after the number guard (same `map.number_guard` switch), each
+  segment's Map strings are checked against what the segment's transcript and slides say
+  (`mapper.guard_dates`). English notes of an English meeting: a date ("November 1", "the 1st
+  of November") that the segment doesn't say is repaired when exactly one said date of the same
+  month has a day one digit edit away ("November 1" → "November 11"; recorded in
+  `number_repairs`), otherwise kept and flagged in `unverified_numbers`. The number guard alone
+  kept "November 1" because the segment said 1 elsewhere. Then a due the segment doesn't say is
+  dropped (`dues.due_said`, D40's rule: English words close together, other languages digits
+  only) and listed in `dropped_dues` (`MapFile` v5): Map copies its prompt's example due ("End
+  of next week") onto tasks that have none, and Ask's documents showed it beside the real ones.
 - **Optional regional Map models (Phase 6, decision D18):** Cohere's regional Tiny Aya variants
   have the same size (3.35B), chat template and license (CC-BY-NC) as Global. The release
   describes their focus as Earth: Africa + West Asia, Fire: South Asia, Water: Asia-Pacific +
@@ -400,7 +410,10 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
 - **Claims:** one per list item (continuation lines join the item; `- none` is skipped) and one
   per sentence in Summary (`.!?` + space, or `。！？`). A `<co>` span is never split, so its
   citations stay with the claim that contains it. A claim's citations are its spans' targets,
-  first occurrence of each; the refined `t` comes from the first span citing that segment.
+  first occurrence of each. A segment's refined `t` comes from the span citing it that best
+  matches one of its chunks (ties: the first; `reduce.best_span`, 8c): R7B often cites a
+  segment through a name alone and then the task (`<co>Tom</co>` … `<co>finish the post
+  mortem…</co>`), and the name's first chunk was 197.7 s early on long-en.
 - **Action item line format:** one item per line, `- [owner: <name or ?>] [due: <date or ?>] <task>`
   (`?` = unknown). The parser fills `owner`/`due` (§19). If a line doesn't match, match the task
   text against `map.json` action items from the cited segments (token overlap ≥ 0.6) and copy their
@@ -497,6 +510,10 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   "no information" or a repeat of an earlier answer; a near-miss question ("marketing budget
   next year") can get a related cited fact ("budget for next quarter") instead of "not
   stated". An Ask eval on the planted facts would measure both (Phase 6).
+- **Map's values (8c, D41):** the segment documents carry map.json as Map's guards left it, so
+  Ask sees repaired dates and no copied dues (a-f82's "November 1" was "11 November"). A task
+  Map missed is only in the transcript; under the 12-document cap its segment may not be sent
+  (long-en a-f15, ASR "Oma" for Omar).
 - **Long meetings (6c, D17, D27):** if the documents don't fit even without history, rank them
   for the question plus the last turn (a follow-up has few terms of its own) with an in-memory
   SQLite FTS5 table (BM25, terms OR'ed, stdlib; `trigram` windows for zh/ja/ko text), add the
@@ -1234,6 +1251,11 @@ quick and lang seed 1 identical.
 Ranking isn't the cause: the answer's segment ranks in the top 3 for all four. Three trace to
 Map's values in Ask's documents (a copied due, a misread date, a missed task), one to a
 one-word cited span placing the citation. Kickoff prompt in §21.
+Done 2026-10-28 (NOTES.md, D41). A segment cited through several spans is placed by the best
+match (`reduce.best_span`); Map's dates are repaired or flagged and its unsaid dues dropped on
+map.json (`mapper.guard_dates`, MapFile v5). long-en Ask 77.8 → 88.9% (citation 93.3 → 100%),
+made-up items 7 → 4, recall unchanged; quick citation accuracy 98.4 → 100%; lang identical
+but one judged claim.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2098,6 +2120,7 @@ section.
 | D38 | Digits in other scripts (§13) | As written | Search check (Phase 7 step 4) | Phase 7 | **Folded to ASCII** in the index and the query: Tiny Aya writes Bengali notes with Bengali digits ("$৪২,৫০০"); clean-bn numbers found in the notes 2/8 → 8/8. Snippets show ASCII digits |
 | D39 | Jump time when the notes and the meeting share no words (§5.6) | Segment start | Offline replay of `refine_time` on the stored lang runs (8a step 0), then lang seed 1 and quick | Phase 8a | **Language-neutral anchors** when no chunk scores ≥ 0.1: the span's numbers (read in each text's language) and its `[owner: …]` (meeting's spelling for the segment, whole word or same-consonant katakana); most anchors wins, ties by word overlap then earliest; segment start when none. Citation accuracy clean-hi 58.3 → 100%, xling-ja 70 → 90%, quick identical. Names elsewhere in claims not used (تم = Tom, مللي = Maria in the replay) |
 | D40 | Dues and owner-less tasks the meeting didn't give (§5.6) | As Map and Reduce wrote them | Step 0 measurement on the stored long-en and AMI runs, offline replay, then quick, lang seed 1, long-en and AMI | Phase 8b | **Due guard + vague-task move on the final notes** (user): a due its cited segments and slides don't say is dropped, never replaced (English: words within a window, `dues.said`; other languages: digits only, in the meeting's language; uncited kept); then an English action item with no owner and no due starting Continue/Ensure/Keep/Monitor/Maintain moves to Key points. long-en made-up items 12 → 7, recall unchanged; AMI 34 unsaid dues dropped and 4 placeholders cleared (1 of 39 left), coverage unchanged; quick and lang identical. Rejected: "no owner and no due" alone (9/9 on long-en but would move 25 of AMI's 47 tasks) and an ask-cue check on the source (no signal). Map's example due left as is (post-v1). Eval: an empty due field reads a due written in the task text, so clearing a field can't turn a wrong date into a match |
+| D41 | Ask on long meetings: citation placement and Map's values in its documents (§5.5–5.7) | First span places a segment citation; Map's dates and dues as written | Step 0 on the cached Ask replies and stored notes (offline replay), then quick, lang seed 1 and long-en | Phase 8c | **Best-matching span places the citation; Map's dates repaired or flagged, unsaid dues dropped on map.json** (user: on Map's items, one value for every reader). Date repair only from exactly one said date of the same month a digit edit away, English notes of an English meeting; dues by D40's rule (`dues.due_said`). long-en Ask 77.8 → 88.9%, citation 93.3 → 100%, made-up items 7 → 4; quick citation 98.4 → 100%; lang identical but one judged claim. map.md's example kept (the check drops every copy). Rejected: Ask snippet-only fix (leaves map.json wrong), an Ask prompt rule (a-f61 left open) |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).
