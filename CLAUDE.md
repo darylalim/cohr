@@ -112,6 +112,22 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
 - A Map change moves pass 2's input, and with it which pass-1 items pass 2 keeps: long-en's
   made-up items went 4 → 6 from two owner-less pass-1 tasks the new pass 2 kept (8d). Before
   blaming a new rule, replay the new run with the rule switched off.
+- The pipeline seed defaults to 0 (`Config.seed`): a report with no `-c seed` is seed 0, and
+  the set's `seed:` per item is the generator's. `-c seed=N` keeps the media and reruns the
+  stored runs in place: copy them first and compare reports of the same seed (8e).
+- Before choosing between a prompt change and a check on Map's output, rerun quick at seeds 2
+  and 3 with `--no-ask --no-judge`: if the misses change with the seed (8e: Omar's task
+  written at 0, dropped at 2 and 3), a prompt change only moves them; a net catches them.
+- A temperature-0 retry repeats the same broken reply: read each entry of a JSON list on its
+  own instead (8e: Tiny Aya closed `{"tasks": [{…}` with `}}}`).
+- `names.skeleton` is for non-Latin names only: Latin names collide on consonants (Omar and
+  Maria are both "mr"). Compare Latin owners by name (`fold` + casefold), the rest through
+  `names.restore` (8e).
+- Tiny Aya shortens a task it writes from a sentence ("order laptops" for "order laptops for
+  the new starters", so the eval missed it), and "keep every detail" didn't stop it (in German
+  it then added the owner). Copy the words from the cited sentence in Python (`whole_task`).
+- zsh doesn't split an unquoted `$VAR`: `for i in $ITEMS` runs once on the whole string. In
+  chained eval commands use `${=ITEMS}` or list the names (8e lost a chain to it).
 
 ## Where things are (PLAN.md)
 Architecture §3 · Memory §4 · Stages §5 · Layout & tooling §6 · UI, layout, theme §7 ·
