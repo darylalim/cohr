@@ -2638,3 +2638,5 @@ Branch `phase-8e-map-recall`. 8d's "Open"; D43.
 - f15 and f40: the transcription's names ("Oma", "Omar Crews read" for "Omar proofread").
 - Cues are English only (xling-es/ja have none); Japanese and Spanish meetings get no net.
 - The 5 long-en made-up items from 8b/8d remain (seg 25's two are Map writing filler as tasks).
+
+- 1.6.0 bump: done 2026-10-29 on request (release-1.6.0).
