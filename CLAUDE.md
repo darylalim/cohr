@@ -136,6 +136,16 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
 - A test fixture's TranscriptItems need distinct `chunk_id`s, listed in their Segment's
   `chunk_ids`: `segment_refiner` keys items by chunk id, so a repeated id silently drops all
   but the last item and the citation time comes out wrong, with no error (8f).
+- A guard rule that picks among repair candidates needs every seed's repairs read, not just
+  the case it was built for. "A digit edit beats a factor" fixed xling-ja f9 at seed 0 and at
+  seed 1 turned pdf-slides' "6,900 candidates" (69 said) into the $8,900 cloud bill (8g).
+  With two plausible values, flag; don't guess.
+- AMI's stored runs can be older than the Map code: check map.json's date before calling a
+  replay on them the AMI measurement. 8b–8e's Map steps first ran on AMI in 8g, and coverage
+  fell 52.8 → 44.9% (IS1009b's Reduce reply changed shape), which no earlier replay could show.
+- A step that rewrites a claim's text keeps its old citations, so a value the new text adds
+  needs its own source cited: re-adding "(slide: $18,000)" under a seg-only citation made the
+  judge check the slide value against the transcript (8g, now cites the slide).
 
 ## Where things are (PLAN.md)
 Architecture §3 · Memory §4 · Stages §5 · Layout & tooling §6 · UI, layout, theme §7 ·
