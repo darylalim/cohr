@@ -2232,6 +2232,8 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
     start when Transcribe wrote no 。 before the moment (xling-ja MARIA, −21.8 s).
 11. ~~**Missed decisions**~~: done in Phase 8f (D44, cue sentences → decisions after Reduce;
     quick 100% at seeds 0–3, long-en 70 → 95%, lang 21 → 24/28). Left over: see 8f's "Open".
+12. ~~**AMI coverage**~~ (8g's "Open"): done in Phase 8h (D46 unknown headings and repeats,
+    D47 segments a section skipped; 44.9 → 50.6%, decisions 30.4 → 47.8%). Left over: see 8h's "Open".
 
 ## 2026-10-14 · Phase 7 kickoff prompt (no code)
 - PLAN §21 "Kickoff prompt for Phase 7": cross-meeting search from §13. Step 0 checks the
@@ -2814,3 +2816,63 @@ Branch `phase-8g-numbers`. Post-v1 item 4, widened; D45.
   evals/data/ami-before-8g/ (git-ignored) for step 0.
 - IS1009b's s/h 2056 in 8g's report is wall-clock: Reduce took 77.7 s but started 17 minutes
   earlier (another run held the GPU).
+
+## 2026-10-30 · Phase 8h: AMI coverage
+Branch `phase-8h-ami`. 8g's "Open"; D46, D47.
+- Step 0 (no models): every judge answer for both states was cached, so the Oct 28 notes
+  (evals/data/ami-before-8g/) and 8g's were scored offline: 47 → 40 of 89, as reported. Net
+  IS1009b −3, ES2004d −2, ES2004b −1, TS3003c −1. No Python step moved a lost sentence (8g's
+  figures only added; the decision → action move touched none).
+- Noise: ES2004d's problem sentence flipped when two open questions lost their "?" and
+  nothing else changed; its lost decision went with a claim that doesn't state it. TS3003c's
+  battery claims were still there; the judge flipped on the list around them.
+- Shared cause: R7B's one-pass replies over AMI's 7–9 segments leave whole segments out of a
+  section, and some loop. IS1009b wrote no decisions for seg 1 and no questions for segs 3/5/6;
+  TS3003c wrote segs 4–6's decisions three times and none of its own for segs 7–8; ES2004b no
+  key points for segs 3–4. The Oct 28 IS1009b reply had it too (no seg 2, seg 5's questions
+  three times). Never on the 2-segment eval items or long-en's groups. Map's output is the
+  same as Oct 14 apart from dues, so restoring `[due: ?]` wouldn't fix it.
+- IS1009b's dump is Map's key points word for word: filing it by Map item gives 20 key
+  points and 2 decisions, a cleaner page but none of the lost decisions back. Hence the
+  second step on the final notes.
+- D46 (parser): list items under an unknown heading filed by the cited segments' best Map item
+  (≥ 0.6), prose stays Summary; a repeated claim (same text and citations) kept once.
+  D47 (`reduce.add_skipped_segments`): one-pass notes; a segment no decision cites gets its Map
+  decisions (not its tasks or questions), one no question cites its Map questions; a key point
+  that states only the decision moves; Map's "[]" items skipped.
+- Replay (main's code reproduced every stored notes.json first): only the AMI notes change.
+  The AMI `--rerun reduce` wrote byte-identical replies, and its notes equal the replay.
+
+| | before (8g) | after |
+|---|---|---|
+| AMI coverage (Oct 28 notes: 52.8%) | 44.9% | **50.6%** |
+| AMI abstract / decisions / actions / problems | 60.5 / 30.4 / 45.5 / 16.7% | 58.1 / **47.8** / 45.5 / **33.3%** |
+| AMI support, unsupported numbers | 80.3%, 1 | 80.1%, 1 |
+| AMI per meeting ES2004b / ES2004d / IS1009b / IS1009c / TS3003c | 46.7 / 23.8 / 43.8 / 63.2 / 50.0% | 53.3 / 28.6 / 56.2 / 63.2 / 55.6% |
+| AMI Reduce s/h | 456 (wall-clock artifact) | 129 |
+| quick seeds 0–3 fact recall | 98.5 / 97.1 / 98.5 / 100% | same; notes identical (replayed per seed) |
+| quick seed 0 Ask, citation, judge support | 98.1%, 100%, 93.8% | same (summary identical) |
+| lang seed 1 | 95.6% recall, 98.9% citation | summary identical |
+| long-en | — | notes identical (two-pass: D47 skips; no heading, no repeats) |
+
+- AMI, sentence by sentence (8g → 8h): +6 (IS1009b teletext, whole-house, budget; TS3003c
+  battery; ES2004b Video Plus; ES2004d's noise sentence back), −1 (IS1009b "plastic cases",
+  its claim moved from Summary to Key points: noise).
+- Runs: quick seed 0 with Ask and the judge (`--rerun reduce`), quick seeds 1–3 `--no-ask
+  --no-judge` (seed-0 runs copied first and put back), lang `-c seed=1 --no-ask --rerun
+  reduce`, AMI `--item ami --no-ask --rerun reduce` (asked). long-en not rerun (asked; the
+  replay shows it can't change). No baseline rewritten: quick, lang and long don't move, and
+  `--update-baseline` after an `--item ami` run would replace baseline-full.json with an
+  AMI-only report.
+- Cost: no model call; Ask keys, MapFile, NotesDoc and REDUCE_HASH unchanged.
+
+### Open
+- AMI's 2 points to the Oct 28 notes: ES2004b's 3 abstract sentences and "young,
+  business-class buyer" (reply drift: segs 3–4's key points, R7B's own seg 5–6 decisions);
+  IS1009b "corporate image" (Map lists it as a task too, so D44's rule skips it, and 8b's
+  vague-task move made the task a key point); ES2004d's production decision (noise).
+- Key points of skipped segments aren't filled (D47): revisit if a set shows Summary missing.
+- Map writes "[]" as an open question (5 AMI segments, 2 long-en): skipped by D47, still a
+  `- []` bullet in Reduce's input.
+- 8g's Open (Map's 8 never-written numbers, xling-ja f9, the judge on slide-conflict notes,
+  long-en's 3 key points) and post-v1 items 5, 8, 10 unchanged.

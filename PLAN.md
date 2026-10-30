@@ -446,7 +446,13 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   has none, D22), and R7B then writes the other four in English. `render.py` shows each heading in the target language from
   a static table (`LABELS[lang][key]`: the five headings plus "Sources", "owner", "due" and
   "uncited", for all 23 languages; English if the language is missing). Missing or unknown
-  markers: log them, and put unmatched text in Summary rather than dropping it.
+  markers: log them, and put unmatched text in Summary rather than dropping it. A list item
+  under an unknown heading goes to the section of the cited segments' Map item it matches best
+  (≥ 0.6; 8h, D46), else Summary: AMI IS1009b's reply wrote segment 0's five sections, then
+  "## <co>Remote Control Design</co: …>" over segments 1–6 as one list of Map's key points and
+  decisions word for word. Prose under it stays Summary. A claim repeated in its section with
+  the same citations is kept once (a looping reply wrote 14 lines twice, TS3003c three
+  segments' decisions three times).
 - **Claims:** one per list item (continuation lines join the item; `- none` is skipped) and one
   per sentence in Summary (`.!?` + space, or `。！？`). A `<co>` span is never split, so its
   citations stay with the claim that contains it. A claim's citations are its spans' targets,
@@ -507,6 +513,17 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   2 of long-en, one-pass ar/hi). Numbers Map never wrote stay missed (8 in 8g's kickoff): a
   sentence net fits evals/gen's "The X is Y. That's compared with Z." and copies AMI's
   fragments.
+- **Segments a section skipped (8h, D47):** one-pass notes only, after the decisions. A segment
+  that no decision cites gets its Map decisions the notes don't state (≥ 0.6; not Map's tasks
+  or open questions of the segment), and one that no open question cites gets its Map open
+  questions the notes don't ask, each citing its segment, in segment order; a key point citing
+  the segment that states only the decision moves to Decisions instead (D44's move). Items
+  with no letter or digit (Map's "[]") are skipped. R7B's one-pass replies over AMI's 7–9
+  segments leave whole segments out of a section (IS1009b seg 1's five decisions, TS3003c,
+  ES2004b's key points); the eval's 2-segment items never did. Two-pass notes are condensed on
+  purpose and long-en's Map wrote a planted open question ("sponsor the local hackathon") as a
+  decision, so they're left as written. Key points aren't filled: Summary covers AMI's abstract,
+  and the fills read as padding ("The meeting was stuck due to an issue with opening a file").
 - **Cut replies (6e-2, D32):** a reply that stopped at `reduce.max_tokens` without
   `<|END_RESPONSE|>` (mlx-lm's finish reason) is counted in `NotesDoc.truncated`, logged and
   shown on the Notes page. It is never retried (temperature 0 would write the same start) or
@@ -1035,7 +1052,8 @@ dataframes, code blocks, the Runs memory chart, badges, and a Notes page full of
   long-run split, gaps recorded), relative silence threshold, silence-cut selection, frame dedupe, segment windowing and token
   budget split, citation regex and index mapping, render anchors, manifest skip logic, storage (link vs. copy, prune keeps notes usable, disk-space refusal).
 - **Reduce output parsing (`test_citations.py`, `test_render.py`):** section markers in a
-  non-English output (German fixture) land in the right sections, and unknown markers go to Summary;
+  non-English output (German fixture) land in the right sections, and unknown markers go to Summary
+  (list items under one go to their Map item's section, D46; a repeated claim is kept once);
   out-of-range document indices are dropped; uncited claims are kept with `citations: []`;
   citation time refinement picks the best-matching chunk and falls back to segment `t0` below
   the threshold; action item lines parse owner/due, with the `map.json` fallback; the portable
@@ -1382,6 +1400,14 @@ all five sections for segment 0 only, then segments 1–6 as one flat list under
 all as Summary (34 summary claims; decisions 75 → 0%). Reduce's prompt is unchanged since
 Oct 13; its input lost 44 tokens (8c's dropped dues, now `[due: ?]`). The other four meetings
 kept the shape and moved by one or two claims each. Kickoff prompt in §21.
+Done 2026-10-30 (NOTES.md, D46, D47). Step 0 scored both sides from the judge cache: 3 of the
+7 lost sentences were judge noise or reply drift, and the shared cause was R7B's one-pass
+replies over 7–9 segments leaving whole segments out of a section (IS1009b, TS3003c's loop,
+ES2004b), not the dump alone. The parser files list items under an unknown heading by their
+Map item and keeps a repeated claim once (D46); after Reduce, a segment no decision or open
+question cites gets its Map ones (one-pass notes, D47). AMI coverage 44.9 → 50.6%,
+decisions 30.4 → 47.8%, problems 16.7 → 33.3%, support 80.3 → 80.1%; quick (seeds 0–3), lang
+and long-en notes identical.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2104,6 +2130,12 @@ committed or redistributed.
   items, `problems` → Open questions; `abstract` → Summary **and Key points** (6e-1: our Summary
   is one claim, AMI abstracts are 5–11 sentences; `evals.AMI_HOME`).
 - Metric: per section, the share of reference sentences the judge says are covered by our notes.
+- Noise (8h): the judge reads a sentence against the whole list of claims in its sections, so
+  a change elsewhere in the list can flip it. ES2004d's problem sentence flipped when two open
+  questions lost their "?", and IS1009b's "plastic cases" sentence when its claim moved from
+  Summary to Key points. Read a change of one sentence per meeting as noise until the
+  sentence's own claim is shown to have moved; the cached answers (`evals/data/judge/`) score
+  stored notes offline.
 - Parse with stdlib `xml.etree` (files are ISO-8859-1 encoded). Use the official zip, **not**
   third-party Hub re-uploads of AMI summaries or QMSum mirrors: their licensing and processing are
   unclear.
@@ -2251,6 +2283,8 @@ section.
 | D43 | Action items Map never wrote (§5.5) | As Map wrote them | Step 0 scan of the stored runs and quick at pipeline seeds 2 and 3, then quick seeds 0/2/3, lang seed 1 and long-en | Phase 8e | **Python finds the sentences, one Tiny Aya call decides** (user, over a Python-only net and a map.md rule): in an English meeting, a sentence giving one person a task in a cue position while no Map task of the segment is theirs goes to `prompts/map_tasks.md` (temperature 0, no examples, notes language); Python keeps the owner, completes a task cut short from its sentence (English notes), and runs Map's number, date and due checks. Map's misses change with the seed (quick action recall 95/80/75% at seeds 0/2/3), every one a flagged sentence, 0 false flags (AMI: no sentence names anyone). quick 100% at all three seeds; lang seed 1 94.3 → 97.1%; long-en action recall 70 → 90%, fact recall 71.3 → 78.8%, Ask 88.9 → 94.4%, made-up 6 → 7 (f15, said "Oma"). Rejected: a verb list for must-not-fire (would fit the generator), a prompt rewording for f86's short task (Tiny Aya kept it short and added the name in German) |
 | D44 | Missed decisions: Map never wrote them, or Reduce lost Map's (§5.6) | As Map and Reduce wrote them | Step 0 scan of every stored run (AMI included), lang map.json read by hand, pass-1 replies; offline replay of the stored notes.json; then quick seeds 0–3, lang seed 1 with the judge, long-en | Phase 8f | **Python after Reduce** (`reduce.add_said_decisions`, user, over a D43-style call, a map.md change and re-adding every lost Map decision): in an English meeting a cue sentence ("We decided/agreed to …", "the decision is to …"; not asked, denied, "whether" or an earlier meeting's) no notes decision or action item states becomes a decision in its own words, or its key point moves to Decisions (English notes); other notes languages get the segment's unstated Map decisions up to its cue count, placed at the cues when no decision cited the segment. No prompt or MapFile change (Ask keys and REDUCE_HASH stay). quick decisions 75/81/81/88 → 100% at seeds 0–3, fact recall 91.2 → 97.1% (seed 0); long-en 70 → 95%, fact recall 78.8 → 85.0%; lang judge-covered 21 → 24/28; made-up items and Ask unchanged; AMI: 1 cue, already a decision, 0 changes. Rejected: re-adding every Map decision the notes lack (8 on AMI, several not decisions, plus long-en's "Leave Bitcoin acceptance decision open"), a map.md change (the net catches the misses at every seed), a model call for the 3 Map never wrote in de/ar notes (Tiny Aya misjudged cue sentences in German in 8e) |
 | D45 | Missed numbers: one wrong digit, a wrong repair, figures Reduce lost (§5.5–5.6) | As Map and Reduce wrote them; D20's repair rule | Step 0 trace of the 17 misses (pass-1 replies read), every stored repair counted, AMI's said numbers in no Map item or notes; offline replay of the stored notes.json; then quick seeds 0–3, quick with Ask and the judge, lang seed 1 (`--rerun map`), long-en and AMI | Phase 8g | **Guard bound + Python after Reduce** (user, over a Map-side net and a map.md change): a plain number of one or two digits is never repaired (AMI IS1009b "60%" → 40, the only wrong one of 41 stored repairs; the other short ones are days), and a candidate another number of the claim states is dropped. A digit edit preferred over a factor would have fixed xling-ja f9 but repaired pdf-slides' "6,900 candidates" (69 said) to the $8,900 cloud bill at seed 1: dropped, f9 stays flagged. `reduce.add_lost_numbers`: a Map key point with a figure (digits, ≥ 10, notes language, D38 folding) no claim states is added citing its segment, or replaces the key point citing it that kept some of its figures, and cites the segment's slides that show an added figure; flagged numbers skipped. No prompt or MapFile change. long-en numbers 77.5 → 85.0%, fact recall 85.0 → 88.8%; quick numbers 93.8 → 96.9% (seed 0), 100% at seed 3, seed 1 unchanged; lang 91.1 → 94.6%, unsupported 1 → 1; made-up items, Ask and citation accuracy unchanged; quick judge 95.1 → 93.8% (it reads "(slide: $18,000)" as contradicting $80,000). AMI: 6 key points added, all figures said; IS1009b "60%" kept and flagged (unsupported 0 → 1: "the rest" has no digit). Rejected: a sentence net for numbers Map never wrote (copies evals/gen's "That's compared with" sentences and AMI fragments; can't reach xling-ja), a map.md change (misses move with the seed) |
+| D46 | Reduce replies with an unknown heading or repeated lines (§5.6) | Unknown-heading text to Summary; repeats kept | Step 0: both AMI states scored from the judge cache, raw replies read, Map items matched to the dumped lines; offline replay of every stored notes.json (main's code reproduced each); then quick seeds 0–3, quick with Ask and the judge, lang seed 1 and AMI (`--rerun reduce`) | Phase 8h | **Parser** (user): a list item under an unknown heading goes to the section of the cited segments' Map item it matches best (≥ 0.6, key points first on a tie), else Summary; prose under it stays Summary. A claim repeated in its section with the same citations is kept once. IS1009b's dump: 20 key points, 2 decisions, 32 lines → 22 (Map's items word for word, every match 0.86–1.00); TS3003c: 10 repeated decisions dropped. Fires on no other stored run. No NotesDoc, prompt or REDUCE_HASH change. Rejected: continuing the section before the heading (8g's candidate: the dump holds key points and decisions both, so all would have become open questions) |
+| D47 | Segments a section skipped (§5.6) | As Reduce wrote them | Same runs as D46; long-en's lost-item candidates checked against its planted facts | Phase 8h | **Python after Reduce, one-pass notes only** (user, over also filling key points and the `[due: ?]` input change): `reduce.add_skipped_segments`, after D44: a segment no decision cites gets its Map decisions the notes don't state (`_lost_map_decisions`: not the segment's tasks or open questions), one no open question cites gets its Map open questions the notes don't ask; each cites its segment, in segment order; a key point stating only the decision moves to Decisions; items with no letter or digit (Map's "[]") skipped. AMI coverage 44.9 → 50.6% (40 → 45 of 89: IS1009b teletext, whole-house and budget, TS3003c's battery once its repeats went, ES2004b Video Plus, ES2004d's noise sentence back; IS1009b's plastic-cases sentence flipped away), decisions 30.4 → 47.8%, problems 16.7 → 33.3%, support 80.3 → 80.1%; quick seeds 0–3, lang seed 1 and long-en notes identical (it never fired). Rejected: key points too (abstract held at 58–60%; the fills read as padding), two-pass notes (long-en's Map wrote the planted question "sponsor the local hackathon" as a decision), restoring the old input (the Oct 28 reply also dropped a segment; it would move every set's Reduce input) |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

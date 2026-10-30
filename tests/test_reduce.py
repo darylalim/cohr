@@ -411,6 +411,106 @@ def test_build_notes_without_markers_keeps_everything_in_summary() -> None:
     assert stats.missing_markers == list(reduce.SECTIONS)
 
 
+# AMI IS1009b's shape (8h): segment 0's five sections, then a cited heading and one list of
+# segment 1's Map items word for word, the loop repeating some lines.
+DUMPED = (
+    "<|START_RESPONSE|>## SUMMARY\n"
+    "<co>The team met about the budget.</co: 0:[0]>\n"
+    "## KEY_POINTS\n- <co>The budget is steady.</co: 0:[0]>\n"
+    "## DECISIONS\n- <co>Keep the current vendor.</co: 0:[0]>\n"
+    "## ACTION_ITEMS\n- <co>[owner: Tom] [due: ?] Send the vendor list.</co: 0:[0]>\n"
+    "## OPEN_QUESTIONS\n- <co>Who signs the contract?</co: 0:[0]>\n"
+    "## <co>Remote Control Design</co: 0:[1]>\n"
+    "The design work went on.\n"
+    "- <co>Teletext should be eliminated due to complexity.</co: 0:[1]>\n"
+    "- <co>Eliminate teletext from the design.</co: 0:[1]>\n"
+    "- <co>Order the prototype buttons.</co: 0:[1]>\n"
+    "- <co>Is the budget enough for every group?</co: 0:[1]>\n"
+    "- <co>The room was booked until noon.</co: 0:[1]>\n"
+    "- <co>Teletext should be eliminated due to complexity.</co: 0:[1]>\n"
+    "- <co>Eliminate teletext from the design.</co: 0:[1]>\n"
+    "<|END_RESPONSE|>"
+)
+
+
+def _dumped_map() -> dict[int, SegmentNotes]:
+    maps = _map()
+    maps[1] = maps[1].model_copy(
+        update={
+            "key_points": ["Teletext should be eliminated due to complexity."],
+            "decisions": ["Eliminate teletext from the design."],
+            "action_items": [MapActionItem(owner="Priya", task="Order the prototype buttons")],
+            "open_questions": ["Is the budget enough for every group?"],
+        }
+    )
+    return maps
+
+
+def test_split_sections_keeps_list_items_under_an_unknown_heading_apart() -> None:
+    split = reduce.split_sections(reduce.strip_wrapper(DUMPED))
+    assert split.unknown == ["<co>Remote Control Design</co: 0:[1]>"]
+    assert split.listed.count("\n- ") == 6  # seven list items
+    assert split.sections["summary"] == (
+        "<co>The team met about the budget.</co: 0:[0]>\nThe design work went on."
+    )
+    # the five markers: nothing listed
+    assert reduce.split_sections(reduce.strip_wrapper(REPLY)).listed == ""
+
+
+def test_list_items_under_an_unknown_heading_are_filed_by_map_items_once() -> None:
+    doc, stats = reduce.build_notes(DUMPED, TARGETS, _refine(), _dumped_map(), "en")
+    s = doc.sections
+    seg1 = [("seg", 1)]
+    assert [c.text for c in s.summary] == [
+        "The team met about the budget.",
+        "The design work went on.",  # prose under the heading: summary, as before (§5.6)
+        "The room was booked until noon.",  # matches no Map item of seg 1
+    ]
+    assert [c.text for c in s.key_points] == [
+        "The budget is steady.",
+        "Teletext should be eliminated due to complexity.",
+    ]
+    assert [c.text for c in s.decisions] == [
+        "Keep the current vendor.",
+        "Eliminate teletext from the design.",
+    ]
+    assert [(a.text, a.owner) for a in s.action_items] == [
+        ("Send the vendor list.", "Tom"),
+        ("Order the prototype buttons.", "Priya"),  # owner from Map's task (§5.6)
+    ]
+    assert [c.text for c in s.open_questions] == [
+        "Who signs the contract?",
+        "Is the budget enough for every group?",
+    ]
+    assert [(c.kind, c.id) for c in s.decisions[1].citations] == seg1  # citations kept
+    assert (stats.filed, stats.repeated, stats.claims) == (6, 2, 13)
+
+
+def test_unknown_heading_must_not_file() -> None:
+    # prose only under the heading: all summary, as before
+    prose = "## SUMMARY\nIntro.\n## Overview\n<co>Eliminate teletext from the design.</co: 0:[1]>"
+    doc, stats = reduce.build_notes(prose, TARGETS, _refine(), _dumped_map(), "en")
+    assert [c.text for c in doc.sections.summary] == [
+        "Intro.",
+        "Eliminate teletext from the design.",
+    ]
+    assert doc.sections.decisions == [] and stats.filed == 0
+    # an uncited list item has no segment to match: summary
+    uncited = "## SUMMARY\nIntro.\n## Overview\n- Eliminate teletext from the design."
+    doc, stats = reduce.build_notes(uncited, TARGETS, _refine(), _dumped_map(), "en")
+    assert [c.text for c in doc.sections.summary][-1] == "Eliminate teletext from the design."
+    assert stats.filed == 0
+
+
+def test_same_words_with_other_citations_are_not_a_repeat() -> None:
+    reply = (
+        "## SUMMARY\nIntro.\n## KEY_POINTS\n"
+        "- <co>Budget is steady.</co: 0:[0]>\n- <co>Budget is steady.</co: 0:[1]>\n"
+    )
+    doc, stats = reduce.build_notes(reply, TARGETS, _refine(), _map(), "en")
+    assert len(doc.sections.key_points) == 2 and stats.repeated == 0
+
+
 # --- stage ---------------------------------------------------------------------------------
 
 
@@ -1413,3 +1513,66 @@ def test_add_lost_numbers_must_not_fire() -> None:
     raw = _number_map((1, "Approved budget: $80,000."))
     raw[1] = raw[1].model_copy(update={"raw": "Approved budget: $80,000."})
     assert _lost(doc, raw) == (doc, [])
+
+
+# --- segments a section skipped (8h, D47) ----------------------------------------------------
+
+
+def _skipped(doc: NotesDoc, maps: dict[int, SegmentNotes]) -> tuple[NotesDoc, list[str]]:
+    refine = reduce.segment_refiner(DECISION_SEGMENTS, DECISION_ITEMS, 0.1, "en", "en")
+    return reduce.add_skipped_segments(doc, maps, DECISION_SEGMENTS, refine)
+
+
+def test_add_skipped_segments_adds_the_map_items_of_a_segment_no_claim_of_its_section_cites():
+    # AMI IS1009b (8h): seg 1's decisions and questions never reached the notes.
+    sync = Claim(text="Move the weekly sync to Thursdays", citations=SEG1)
+    later = Claim(text="Who owns the roadmap?", citations=SEG1)
+    doc = _decision_doc([sync]).model_copy(deep=True)
+    doc.sections.open_questions.append(later)
+    maps = _decision_map(
+        (0, "Keep the onboarding checklist."),
+        (0, "Hire two contractors."),
+        (1, "Publish the roadmap."),  # seg 1 has a decision citing it: not added
+    )
+    maps[0].open_questions += ["Is the budget enough?", "[]"]  # "[]": AMI's empty item
+    fixed, added = _skipped(doc, maps)
+    assert added == [
+        "Keep the onboarding checklist.",
+        "Hire two contractors.",
+        "Is the budget enough?",
+    ]
+    s = fixed.sections
+    assert [d.text for d in s.decisions] == [*added[:2], "Move the weekly sync to Thursdays"]
+    assert [q.text for q in s.open_questions] == ["Is the budget enough?", "Who owns the roadmap?"]
+    assert all(c.kind == "seg" and c.id == 0 for d in s.decisions[:2] for c in d.citations)
+
+
+def test_add_skipped_segments_moves_a_key_point_that_states_only_the_decision() -> None:
+    # IS1009b: "A light-emitting feature and beep are recommended" for Map's "Incorporate …"
+    point = Claim(text="Onboarding checklist kept.", citations=SEG0)
+    other = Claim(text="Budget is steady this quarter.", citations=SEG0)
+    doc = _decision_doc([], [other, point])
+    fixed, added = _skipped(doc, _decision_map((0, "Keep the onboarding checklist.")))
+    assert fixed.sections.decisions == [point] and fixed.sections.key_points == [other]
+    assert added == ["Onboarding checklist kept."]
+
+
+def test_add_skipped_segments_must_not_fire() -> None:
+    maps = _decision_map((0, "Keep the onboarding checklist."), (1, "Send the contract."))
+    maps[0].open_questions.append("Is the budget enough?")
+    maps[1].action_items.append(MapActionItem(owner="Laura", task="Send the contract"))
+    stated = Claim(text="Keep onboarding checklist", citations=SEG1)  # stated, other segment
+    asked = Claim(text="Is the budget enough for Q4?", citations=SEG1)
+    doc = _decision_doc([stated]).model_copy(deep=True)
+    doc.sections.open_questions.append(asked)
+    # seg 0's decision and question are stated; seg 1's decision is Map's task
+    assert _skipped(doc, maps) == (doc, [])
+    # two-pass notes are condensed on purpose (long-en: Map's "Sponsor the hackathon"
+    # decision was a planted open question)
+    two = _decision_doc([]).model_copy(update={"passes": 2})
+    assert _skipped(two, _decision_map((0, "Sponsor the local hackathon."))) == (two, [])
+    # a raw (non-JSON) segment has no items to trust
+    raw = _decision_map((0, "Keep the onboarding checklist."))
+    raw[0] = raw[0].model_copy(update={"raw": "Keep the onboarding checklist."})
+    empty = _decision_doc([])
+    assert _skipped(empty, raw) == (empty, [])
