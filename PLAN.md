@@ -329,6 +329,16 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
     both ways, and numbers no native reading fits, keep every reading), and an ordinal ("2nd")
     is only compared with the ordinals in the sources ("the 22nd", "the twenty-second"), not
     with counts and amounts.
+    8g (D45): a plain number of one or two digits is never repaired, only kept or flagged
+    (AMI IS1009b: "forty percent … and the rest" → Map's "60%" became the 40 said, one edit
+    away; every other short repair was a day). With two or more candidates, those another
+    number of the same string states (kept, or repaired to its one candidate) are dropped
+    ("$34,000, up from $13,000" with 354,000 and 134,000 said → "$354,000, up from $134,000").
+    A string that says one value twice is kept; a miscopied repeat of a value another number
+    states would be repaired to the other candidate (not seen in the runs). A digit edit
+    doesn't beat a factor: tried in 8g, it repaired pdf-slides' "6,900 candidates" (69 said,
+    ×100) to the $8,900 cloud bill at seed 1, so xling-ja f9 ("34%" is a third candidate for
+    "$34,000") stays flagged.
   - Otherwise (no candidate, or more than one): **kept and flagged**, never dropped and never
     guessed. The segment's `unverified_numbers` lists them (`MapFile` v3, §19) and the run log
     warns. An invented year such as `2024` in `2024-11-24` lands here.
@@ -486,6 +496,17 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   each is placed at its cue sentence (Map lists them in the order said). Without "to" a cue
   refers back or sums up (AMI: "I think we all agreed on that."); real meetings decide in other
   words too, and those stay R7B's and Map's.
+- **Figures the notes lose (8g, D45):** after the decisions, in any notes language. A Map key
+  point with a figure (digits, 10 or more, read the way the notes language writes numbers,
+  script digits folded per D38) that no claim of the notes states goes to Key points citing its
+  segment, in segment order; a notes key point citing that segment whose figures are some of
+  the Map key point's is replaced by it, citations kept (R7B kept "$80,000" and dropped
+  "(slide: $18,000)"). Either way the segment's slides that show a figure it adds are cited
+  too (the judge read the slide value against seg 0 alone). A Map key point holding a number
+  the guard flagged is skipped, so the step adds no unverified number. Reduce lost 6 of the eval's numbers this way (pass 1 and pass
+  2 of long-en, one-pass ar/hi). Numbers Map never wrote stay missed (8 in 8g's kickoff): a
+  sentence net fits evals/gen's "The X is Y. That's compared with Z." and copies AMI's
+  fragments.
 - **Cut replies (6e-2, D32):** a reply that stopped at `reduce.max_tokens` without
   `<|END_RESPONSE|>` (mlx-lm's finish reason) is counted in `NotesDoc.truncated`, logged and
   shown on the Notes page. It is never retried (temperature 0 would write the same start) or
@@ -1347,6 +1368,13 @@ kind (31/40, 77.5%), and the latest reports miss 17 number facts in all. Map nev
 Reduce lost 6 that are in Map's key points, and xling-ja f9 is the one wrong digit left: Map's
 "$34,000" is one edit from both 354,000 and 134,000, so the guard flags it instead of
 repairing. 8c already fixed "1 November". Kickoff prompt in §21.
+Done 2026-10-30 (NOTES.md, D45). The guard never repairs a one- or two-digit number (AMI
+IS1009b's "60%", the only wrong repair of 41) and drops a candidate the same claim states;
+f9 stays flagged ("34%" is a third candidate; a digit-edit tiebreak repaired a wrong value at
+seed 1 and was dropped). After Reduce (`reduce.add_lost_numbers`), a Map key point with a
+figure the notes lost is added or replaces the claim that kept part of it. Numbers: long-en
+77.5 → 85.0%, quick 93.8/93.8/93.8/96.9 → 96.9/93.8/96.9/100% at seeds 0–3, lang 91.1 →
+94.6%; made-up items, Ask and citation accuracy unchanged. Map's 8 never-written numbers left.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2215,6 +2243,7 @@ section.
 | D42 | Missed action items: tasks Map wrote as decisions or without owners, tasks the notes lost (§5.5–5.6) | As Map and Reduce wrote them | Step 0 on the stored quick, lang and long runs (pass-1 replies are stored in notes.json), offline replay incl. AMI, then lang seed 1, quick and long-en | Phase 8d | **Python on map.json and the final notes** (user): Map's "X will …" decision → X's task when X is said in the segment; an owner-less task's owner from its own text or its best sentence's one cued person (English notes; English meeting for the sentence); an `[owner: ?]` notes item takes its Map task's owner (merged into a duplicate); an owned Map task no notes item states is added, cited with `[owner: …]` as anchor. Logged, no MapFile field (user: Ask keys move only where map.json changes). lang seed 1 action recall 80.0 → 94.3%; long-en action recall 55 → 70%, fact recall 67.5 → 71.3%, made-up 4 → 6 (owner-less pass-1 tasks pass 2 kept, not the rules: replayed without them, still 6); quick identical; AMI replay 0 changes. Rejected: a map.md prompt rule (Python reaches every Map-reachable case but conflict-de f6, a German task of an English meeting) and names anywhere in a sentence (`said_names` keeps "Okay", "Monday", "Action") |
 | D43 | Action items Map never wrote (§5.5) | As Map wrote them | Step 0 scan of the stored runs and quick at pipeline seeds 2 and 3, then quick seeds 0/2/3, lang seed 1 and long-en | Phase 8e | **Python finds the sentences, one Tiny Aya call decides** (user, over a Python-only net and a map.md rule): in an English meeting, a sentence giving one person a task in a cue position while no Map task of the segment is theirs goes to `prompts/map_tasks.md` (temperature 0, no examples, notes language); Python keeps the owner, completes a task cut short from its sentence (English notes), and runs Map's number, date and due checks. Map's misses change with the seed (quick action recall 95/80/75% at seeds 0/2/3), every one a flagged sentence, 0 false flags (AMI: no sentence names anyone). quick 100% at all three seeds; lang seed 1 94.3 → 97.1%; long-en action recall 70 → 90%, fact recall 71.3 → 78.8%, Ask 88.9 → 94.4%, made-up 6 → 7 (f15, said "Oma"). Rejected: a verb list for must-not-fire (would fit the generator), a prompt rewording for f86's short task (Tiny Aya kept it short and added the name in German) |
 | D44 | Missed decisions: Map never wrote them, or Reduce lost Map's (§5.6) | As Map and Reduce wrote them | Step 0 scan of every stored run (AMI included), lang map.json read by hand, pass-1 replies; offline replay of the stored notes.json; then quick seeds 0–3, lang seed 1 with the judge, long-en | Phase 8f | **Python after Reduce** (`reduce.add_said_decisions`, user, over a D43-style call, a map.md change and re-adding every lost Map decision): in an English meeting a cue sentence ("We decided/agreed to …", "the decision is to …"; not asked, denied, "whether" or an earlier meeting's) no notes decision or action item states becomes a decision in its own words, or its key point moves to Decisions (English notes); other notes languages get the segment's unstated Map decisions up to its cue count, placed at the cues when no decision cited the segment. No prompt or MapFile change (Ask keys and REDUCE_HASH stay). quick decisions 75/81/81/88 → 100% at seeds 0–3, fact recall 91.2 → 97.1% (seed 0); long-en 70 → 95%, fact recall 78.8 → 85.0%; lang judge-covered 21 → 24/28; made-up items and Ask unchanged; AMI: 1 cue, already a decision, 0 changes. Rejected: re-adding every Map decision the notes lack (8 on AMI, several not decisions, plus long-en's "Leave Bitcoin acceptance decision open"), a map.md change (the net catches the misses at every seed), a model call for the 3 Map never wrote in de/ar notes (Tiny Aya misjudged cue sentences in German in 8e) |
+| D45 | Missed numbers: one wrong digit, a wrong repair, figures Reduce lost (§5.5–5.6) | As Map and Reduce wrote them; D20's repair rule | Step 0 trace of the 17 misses (pass-1 replies read), every stored repair counted, AMI's said numbers in no Map item or notes; offline replay of the stored notes.json; then quick seeds 0–3, quick with Ask and the judge, lang seed 1 (`--rerun map`), long-en and AMI | Phase 8g | **Guard bound + Python after Reduce** (user, over a Map-side net and a map.md change): a plain number of one or two digits is never repaired (AMI IS1009b "60%" → 40, the only wrong one of 41 stored repairs; the other short ones are days), and a candidate another number of the claim states is dropped. A digit edit preferred over a factor would have fixed xling-ja f9 but repaired pdf-slides' "6,900 candidates" (69 said) to the $8,900 cloud bill at seed 1: dropped, f9 stays flagged. `reduce.add_lost_numbers`: a Map key point with a figure (digits, ≥ 10, notes language, D38 folding) no claim states is added citing its segment, or replaces the key point citing it that kept some of its figures, and cites the segment's slides that show an added figure; flagged numbers skipped. No prompt or MapFile change. long-en numbers 77.5 → 85.0%, fact recall 85.0 → 88.8%; quick numbers 93.8 → 96.9% (seed 0), 100% at seed 3, seed 1 unchanged; lang 91.1 → 94.6%, unsupported 1 → 1; made-up items, Ask and citation accuracy unchanged; quick judge 95.1 → 93.8% (it reads "(slide: $18,000)" as contradicting $80,000). AMI: 6 key points added, all figures said; IS1009b "60%" kept and flagged (unsupported 0 → 1: "the rest" has no digit). Rejected: a sentence net for numbers Map never wrote (copies evals/gen's "That's compared with" sentences and AMI fragments; can't reach xling-ja), a map.md change (misses move with the seed) |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

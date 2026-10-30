@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-29T13:15:43.582311-10:00",
+  "created_at": "2026-10-30T08:02:55.930832-10:00",
   "set": "lang",
-  "git_sha": "03a01f7-dirty",
+  "git_sha": "1f6d7aa-dirty",
   "overrides": {
     "seed": 1
   },
@@ -580,15 +580,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 17.29,
-          "s_per_audio_hour": 177.8,
+          "seconds": 17.41,
+          "s_per_audio_hour": 179.0,
           "peak_mem_gb": 4.4,
           "reused": true
         },
         "reduce": {
-          "seconds": 30.86,
-          "s_per_audio_hour": 317.4,
-          "peak_mem_gb": 5.92,
+          "seconds": 29.95,
+          "s_per_audio_hour": 307.9,
+          "peak_mem_gb": 9.48,
           "reused": true
         },
         "translate": {
@@ -612,10 +612,10 @@
       "duration_s": 357.88,
       "metrics": {
         "facts": 13,
-        "facts_found": 12,
-        "fact_recall": 0.9231,
+        "facts_found": 13,
+        "fact_recall": 1.0,
         "citation_accuracy": 1.0,
-        "claims": 19,
+        "claims": 20,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": null,
@@ -644,10 +644,10 @@
         "untranslated_claims": null,
         "recall_decision": null,
         "recall_action": 1.0,
-        "recall_number": 0.875,
+        "recall_number": 1.0,
         "recall_open_question": null,
-        "cited_claims": 19,
-        "support_rate": 0.8947,
+        "cited_claims": 20,
+        "support_rate": 0.9,
         "support_partial": 1,
         "support_no": 1,
         "support_unjudged": 0,
@@ -854,14 +854,14 @@
           "id": "f16",
           "kind": "number",
           "text": "New trial signups: 4,650",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
-          "slide_cited": false
+          "section": "key_points",
+          "claim": "عدد تسجيلات التجارب الجديدة لهذا الشهر هو 4,650 مقارنة بـ 2,600 في الشهر الماضي.",
+          "citation_ok": true,
+          "t_error": 0.84,
+          "slide_cited": true
         },
         {
           "id": "f17",
@@ -971,6 +971,16 @@
           ],
           "supported": "yes",
           "reason": "The cited text states the number of candidates in the pipeline is 75, compared with 85 last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: عدد تسجيلات التجارب الجديدة لهذا الشهر هو 4,650 مقارنة بـ 2,600 في الشهر الماضي.",
+          "citations": [
+            "seg 1",
+            "slide 7"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of new trial signups this month is 4,650 compared with 2,600 last month."
         },
         {
           "section": "decisions",
@@ -1107,15 +1117,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 14.87,
-          "s_per_audio_hour": 149.6,
+          "seconds": 14.9,
+          "s_per_audio_hour": 149.9,
           "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 25.94,
-          "s_per_audio_hour": 260.9,
-          "peak_mem_gb": 5.94,
+          "seconds": 25.98,
+          "s_per_audio_hour": 261.3,
+          "peak_mem_gb": 9.5,
           "reused": true
         },
         "translate": {
@@ -1655,20 +1665,20 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.87,
-          "s_per_audio_hour": 119.4,
+          "seconds": 11.86,
+          "s_per_audio_hour": 119.3,
           "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 24.24,
-          "s_per_audio_hour": 243.8,
-          "peak_mem_gb": 5.92,
+          "seconds": 24.27,
+          "s_per_audio_hour": 244.2,
+          "peak_mem_gb": 9.48,
           "reused": true
         },
         "translate": {
-          "seconds": 17.79,
-          "s_per_audio_hour": 179.0,
+          "seconds": 13.34,
+          "s_per_audio_hour": 134.2,
           "peak_mem_gb": 8.74,
           "reused": true
         },
@@ -1687,10 +1697,10 @@
       "duration_s": 357.88,
       "metrics": {
         "facts": 13,
-        "facts_found": 12,
-        "fact_recall": 0.9231,
+        "facts_found": 13,
+        "fact_recall": 1.0,
         "citation_accuracy": 1.0,
-        "claims": 20,
+        "claims": 21,
         "uncited_claims": 0,
         "made_up_items": 0,
         "made_up_open_questions": null,
@@ -1719,10 +1729,10 @@
         "untranslated_claims": null,
         "recall_decision": null,
         "recall_action": 1.0,
-        "recall_number": 0.875,
+        "recall_number": 1.0,
         "recall_open_question": null,
-        "cited_claims": 20,
-        "support_rate": 0.9,
+        "cited_claims": 21,
+        "support_rate": 0.9048,
         "support_partial": 0,
         "support_no": 2,
         "support_unjudged": 0,
@@ -1929,14 +1939,14 @@
           "id": "f16",
           "kind": "number",
           "text": "New trial signups: 4,650",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
-          "slide_cited": false
+          "section": "key_points",
+          "claim": "नए ट्रायल साइनअप्स की संख्या पिछले महीने की तुलना में बढ़ी है (4,650 बनाम 2,600)।",
+          "citation_ok": true,
+          "t_error": 0.84,
+          "slide_cited": true
         },
         {
           "id": "f17",
@@ -2053,6 +2063,16 @@
           ],
           "supported": "yes",
           "reason": "The number of candidates in the pipeline is 75, compared with 85 last month."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: नए ट्रायल साइनअप्स की संख्या पिछले महीने की तुलना में बढ़ी है (4,650 बनाम 2,600)।",
+          "citations": [
+            "seg 1",
+            "slide 7"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states the number of new trial signups this month is 4,650 compared with 2,600 last month, confirming the increase."
         },
         {
           "section": "decisions",
@@ -2197,14 +2217,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 15.05,
-          "s_per_audio_hour": 151.4,
+          "seconds": 15.02,
+          "s_per_audio_hour": 151.1,
           "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 41.4,
-          "s_per_audio_hour": 416.4,
+          "seconds": 41.17,
+          "s_per_audio_hour": 414.2,
           "peak_mem_gb": 9.62,
           "reused": true
         },
@@ -2751,14 +2771,14 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 24.27,
-          "s_per_audio_hour": 244.1,
+          "seconds": 24.21,
+          "s_per_audio_hour": 243.5,
           "peak_mem_gb": 9.48,
           "reused": true
         },
         "translate": {
-          "seconds": 13.16,
-          "s_per_audio_hour": 132.4,
+          "seconds": 13.1,
+          "s_per_audio_hour": 131.8,
           "peak_mem_gb": 8.74,
           "reused": true
         },
@@ -3291,14 +3311,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.91,
-          "s_per_audio_hour": 112.6,
+          "seconds": 11.92,
+          "s_per_audio_hour": 112.7,
           "peak_mem_gb": 8.91,
           "reused": true
         },
         "reduce": {
-          "seconds": 23.99,
-          "s_per_audio_hour": 226.7,
+          "seconds": 23.95,
+          "s_per_audio_hour": 226.4,
           "peak_mem_gb": 9.48,
           "reused": true
         },
@@ -3839,8 +3859,8 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 23.04,
-          "s_per_audio_hour": 178.7,
+          "seconds": 22.97,
+          "s_per_audio_hour": 178.1,
           "peak_mem_gb": 9.48,
           "reused": true
         },
@@ -3862,8 +3882,8 @@
   "summary": {
     "items": 7,
     "facts": 91,
-    "fact_recall": 0.9341,
-    "citation_accuracy": 0.9882,
+    "fact_recall": 0.956,
+    "citation_accuracy": 0.9885,
     "uncited_claims": 0,
     "made_up_items": 0,
     "made_up_open_questions": 0,
@@ -3882,7 +3902,7 @@
     "untranslated_claims": 5,
     "recall_decision": null,
     "recall_action": 0.9714,
-    "recall_number": 0.9107,
+    "recall_number": 0.9464,
     "recall_open_question": null,
     "map_numbers_repaired": 21,
     "map_numbers_unverified": 3,
@@ -3892,7 +3912,7 @@
     "pass2_claim": 0,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.7676,
+    "support_rate": 0.7708,
     "support_partial": 10,
     "support_no": 23,
     "support_unjudged": 0,
@@ -3921,15 +3941,15 @@
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 129.8,
+      "s_per_audio_hour": 130.0,
       "peak_mem_gb": 8.91
     },
     "reduce": {
-      "s_per_audio_hour": 265.5,
+      "s_per_audio_hour": 263.8,
       "peak_mem_gb": 9.62
     },
     "translate": {
-      "s_per_audio_hour": 42.4,
+      "s_per_audio_hour": 36.2,
       "peak_mem_gb": 8.74
     },
     "render": {
@@ -3937,7 +3957,7 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 917.1,
+      "s_per_audio_hour": 909.4,
       "peak_mem_gb": 16.88
     }
   },
@@ -4005,6 +4025,8 @@
     0.84,
     0.84,
     0.84,
+    0.84,
+    0.84,
     0.87,
     0.87,
     0.87,
@@ -4031,7 +4053,7 @@
   "judge": {
     "loaded": false,
     "calls": 0,
-    "cached": 178,
+    "cached": 180,
     "seconds": 0.02,
     "s_per_audio_hour": 0.0,
     "peak_mem_gb": null

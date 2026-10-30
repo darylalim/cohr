@@ -706,6 +706,71 @@ def add_said_decisions(
     return doc.model_copy(update={"sections": sections}), added
 
 
+def _figures(text: str, language: str) -> set[float]:
+    """The numbers written with digits in `text`, read the way `language` writes them (D38)."""
+    return set().union(*numbers.written_values(fold_digits(text), language))
+
+
+def add_lost_numbers(
+    doc: NotesDoc,
+    map_notes: Mapping[int, SegmentNotes],
+    segments: Sequence[Segment],
+    slides: Sequence[Slide],
+    refine: Refine,
+    source_language: str,
+) -> tuple[NotesDoc, list[str]]:
+    """8g: a Map key point with a figure (10 or more, digits) that no claim of the notes states
+    goes to Key points, citing its segment. Reduce lost 6 of the eval's numbers this way
+    (long-en f43 and f66 in pass 1, f79 in pass 2; clean-ar and clean-hi f16), and kept
+    slide-conflict-en's "$80,000" but not its "(slide: $18,000)": a key point citing the
+    segment whose figures are some of the Map key point's is replaced by it, citations kept.
+    Either way, the segment's slides that show a figure it adds are cited too (the judge read
+    "(slide: $18,000)" against seg 0 alone). A key point holding a number the guard flagged
+    is skipped. The additions, as written."""
+    lang = doc.language
+    slide_ids = {s.seg_id: s.slide_ids for s in segments}
+    shown = {s.slide_id: numbers.source_numbers_in(slide_text(s), source_language) for s in slides}
+    key_points = list(doc.sections.key_points)
+    stated = set().union(*(_figures(c.text, lang) for c in all_claims(doc)))
+    added: list[str] = []
+    for seg_id in sorted(map_notes):
+        notes = map_notes[seg_id]
+        if notes.raw:
+            continue
+        flagged = set().union(*(_figures(u, lang) for u in notes.unverified_numbers))
+        for point in notes.key_points:
+            figures = _figures(point, lang)
+            new = {f for f in figures - stated if f >= 10}
+            if not new or figures & flagged:
+                continue
+            showing = [
+                Citation(kind="slide", id=i)
+                for i in slide_ids.get(seg_id, [])
+                if new & shown.get(i, set())
+            ]
+            part = next(
+                (
+                    k
+                    for k in key_points
+                    if _cites(k, seg_id) and (f := _figures(k.text, lang)) and f < figures
+                ),
+                None,
+            )
+            if part is not None:
+                more = [c for c in showing if c not in part.citations]
+                update = {"text": point, "citations": [*part.citations, *more]}
+                key_points[key_points.index(part)] = part.model_copy(update=update)
+            else:
+                cited = cite([(("seg", seg_id), point)], refine)
+                _insert_by_seg(key_points, Claim(text=point, citations=cited + showing), seg_id)
+            stated |= figures
+            added.append(point)
+    if not added:
+        return doc, []
+    sections = doc.sections.model_copy(update={"key_points": key_points})
+    return doc.model_copy(update={"sections": sections}), added
+
+
 def _lost_map_decisions(
     seg_id: int,
     cues: int,
@@ -1223,6 +1288,11 @@ def run_stage(ctx: StageContext) -> None:
     doc, decided = add_said_decisions(doc, map_notes, segments, refine, ctx.config.source_language)
     if decided:
         ctx.log.info("reduce: decisions the meeting stated, added: %s", "; ".join(decided))
+    doc, figures = add_lost_numbers(
+        doc, map_notes, segments, slides, refine, ctx.config.source_language
+    )
+    if figures:
+        ctx.log.info("reduce: Map's figures the notes lost, added: %s", "; ".join(figures))
     doc, restored = restore_owners(doc, texts)
     if restored:
         ctx.log.info("reduce: owners in the meeting's spelling: %s", ", ".join(restored))

@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-29T13:15:44.241975-10:00",
+  "created_at": "2026-10-30T08:02:56.580459-10:00",
   "set": "long",
-  "git_sha": "03a01f7-dirty",
+  "git_sha": "1f6d7aa-dirty",
   "overrides": {},
   "models": {
     "vad": "mlx-community/silero-vad-v6@2ebf4a5",
@@ -31,10 +31,10 @@
       "duration_s": 7906.73,
       "metrics": {
         "facts": 80,
-        "facts_found": 68,
-        "fact_recall": 0.85,
-        "citation_accuracy": 0.9853,
-        "claims": 114,
+        "facts_found": 71,
+        "fact_recall": 0.8875,
+        "citation_accuracy": 0.9859,
+        "claims": 117,
         "uncited_claims": 0,
         "made_up_items": 7,
         "made_up_open_questions": 4,
@@ -64,7 +64,7 @@
         "slide_alignment": 1.0,
         "recall_decision": 0.95,
         "recall_action": 0.9,
-        "recall_number": 0.775,
+        "recall_number": 0.85,
         "recall_open_question": 0.75,
         "ask_questions": 24,
         "ask_accuracy": 0.9444,
@@ -74,8 +74,8 @@
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 0.0,
         "ask_near_miss": 1.0,
-        "cited_claims": 114,
-        "support_rate": 0.8333,
+        "cited_claims": 117,
+        "support_rate": 0.8376,
         "support_partial": 6,
         "support_no": 13,
         "support_unjudged": 0,
@@ -633,14 +633,14 @@
           "id": "f43",
           "kind": "number",
           "text": "Week-2 return rate (East): 38%",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
-          "slide_cited": false
+          "section": "key_points",
+          "claim": "Retention for East region is 38% (down from 63% last month), showing steady but slower growth.",
+          "citation_ok": true,
+          "t_error": -2.55,
+          "slide_cited": true
         },
         {
           "id": "f44",
@@ -932,14 +932,14 @@
           "id": "f66",
           "kind": "number",
           "text": "Candidates in pipeline (West): 99",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
-          "slide_cited": false
+          "section": "key_points",
+          "claim": "Hiring figures for the West region are stable, with a notable increase in candidates in the pipeline from 55 to 99.",
+          "citation_ok": true,
+          "t_error": -0.05,
+          "slide_cited": true
         },
         {
           "id": "f67",
@@ -1101,14 +1101,14 @@
           "id": "f79",
           "kind": "number",
           "text": "Week-2 return rate (Central): 85%",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
-          "slide_cited": false
+          "section": "key_points",
+          "claim": "Retention for the central region improved to 85% week-2 return rate, up from 50% last month.",
+          "citation_ok": true,
+          "t_error": 0.56,
+          "slide_cited": true
         },
         {
           "id": "f80",
@@ -1520,6 +1520,16 @@
         },
         {
           "section": "key_points",
+          "claim": "Key point: Retention for East region is 38% (down from 63% last month), showing steady but slower growth.",
+          "citations": [
+            "seg 11",
+            "slide 16"
+          ],
+          "supported": "yes",
+          "reason": "The claim states retention for the East region is 38% (down from 63% last month), which is directly stated in the cited text with the week-2 return rate for trial users in the East Region being 38% compared to 63% last month, and the text confirms the trend is steady."
+        },
+        {
+          "section": "key_points",
           "claim": "Key point: Site speed performance has remained stable and consistent, with no major changes observed.",
           "citations": [
             "seg 12"
@@ -1677,6 +1687,16 @@
         },
         {
           "section": "key_points",
+          "claim": "Key point: Hiring figures for the West region are stable, with a notable increase in candidates in the pipeline from 55 to 99.",
+          "citations": [
+            "seg 18",
+            "slide 26"
+          ],
+          "supported": "yes",
+          "reason": "The cited text states that the number of candidates in the pipeline for the West Region is 99, compared with 55 last month, and that hiring has been steady and more stable than expected."
+        },
+        {
+          "section": "key_points",
           "claim": "Key point: Monthly cloud bill for West Region: $7,100 (last month: $7,500).",
           "citations": [
             "seg 19"
@@ -1764,6 +1784,16 @@
           ],
           "supported": "no",
           "reason": "The cited text states the average page load time is 810 milliseconds compared to 780 milliseconds last release, but it does not state that performance has improved."
+        },
+        {
+          "section": "key_points",
+          "claim": "Key point: Retention for the central region improved to 85% week-2 return rate, up from 50% last month.",
+          "citations": [
+            "seg 24",
+            "slide 35"
+          ],
+          "supported": "yes",
+          "reason": "The claim states an improvement to 85% from 50%, which is directly stated in the slide and transcript as the week-2 return rate for trial users in the central region."
         },
         {
           "section": "key_points",
@@ -2842,8 +2872,8 @@
           "reused": true
         },
         "reduce": {
-          "seconds": 309.06,
-          "s_per_audio_hour": 140.7,
+          "seconds": 305.69,
+          "s_per_audio_hour": 139.2,
           "peak_mem_gb": 6.54,
           "reused": true
         },
@@ -2854,7 +2884,7 @@
           "reused": true
         },
         "render": {
-          "seconds": 0.0,
+          "seconds": 0.01,
           "s_per_audio_hour": 0.0,
           "peak_mem_gb": 0.0,
           "reused": true
@@ -2865,8 +2895,8 @@
   "summary": {
     "items": 1,
     "facts": 80,
-    "fact_recall": 0.85,
-    "citation_accuracy": 0.9853,
+    "fact_recall": 0.8875,
+    "citation_accuracy": 0.9859,
     "uncited_claims": 0,
     "made_up_items": 7,
     "made_up_open_questions": 4,
@@ -2885,7 +2915,7 @@
     "untranslated_claims": null,
     "recall_decision": 0.95,
     "recall_action": 0.9,
-    "recall_number": 0.775,
+    "recall_number": 0.85,
     "recall_open_question": 0.75,
     "map_numbers_repaired": 9,
     "map_numbers_unverified": 0,
@@ -2895,7 +2925,7 @@
     "pass2_claim": 138,
     "pass2_group": 5,
     "pass2_uncited": 0,
-    "support_rate": 0.8333,
+    "support_rate": 0.8376,
     "support_partial": 6,
     "support_no": 13,
     "support_unjudged": 0,
@@ -2936,7 +2966,7 @@
       "peak_mem_gb": 4.49
     },
     "reduce": {
-      "s_per_audio_hour": 140.7,
+      "s_per_audio_hour": 139.2,
       "peak_mem_gb": 6.54
     },
     "translate": {
@@ -2948,12 +2978,13 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 438.2,
+      "s_per_audio_hour": 436.7,
       "peak_mem_gb": 8.59
     }
   },
   "citation_errors": [
     -3.2,
+    -2.55,
     -0.98,
     -0.85,
     -0.81,
@@ -2971,6 +3002,7 @@
     -0.1,
     -0.08,
     -0.06,
+    -0.05,
     -0.03,
     -0.03,
     -0.02,
@@ -3002,6 +3034,7 @@
     0.52,
     0.52,
     0.55,
+    0.56,
     0.65,
     0.69,
     0.7,
@@ -3029,7 +3062,7 @@
   "judge": {
     "loaded": false,
     "calls": 0,
-    "cached": 114,
+    "cached": 117,
     "seconds": 0.01,
     "s_per_audio_hour": 0.0,
     "peak_mem_gb": null

@@ -249,6 +249,60 @@ def test_guard_reads_the_sources_in_the_meetings_language() -> None:
     assert mapper.check_numbers("$34,000", ja, "en") == ("$34,000", [], ["34,000"])
 
 
+def test_guard_drops_a_candidate_the_claim_states_elsewhere() -> None:
+    # 8g: "$34,000, up from $13,000" with 354,000 and 134,000 said. The 13,000 repair states
+    # 134,000, so of 34,000's two candidates only 354,000 is left.
+    sources = {354000.0, 134000.0}
+    text = "Monthly recurring revenue is $34,000, up from $13,000 last month."
+    assert mapper.check_numbers(text, sources, "en") == (
+        "Monthly recurring revenue is $354,000, up from $134,000 last month.",
+        [
+            NumberRepair(original="34,000", repaired="354,000"),
+            NumberRepair(original="13,000", repaired="134,000"),
+        ],
+        [],
+    )
+    # a value kept as written counts too
+    assert mapper.check_numbers("$34,000, up from $134,000", sources, "en")[0] == (
+        "$354,000, up from $134,000"
+    )
+
+
+def test_guard_still_flags_when_no_other_number_settles_the_candidates() -> None:
+    sources = {354000.0, 134000.0}
+    assert mapper.check_numbers("$34,000", sources, "en") == ("$34,000", [], ["34,000"])
+    # a claim that says one value twice is kept as written
+    text = "$134,000, the same $134,000 as last month"
+    assert mapper.check_numbers(text, sources, "en") == (text, [], [])
+    # another ambiguous number doesn't settle anything
+    assert mapper.check_numbers("$34,000 and $34,000", sources, "en")[2] == ["34,000"] * 2
+    # xling-ja f9 as said: "34%" too, a third candidate (×1000), so two are left: flagged
+    ja = {354000.0, 134000.0, 34.0}
+    assert mapper.check_numbers("$34,000, up from $134,000", ja, "en")[2] == ["34,000"]
+
+
+def test_guard_does_not_prefer_a_digit_edit_over_a_factor() -> None:
+    # pdf-slides-en at seed 1: "6,900 candidates" for the 69 said (×100); $8,900 (the cloud
+    # bill) is one edit away. Two candidates: flagged, as before 8g.
+    sources = mapper.source_numbers("69 candidates. The monthly cloud bill is $8,900.", [], "en")
+    text = "6,900 candidates in pipeline vs. 86 last month."
+    assert mapper.check_numbers(text, sources, "en")[2] == ["6,900", "86"]
+
+
+def test_guard_never_repairs_a_one_or_two_digit_number() -> None:
+    # 8g, AMI IS1009b: "forty percent ... and the rest we make regular" → Map "40% large
+    # buttons, 60% regular buttons"; 60 was "repaired" to the 40 said, one edit away.
+    assert _check("40% large, 60% regular", "forty percent large, the rest regular") == (
+        "40% large, 60% regular",
+        [],
+        ["60"],
+    )
+    assert _check("6 seats", "60 seats")[2] == ["6"]  # nor by a factor of 10
+    # three digits still repair, and a day still repairs from the days said
+    assert _check("120 seats", "12 seats")[0] == "12 seats"
+    assert _check("Due Nov 2nd.", "by the 22nd of November")[0] == "Due Nov 22nd."
+
+
 def test_slide_conflicts_read_the_meetings_language() -> None:
     # 6d-2 step 1, xling-es: slide "4.650" read the English way (4.65) wasn't the 4650 said,
     # so the notes got "4,650 (slide: 4.65)".
