@@ -188,15 +188,19 @@ class SplitReply:
     sections: dict[str, str]
     unknown: list[str] = field(default_factory=list)  # headings that aren't one of SECTIONS
     missing: list[str] = field(default_factory=list)
+    listed: str = ""  # list items under an unknown heading (filed by `listed_section`, D46)
 
 
 def split_sections(text: str) -> SplitReply:
     """Split on the fixed English markers. Text before the first marker and under an unknown
-    heading goes to the summary; localized headings are never parsed."""
+    heading goes to the summary, except list items under an unknown heading (`listed`, D46);
+    localized headings are never parsed."""
     parts: dict[str, list[str]] = {s: [] for s in SECTIONS}
     unknown: list[str] = []
+    listed: list[str] = []
     seen: set[str] = set()
     current = "summary"
+    under_unknown = False
     for line in text.splitlines():
         if m := _HEADING.match(line):
             # R7B sometimes cites the marker itself: "## <co>SUMMARY</co: 0:[0]>" (4b-1 eval).
@@ -205,15 +209,21 @@ def split_sections(text: str) -> SplitReply:
             if name in parts:
                 current = name
                 seen.add(name)
+                under_unknown = False
             else:
                 unknown.append(m.group(1))
                 current = "summary"
+                under_unknown = True
+            continue
+        if under_unknown and _BULLET.match(line):
+            listed.append(line)
             continue
         parts[current].append(line)
     return SplitReply(
         sections={k: "\n".join(v).strip() for k, v in parts.items()},
         unknown=unknown,
         missing=[s for s in SECTIONS if s not in seen],
+        listed="\n".join(listed),
     )
 
 
@@ -795,6 +805,70 @@ def _lost_map_decisions(
     return out
 
 
+def add_skipped_segments(
+    doc: NotesDoc,
+    map_notes: Mapping[int, SegmentNotes],
+    segments: Sequence[Segment],
+    refine: Refine,
+) -> tuple[NotesDoc, list[str]]:
+    """D47: one-pass notes only. A segment that no decision cites gets its Map decisions the
+    notes don't state (`_lost_map_decisions`: not its tasks or open questions), and one that
+    no open question cites gets its Map open questions the notes don't ask; each cites its
+    segment, before the first item citing a later one. A key point citing the segment that
+    states only the decision moves to Decisions instead (D44). R7B's one-pass replies over
+    AMI's 7–9 segments leave whole segments out of a section (8h: IS1009b seg 1's five
+    decisions and seg 5's questions, TS3003c, ES2004b); the 2-segment eval items never did.
+    Two-pass notes are condensed on purpose, and long-en's Map wrote the planted question
+    "sponsor the local hackathon" as a decision. Items with no letter or digit ("[]", AMI)
+    are skipped. The additions, as written."""
+    if doc.passes != 1:
+        return doc, []
+    seg_ids = {s.seg_id for s in segments}
+    decisions = list(doc.sections.decisions)
+    key_points = list(doc.sections.key_points)
+    questions = list(doc.sections.open_questions)
+    stated = [c.text for c in [*decisions, *doc.sections.action_items]]
+    asked = [c.text for c in [*questions, *decisions]]
+    added: list[str] = []
+    for seg_id in sorted(map_notes):
+        notes = map_notes[seg_id]
+        if seg_id not in seg_ids or notes.raw:
+            continue
+        if not any(_cites(d, seg_id) for d in decisions):
+            lost = _lost_map_decisions(seg_id, len(notes.decisions), decisions, stated, map_notes)
+            for text in filter(_worded, lost):
+                point = next(
+                    (k for k in key_points if _cites(k, seg_id) and _states_only(k.text, text)),
+                    None,
+                )
+                if point is not None:
+                    key_points.remove(point)
+                    claim = point
+                else:
+                    claim = Claim(text=text, citations=cite([(("seg", seg_id), text)], refine))
+                _insert_by_seg(decisions, claim, seg_id)
+                stated.append(claim.text)
+                asked.append(claim.text)
+                added.append(claim.text)
+        if not any(_cites(q, seg_id) for q in questions):
+            for text in filter(_worded, dict.fromkeys(notes.open_questions)):
+                if any(match_score(text, t) >= ACTION_MATCH_MIN for t in asked):
+                    continue
+                claim = Claim(text=text, citations=cite([(("seg", seg_id), text)], refine))
+                _insert_by_seg(questions, claim, seg_id)
+                asked.append(text)
+                added.append(text)
+    if not added:
+        return doc, []
+    update = {"decisions": decisions, "key_points": key_points, "open_questions": questions}
+    sections = doc.sections.model_copy(update=update)
+    return doc.model_copy(update={"sections": sections}), added
+
+
+def _worded(text: str) -> bool:
+    return any(ch.isalnum() for ch in text)
+
+
 def add_task(items: list[ActionItem], task: ActionItem) -> None:
     """Append a moved decision; when an action item already states it (ACTION_MATCH_MIN),
     add its citations there instead of listing the task twice."""
@@ -840,6 +914,8 @@ class ReduceStats:
     prompt_tokens: int = 0
     trimmed: int | None = None  # characters per segment, when transcripts were trimmed
     moved: int = 0  # decisions moved to action items (filed_task)
+    filed: int = 0  # list items under an unknown heading filed by Map's items (D46)
+    repeated: int = 0  # claims dropped as a repeat in their section (D46)
     # two-pass only (§4)
     groups: int = 0
     pass1_uncited: int = 0
@@ -878,11 +954,57 @@ def notes_from_reply(
             else:
                 section.append(action_item(claim, map_notes) if name == "action_items" else claim)
         out[name] = section
+    for raw in claims(split.listed, sentences=False):
+        claim, dropped = resolver(raw)
+        stats.claims += 1
+        stats.dropped += dropped
+        stats.uncited += not claim.citations
+        name = listed_section(claim, map_notes)
+        out[name].append(action_item(claim, map_notes) if name == "action_items" else claim)
+        stats.filed += name != "summary"
     for claim in tasks:
         add_task(out["action_items"], action_item(claim, map_notes))
     stats.moved = len(tasks)
+    for name in SECTIONS:
+        once = _once(out[name])
+        stats.repeated += len(out[name]) - len(once)
+        out[name] = once
     doc = NotesDoc(sections=NotesSections(**out), passes=1, language=language, raw=reply)
     return doc, stats
+
+
+def _once[C: Claim](items: Sequence[C]) -> list[C]:
+    """Each claim once, first place kept: a looping reply repeats lines with the same
+    citations (AMI IS1009b 14 lines twice, TS3003c three segments' decisions three times; 8h)."""
+    seen: set[str] = set()
+    out: list[C] = []
+    for c in items:
+        if (key := c.model_dump_json()) not in seen:
+            seen.add(key)
+            out.append(c)
+    return out
+
+
+def listed_section(claim: Claim, map_notes: Mapping[int, SegmentNotes]) -> str:
+    """D46: the section of a list item under an unknown heading, from the cited segments' Map
+    item it matches best (ACTION_MATCH_MIN; key points first on a tie), else the summary.
+    AMI IS1009b (8h): after segment 0's five sections R7B wrote "## <co>Remote Control
+    Design</co: …>" and segments 1–6 as one list, mostly Map's key points and decisions word
+    for word, which §5.6's fallback had all filed as summary claims."""
+    m = _ACTION.match(claim.text)
+    text = m.group(3).strip() if m and (m.group(1) or m.group(2)) else claim.text
+    best, score = "summary", 0.0
+    for n in (map_notes[c.id] for c in claim.citations if c.kind == "seg" and c.id in map_notes):
+        for name, items in (
+            ("key_points", n.key_points),
+            ("decisions", n.decisions),
+            ("action_items", [a.task for a in n.action_items]),
+            ("open_questions", n.open_questions),
+        ):
+            for item in items:
+                if (s := match_score(text, item)) > score:
+                    best, score = name, s
+    return best if score >= ACTION_MATCH_MIN else "summary"
 
 
 def segment_refiner(
@@ -1288,6 +1410,12 @@ def run_stage(ctx: StageContext) -> None:
     doc, decided = add_said_decisions(doc, map_notes, segments, refine, ctx.config.source_language)
     if decided:
         ctx.log.info("reduce: decisions the meeting stated, added: %s", "; ".join(decided))
+    doc, skipped = add_skipped_segments(doc, map_notes, segments, refine)
+    if skipped:
+        ctx.log.info(
+            "reduce: Map's decisions and questions of segments the notes skipped, added: %s",
+            "; ".join(skipped),
+        )
     doc, figures = add_lost_numbers(
         doc, map_notes, segments, slides, refine, ctx.config.source_language
     )
@@ -1321,8 +1449,13 @@ def run_stage(ctx: StageContext) -> None:
         )
     if stats.unknown_markers:
         ctx.log.warning(
-            "reduce: unknown section markers %s (text kept in summary)", stats.unknown_markers
+            "reduce: unknown section markers %s (%d list items filed by Map's items, "
+            "the rest kept in summary)",
+            stats.unknown_markers,
+            stats.filed,
         )
+    if stats.repeated:
+        ctx.log.warning("reduce: %d repeated claims dropped", stats.repeated)
     if stats.missing_markers:
         ctx.log.warning("reduce: missing section markers %s", stats.missing_markers)
     if stats.dropped:
