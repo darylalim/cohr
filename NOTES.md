@@ -2878,3 +2878,23 @@ Branch `phase-8h-ami`. 8g's "Open"; D46, D47.
   long-en's 3 key points) and post-v1 items 5, 8, 10 unchanged.
 
 - 1.9.0 bump: done 2026-10-30 on request (release-1.9.0).
+
+## 2026-10-30 · Phase 8i kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 8i" and a §9 line: Japanese meetings (post-v1 items 5
+  and 10, carry-over 5 of item 8, 8g's xling-ja f7/f9). Picked over Ask's near-miss (no cause
+  found yet) and AMI's leftovers (~2 points, mostly judge noise): xling-ja is the lang set's
+  weakest item on every measure (seed 1: recall 76.9%, citation 90.0%, support 65.0%).
+- Kickoff check on the stored run (CLAUDE.md lesson): Transcribe wrote 5 of xling-ja's 18
+  chunks without punctuation, and 4 of them lost their opening (chunk 5 the whole 42,500
+  budget line, f6, so Map never saw it; chunk 7 "先月は7700ドル"; chunk 11 "昨日"; chunk 15
+  "先月は2600"). No punctuated chunk lost one, and all chunks start 0–40 ms before speech.
+  #10's −21.8 s is in chunk 11, so the two items may share a cause.
+- The decoder already sends <|pnc|>: no switch to flip. No generated set has an unpunctuated
+  chunk; AMI has 10–26 per meeting (spontaneous speech: step 0 checks them against AMI's
+  reference words).
+- Map: f7 (11,800, chunk 6) in no Map item; f9 "35万4000" written "$34,000" and only flagged;
+  one seg-0 key point with no source (budget "for team spending, user testing, and
+  onboarding").
+- #5 confirmed in Python: Victor "fktr", ビクター "fkt"; Omar and Maria share "mr" in katakana.
+  No set has Japanese notes; a clean-ja lang item (clean-en seed 1, target ja) would plant
+  all five owners.
