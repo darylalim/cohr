@@ -146,6 +146,19 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
 - A step that rewrites a claim's text keeps its old citations, so a value the new text adds
   needs its own source cited: re-adding "(slide: $18,000)" under a seg-only citation made the
   judge check the slide value against the transcript (8g, now cites the slide).
+- The judge reads a reference sentence against every claim of its sections, so a change
+  elsewhere in the list flips it: ES2004d's problem sentence flipped when two open questions
+  lost their "?" (8h). Before blaming a change, score both sides from the judge cache
+  (`evals/data/judge/`, offline) and diff per sentence; one sentence per meeting is noise until
+  its own claim moved.
+- A reply shape seen once (IS1009b's dump) is one form of a cause: look for the others before
+  fixing it. IS1009b's dump, TS3003c's loop and ES2004b's drift were all one-pass Reduce over
+  7–9 segments leaving segments out of a section; filing the dump recovered nothing (R7B had
+  copied Map's key points, not its decisions), a per-segment check on the final notes caught
+  all three (8h, D47). The eval's 2-segment items never show it: measure Reduce fixes on AMI.
+- `--update-baseline` writes the whole report as the set's baseline: after an `--item` run it
+  would replace baseline-full.json with an AMI-only one and drop the quick gate. Rewrite a
+  baseline only from a run of its whole set (8h).
 
 ## Where things are (PLAN.md)
 Architecture §3 · Memory §4 · Stages §5 · Layout & tooling §6 · UI, layout, theme §7 ·
