@@ -2791,3 +2791,5 @@ Branch `phase-8g-numbers`. Post-v1 item 4, widened; D45.
 - xling-ja f9 flagged ("34%" is a third candidate); a unit check (% vs $) could settle it.
 - The judge reads a "(slide: …)" conflict note as a contradiction.
 - long-en's Map writes exactly 3 key points in 17 of 28 segments: cause still unknown.
+
+- 1.8.0 bump: done 2026-10-30 on request (release-1.8.0).
