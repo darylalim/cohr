@@ -1375,6 +1375,13 @@ seed 1 and was dropped). After Reduce (`reduce.add_lost_numbers`), a Map key poi
 figure the notes lost is added or replaces the claim that kept part of it. Numbers: long-en
 77.5 → 85.0%, quick 93.8/93.8/93.8/96.9 → 96.9/93.8/96.9/100% at seeds 0–3, lang 91.1 →
 94.6%; made-up items, Ask and citation accuracy unchanged. Map's 8 never-written numbers left.
+**Phase 8h (after v1): AMI coverage** (8g's "Open"): 8g's run, AMI's first Map run since Oct
+14, fell 52.8 → 44.9% (decisions 52.2 → 30.4%). Most of it is one reply: on IS1009b R7B wrote
+all five sections for segment 0 only, then segments 1–6 as one flat list under
+"## <co>Remote Control Design</co: …>", 14 of its lines twice, and §5.6's fallback filed it
+all as Summary (34 summary claims; decisions 75 → 0%). Reduce's prompt is unchanged since
+Oct 13; its input lost 44 tokens (8c's dropped dues, now `[due: ?]`). The other four meetings
+kept the shape and moved by one or two claims each. Kickoff prompt in §21.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -3495,4 +3502,86 @@ the post-v1 list stays open (items 5, 8 and 10, 8f's "Open") unless step 0 shows
 cause. Don't bump the version: I'll ask separately. When done: tick the checklist, add new
 decisions to §20 as D-numbers, update §5.5–5.6, add a NOTES.md entry and update the post-v1
 list, make sure the gate passes, and open a PR (ask before pushing).
+```
+
+### Kickoff prompt for Phase 8h (AMI coverage)
+```text
+Continue cohr: Phase 8h (AMI coverage, 8g's "Open"). Read CLAUDE.md, then PLAN.md §5.6
+(Reduce, its markers and the fallback to Summary), §18 (AMI coverage, the judge), §19, D40–D45
+in §20, and NOTES.md: the 8g entry ("Open"), the post-v1 list and the 8h kickoff entry. Work on
+branch phase-8h-ami from main (v1.8.0 is released: #77, #79).
+8g's AMI run (`--item ami --no-ask`, report 20261030-075941-full.json) was the first Map run on
+AMI since Oct 14: coverage 52.8 → 44.9%, decisions 52.2 → 30.4% (baseline-full.json, and
+20261028-125512-full.json, 8b's Reduce rerun, agrees with it). From the kickoff check on the
+stored runs:
+- The runs in evals/data/runs/ami-*/ were rewritten in place on Oct 30. The state before is
+  kept in evals/data/ami-before-8g/ (notes.json, map.json, log.txt, manifest.json,
+  segments.json of all five; Oct 28 Reduce on Oct 14 Map, git-ignored). Compare against it;
+  don't overwrite it.
+- IS1009b (62.5 → 43.8%, decisions 75 → 0%): R7B's reply changed shape. Before, it wrote the
+  five markers once per segment (25 headings, parsed fine). Now it writes all five sections
+  for segment 0 only, then "## <co>Remote Control Design</co: 0:[1,2,3,4,5,6]>" and segments
+  1–6 as one flat list of 32 lines, 14 of them twice. `split_sections` files everything under
+  an unknown heading as Summary (§5.6), so the notes have 34 summary claims, 5 key points and
+  4 decisions (before: 10, 31, 13). The flat list holds key points and decisions both
+  ("Teletext should be eliminated", "The target group is everyone with a TV"): continuing the
+  section before it would file them all as open questions.
+- What moved it: Reduce's prompts are unchanged since Oct 13 and it runs at temperature 0.
+  map.json differs from before only in dues (8c's `guard_dates` dropped 21, so `_action_line`
+  writes `[due: ?]`) and IS1009b seg 6's 60%, which 8g put back to 40 with the same reply.
+  Prompt tokens 10,086 → 10,042. A 44-token change flipped the shape, so a fix that only
+  brings this one reply back isn't a fix.
+- The fallback has fired only on IS1009b, in 3 of its 7 Reduce runs (log.txt): "#" at Oct 14
+  06:56 and 08:49, whose reports (071244, 085703) score IS1009b 56.2% against 62.5% for the
+  other Oct 14 runs, and the Oct 30 heading. No other stored run in any set has an unknown
+  heading. One meeting is thin evidence for a rule: a parse fix also needs tests built from
+  this reply's shape.
+- The other four kept the shape and moved by one or two claims: ES2004b 53.3 → 46.7%
+  (abstract 77.8 → 55.6%; "3 decisions moved to action items (Map's tasks)", 8g added 4
+  figures), ES2004d 33.3 → 23.8% (decisions 16.7 → 0%, 10 → 9 decision claims), TS3003c 55.6 →
+  50.0% (decision claims 15 → 22, yet decisions 66.7 → 50%), IS1009c unchanged. On Oct 14,
+  TS3003c scored 22.2% and 55.6% in different runs, and each meeting has 6–9 reference
+  sentences per part: one sentence is 11–17 points.
+- The judge's coverage answers are cached by hash (evals/data/judge/ami-*.json). If the
+  cache still holds the Oct 28 notes' answers, both sides can be scored offline.
+- IS1009b's s/h 2056 is a wall-clock artifact: Reduce logs "done in 77.7 s" but started 17
+  minutes before (another run was using the GPU). Not a cost regression.
+Read the run files yourself before building on this (CLAUDE.md).
+0. Proposal before code (ask me). First, without models: score evals/data/ami-before-8g and
+   the current runs with the cached judge (say which answers were missing), and split each
+   meeting's change into the notes (which reference sentence lost its claim, and the Python
+   step that moved it) and noise. Read IS1009b's raw before and after. Then propose.
+   Candidates, not choices:
+   - Parse: claims under an unknown heading are filed by their cited segment's Map item
+     (the section of the Map key point, decision, task or question they best match), and a
+     claim repeated with the same citation is kept once. Pure Python: replay
+     `build_notes` + `restore_owners` on notes.json `raw` for the five meetings and every
+     stored run in quick, lang and long. Must not fire: a reply with the five markers; a
+     heading-less summary paragraph.
+   - Coverage check: segments that no claim outside Summary cites get their Map items added
+     (the D42–D45 pattern: `add_lost_tasks`, `add_said_decisions`, `add_lost_numbers`). Say
+     what it adds on the eval sets and to made-up items.
+   - Input: write the action line without "[due: ?]" when Map has none. It moves Reduce's
+     input on every set (Reduce runs everywhere; REDUCE_HASH may not move): only with a
+     reason beyond IS1009b and every set rerun from Reduce.
+   - ES2004b/d: if the judge splits them to a Python step (6e-2's decision → action move, 8f,
+     8g), say whether it's noise or a rule to tighten; AMI is that step's must-not-fire set.
+   For each: whether it changes NotesDoc (FORMAT_VERSION, snapshots) or Ask keys, and what
+   it does on quick, lang and long-en.
+1. The fixes, with tests: IS1009b's dumped claims land in their sections with their
+   citations, each once; the must-not-fire replies parse as before.
+2. Measure: replay first (copy, don't delete). Then quick seed 0 with Ask and the judge, lang
+   -c seed=1 --no-ask, long-en `--rerun reduce` (ask first), and AMI (`--item ami --no-ask`;
+   ask first, and nothing else on the GPU so s/h is real). Report AMI coverage by part and
+   support, plus fact recall, made-up items and citation accuracy on the other sets, before
+   and after.
+3. Rewrite the baselines the fix moves on purpose, with the reason in the commit;
+   baseline-full.json only from an AMI run (no full run without asking).
+Rules from CLAUDE.md apply. Ask me before every full or long run, AMI runs, the opt-in model
+tests and new dependencies (none should be needed). quick and lang runs are fine. The rest of
+8g's "Open" (Map's 8 never-written numbers, xling-ja f9, the judge on slide-conflict notes,
+long-en's 3 key points) and post-v1 items 5, 8 and 10 stay open unless step 0 shows they
+share a cause. Don't bump the version: I'll ask separately. When done: tick the checklist,
+add new decisions to §20 as D-numbers, update §5.6 and §18, add a NOTES.md entry and update
+the post-v1 list, make sure the gate passes, and open a PR (ask before pushing).
 ```

@@ -2793,3 +2793,24 @@ Branch `phase-8g-numbers`. Post-v1 item 4, widened; D45.
 - long-en's Map writes exactly 3 key points in 17 of 28 segments: cause still unknown.
 
 - 1.8.0 bump: done 2026-10-30 on request (release-1.8.0).
+
+## 2026-10-30 · Phase 8h kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 8h" and a §9 line: AMI coverage (8g's "Open"; user's
+  choice over Map's never-written numbers, because AMI is the only set evals/gen didn't make
+  and it went down).
+- Kickoff check on the stored runs (CLAUDE.md lesson): IS1009b's reply changed shape. R7B
+  wrote all five sections for segment 0 only, then segments 1–6 as one flat list under
+  "## <co>Remote Control Design</co: …>" (14 lines twice), all filed as Summary. That flat
+  list holds key points and decisions both, so "continue the section before it" (8g's
+  candidate) would have filed them as open questions.
+- Cause of the flip: Reduce's prompts are unchanged since Oct 13; its input lost 44 tokens
+  (8c's dropped dues, written `[due: ?]`). The fallback fired in 3 of IS1009b's 7 Reduce runs,
+  and both earlier ones ("#", Oct 14) are the runs where it scored 56.2% instead of 62.5%.
+  No other stored run has an unknown heading.
+- The other four meetings kept the shape and moved by one or two claims; one reference
+  sentence is 11–17 points, and TS3003c scored 22.2% and 55.6% in Oct 14 runs. Step 0 splits
+  notes changes from noise with the cached judge.
+- The pre-Oct-30 AMI runs were only in an old session's /tmp scratchpad; copied to
+  evals/data/ami-before-8g/ (git-ignored) for step 0.
+- IS1009b's s/h 2056 in 8g's report is wall-clock: Reduce took 77.7 s but started 17 minutes
+  earlier (another run held the GPU).
