@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-29T13:15:43.178177-10:00",
+  "created_at": "2026-10-30T08:02:55.518186-10:00",
   "set": "quick",
-  "git_sha": "03a01f7-dirty",
+  "git_sha": "1f6d7aa-dirty",
   "overrides": {},
   "models": {
     "vad": "mlx-community/silero-vad-v6@2ebf4a5",
@@ -833,8 +833,8 @@
           "reused": true
         },
         "vision": {
-          "seconds": 34.54,
-          "s_per_audio_hour": 347.5,
+          "seconds": 34.3,
+          "s_per_audio_hour": 345.0,
           "peak_mem_gb": 4.46,
           "reused": true
         },
@@ -845,14 +845,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 14.85,
-          "s_per_audio_hour": 149.4,
+          "seconds": 14.83,
+          "s_per_audio_hour": 149.2,
           "peak_mem_gb": 7.54,
           "reused": true
         },
         "reduce": {
-          "seconds": 34.32,
-          "s_per_audio_hour": 345.3,
+          "seconds": 34.16,
+          "s_per_audio_hour": 343.6,
           "peak_mem_gb": 12.62,
           "reused": true
         },
@@ -1683,8 +1683,8 @@
           "reused": true
         },
         "vision": {
-          "seconds": 31.8,
-          "s_per_audio_hour": 317.4,
+          "seconds": 31.64,
+          "s_per_audio_hour": 315.8,
           "peak_mem_gb": 12.53,
           "reused": true
         },
@@ -1695,14 +1695,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 13.5,
+          "seconds": 13.49,
           "s_per_audio_hour": 134.7,
           "peak_mem_gb": 12.06,
           "reused": true
         },
         "reduce": {
-          "seconds": 24.04,
-          "s_per_audio_hour": 239.9,
+          "seconds": 23.96,
+          "s_per_audio_hour": 239.1,
           "peak_mem_gb": 12.62,
           "reused": true
         },
@@ -2535,8 +2535,8 @@
           "reused": true
         },
         "vision": {
-          "seconds": 32.01,
-          "s_per_audio_hour": 322.6,
+          "seconds": 31.77,
+          "s_per_audio_hour": 320.2,
           "peak_mem_gb": 12.53,
           "reused": true
         },
@@ -2547,14 +2547,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 10.61,
-          "s_per_audio_hour": 106.9,
+          "seconds": 10.6,
+          "s_per_audio_hour": 106.8,
           "peak_mem_gb": 12.06,
           "reused": true
         },
         "reduce": {
-          "seconds": 29.07,
-          "s_per_audio_hour": 293.0,
+          "seconds": 28.86,
+          "s_per_audio_hour": 290.8,
           "peak_mem_gb": 12.62,
           "reused": true
         },
@@ -2579,8 +2579,8 @@
       "duration_s": 350.12,
       "metrics": {
         "facts": 17,
-        "facts_found": 16,
-        "fact_recall": 0.9412,
+        "facts_found": 17,
+        "fact_recall": 1.0,
         "citation_accuracy": 1.0,
         "claims": 23,
         "uncited_claims": 0,
@@ -2611,7 +2611,7 @@
         "untranslated_claims": null,
         "recall_decision": 1.0,
         "recall_action": 1.0,
-        "recall_number": 0.875,
+        "recall_number": 1.0,
         "recall_open_question": 1.0,
         "ask_questions": 19,
         "ask_accuracy": 0.9231,
@@ -2622,9 +2622,9 @@
         "ask_xlang_history": 1.0,
         "ask_near_miss": 0.6667,
         "cited_claims": 23,
-        "support_rate": 0.913,
+        "support_rate": 0.8696,
         "support_partial": 0,
-        "support_no": 2,
+        "support_no": 3,
         "support_unjudged": 0,
         "judge_covered": 0,
         "judge_recall": null
@@ -2712,14 +2712,14 @@
           "id": "f7",
           "kind": "number",
           "text": "Approved budget: $18,000",
-          "found": false,
+          "found": true,
           "judge_only": false,
           "judge_covered": null,
-          "section": null,
-          "claim": null,
-          "citation_ok": null,
-          "t_error": null,
-          "slide_cited": false
+          "section": "key_points",
+          "claim": "Quarterly budget approved at $80,000 (slide: $18,000), stable compared to $77,500 last quarter.",
+          "citation_ok": true,
+          "t_error": 4.05,
+          "slide_cited": true
         },
         {
           "id": "f8",
@@ -2884,7 +2884,7 @@
       "uncited": [],
       "gap_texts": [],
       "conflict": {
-        "slide_value_used": false,
+        "slide_value_used": true,
         "misspoken_value_used": true
       },
       "number_repairs": [
@@ -2923,12 +2923,13 @@
         },
         {
           "section": "key_points",
-          "claim": "Key point: Quarterly budget approved at $80,000, stable compared to $77,500 last quarter.",
+          "claim": "Key point: Quarterly budget approved at $80,000 (slide: $18,000), stable compared to $77,500 last quarter.",
           "citations": [
-            "seg 0"
+            "seg 0",
+            "slide 2"
           ],
-          "supported": "yes",
-          "reason": "The cited text states the approved budget for next quarter is $80,000 compared with $77,500 last quarter, and mentions stability."
+          "supported": "no",
+          "reason": "The slide shows a different approved budget value of $18,000, contradicting the claim's $80,000."
         },
         {
           "section": "key_points",
@@ -3424,8 +3425,8 @@
           "reused": true
         },
         "vision": {
-          "seconds": 31.86,
-          "s_per_audio_hour": 327.6,
+          "seconds": 31.65,
+          "s_per_audio_hour": 325.5,
           "peak_mem_gb": 12.53,
           "reused": true
         },
@@ -3436,14 +3437,14 @@
           "reused": true
         },
         "map": {
-          "seconds": 12.04,
-          "s_per_audio_hour": 123.7,
+          "seconds": 11.98,
+          "s_per_audio_hour": 123.2,
           "peak_mem_gb": 12.06,
           "reused": true
         },
         "reduce": {
-          "seconds": 22.82,
-          "s_per_audio_hour": 234.6,
+          "seconds": 22.75,
+          "s_per_audio_hour": 233.9,
           "peak_mem_gb": 12.62,
           "reused": true
         },
@@ -3465,7 +3466,7 @@
   "summary": {
     "items": 4,
     "facts": 68,
-    "fact_recall": 0.9706,
+    "fact_recall": 0.9853,
     "citation_accuracy": 1.0,
     "uncited_claims": 0,
     "made_up_items": 0,
@@ -3485,7 +3486,7 @@
     "untranslated_claims": null,
     "recall_decision": 1.0,
     "recall_action": 1.0,
-    "recall_number": 0.9375,
+    "recall_number": 0.9688,
     "recall_open_question": 1.0,
     "map_numbers_repaired": 10,
     "map_numbers_unverified": 0,
@@ -3495,9 +3496,9 @@
     "pass2_claim": 0,
     "pass2_group": 0,
     "pass2_uncited": 0,
-    "support_rate": 0.9506,
+    "support_rate": 0.9383,
     "support_partial": 1,
-    "support_no": 3,
+    "support_no": 4,
     "support_unjudged": 0,
     "judge_recall": null,
     "ask_questions": 76,
@@ -3524,7 +3525,7 @@
       "peak_mem_gb": 16.83
     },
     "vision": {
-      "s_per_audio_hour": 328.7,
+      "s_per_audio_hour": 326.6,
       "peak_mem_gb": 12.53
     },
     "fuse": {
@@ -3532,11 +3533,11 @@
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 128.8,
+      "s_per_audio_hour": 128.5,
       "peak_mem_gb": 12.06
     },
     "reduce": {
-      "s_per_audio_hour": 278.4,
+      "s_per_audio_hour": 277.0,
       "peak_mem_gb": 12.62
     },
     "translate": {
@@ -3548,7 +3549,7 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 879.2,
+      "s_per_audio_hour": 875.4,
       "peak_mem_gb": 16.83
     }
   },
@@ -3623,6 +3624,7 @@
     2.5,
     3.42,
     3.47,
+    4.05,
     4.54
   ],
   "judge": {

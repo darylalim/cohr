@@ -2212,8 +2212,9 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
    9 of 17 found). Left over: see 8d's "Open".
    Map's never-written tasks: done in Phase 8e (D43, flagged sentences → one Tiny Aya call;
    quick action recall 100% at seeds 0/2/3, long-en 70 → 90%). Left over: see 8e's "Open".
-4. **Map miscopies digits in ja meetings** (D35): 354,000 written 3,400,000 / 345,000 even
-   from grouped digits. The guard flags it; no repair.
+4. ~~**Map miscopies digits in ja meetings**~~ (D35): widened in Phase 8g to every missed
+   number (D45: short numbers never repaired, figures Reduce lost re-added; long-en 77.5 →
+   85.0%). xling-ja f9 stays flagged. Left over: see 8g's "Open".
 5. **Japanese ビクター** isn't matched to Victor (no final r); Japanese owners in Japanese
    notes aren't in any set.
 6. ~~**Map's ownerless "End of next week" dues**~~: dropped from the notes in Phase 8b
@@ -2730,3 +2731,63 @@ Branch `phase-8f-decisions`. D44.
 - AMI IS1009b's one repair is wrong: "the rest" (60%) became "40% regular buttons", one digit
   edit from the 40 said. The prompt asks step 0 to check AMI's repairs before widening D20.
 - long-en's Map writes exactly 3 key points in 17 of 28 segments (quick/lang 4–8); cause unknown.
+
+## 2026-10-30 · Phase 8g: missed numbers
+Branch `phase-8g-numbers`. Post-v1 item 4, widened; D45.
+- Step 0 (no models) confirmed the kickoff's 17: Reduce lost 6 that Map wrote as key points
+  (long-en f43 and f66 in pass 1, f79 in pass 2; slide-conflict-en f7 kept "$80,000" and
+  dropped "(slide: $18,000)"; clean-ar/hi f16), Map never wrote 8, xling-ja f9 is the digit,
+  f6 is ASR. Where Map never wrote one, it still wrote a key point on the topic ("Quarterly
+  budget figures are steady"), just without the figure.
+- Repairs: 41 stored, AMI's only one (IS1009b 60 → 40) wrong; the other one- and two-digit
+  repairs are days (pdf-slides "2nd" → 22nd). So no plain number under three digits is
+  repaired now. AMI says 33 digit numbers no Map item or notes state, mostly scoring
+  fragments ("35.", "50?", "Do 5."); a filtered sentence net still fired 5 times on AMI (2
+  garbled) and on every "That's compared with …" sentence of long-en: not built.
+- f9 has three candidates, not two: "34%" (×1000) too. Dropping the one the claim states
+  (134,000) leaves two. A tiebreak (one digit edit beats a factor) fixed it, but at quick
+  seed 1 it repaired pdf-slides' "6,900 candidates" (69 said, ×100) to the $8,900 cloud bill,
+  and the eval matched the cloud-bill fact to that claim (citation −109 s). Dropped; f9
+  stays flagged. The stated-candidate rule stays (no wrong repair on any run).
+- `reduce.add_lost_numbers` after the decisions. The replay on the stored notes.json and the
+  eval runs added the same 7 key points (6 eval facts + AMI ES2004d "50% profit"). The
+  replace path kept Reduce's seg-only citation, so the judge read "(slide: $18,000)" against
+  seg 0 and said no; the step now also cites the segment's slides showing an added figure,
+  and the judge then said the slide contradicts $80,000 (the conflict note, as §5.5 writes it).
+- Code only: Map's text changes only where the guard does (IS1009b seg 6), so Ask keys move
+  there only; REDUCE_HASH and MapFile unchanged.
+
+| | before | after |
+|---|---|---|
+| quick numbers, seeds 0 / 1 / 2 / 3 | 93.8 / 93.8 / 93.8 / 96.9% | **96.9** / 93.8 / **96.9 / 100%** |
+| quick seed 0 fact recall, Ask, citation accuracy | 97.1%, 98.1%, 100% | **98.5%**, 98.1%, 100% |
+| quick seed 0 judge support | 95.1% | 93.8% (the conflict note) |
+| quick made-up items, unsupported numbers, seeds 0–3 | 0 | 0 |
+| lang seed 1 numbers, fact recall, citation | 91.1%, 93.4%, 98.8% | **94.6%, 95.6%**, 98.9% |
+| lang unsupported, unverified | 1, 3 | 1, 3 |
+| long-en numbers, fact recall | 77.5%, 85.0% | **85.0%, 88.8%** |
+| long-en Ask, citation, made-up, wrong owner/due | 94.4%, 98.5%, 7, 2 | 94.4%, 98.6%, 7, 2 |
+| AMI (first Map run since Oct 14) | 52.8% coverage | 44.9% (not 8g: see Open) |
+
+- AMI, 8g's part: 6 key points added (ES2004b's survey figures "80% would spend more…",
+  "50% only use 10% of the buttons", "34% take too long to learn", "35 and under…";
+  ES2004d "50% profit"; IS1009b "€25"), all said; IS1009b seg 6 keeps "60%" and flags it, so
+  ami_unsupported_numbers 0 → 1 ("the rest" has no digit).
+- Runs: quick seeds 1–3 `--no-ask --no-judge`, quick seed 0 with Ask and the judge, lang seed
+  1 `--no-ask --rerun map`, long-en `--rerun reduce`, AMI (`--item ami --no-ask`); seed 1 and
+  lang rerun after dropping the tiebreak. quick, lang and long baselines rewritten on purpose
+  (figures the notes lost are added); baseline-full.json not (no full run).
+- Cost: none (no model call).
+
+### Open
+- AMI coverage 52.8 → 44.9% (decisions 52.2 → 30.4%): the first Map run on AMI since Oct 14,
+  so 8b–8e's Map steps (only replayed on AMI) and 8g together. IS1009b drove most of it: R7B
+  wrote a second block under "## <co>Remote Control Design</co…>" after OPEN_QUESTIONS, and
+  §5.6's fallback filed it as Summary (34 summary claims, 5 key points). With 8g's "60%" put
+  back to "40%" the reply is the same, so 8g didn't trigger it. Needs its own look: which
+  Map change moved the prompt, and whether a heading after the last marker should continue
+  the section before it.
+- Map's 8 never-written numbers (long-en f8/f11/f16/f45/f50/f70, pdf-slides f12, xling-ja f7).
+- xling-ja f9 flagged ("34%" is a third candidate); a unit check (% vs $) could settle it.
+- The judge reads a "(slide: …)" conflict note as a contradiction.
+- long-en's Map writes exactly 3 key points in 17 of 28 segments: cause still unknown.

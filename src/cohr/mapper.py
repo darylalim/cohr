@@ -164,33 +164,60 @@ def check_numbers(
     "$34,000" isn't kept as 34.0 because "34%" was said), and for an ordinal ("2nd") repair
     candidates come only from `days` when given ("by the 22nd", not "12 seats"). A number
     with a scale suffix ("42.5k") or grouped with plain spaces ("42 500", which could also be two
-    numbers) is only kept or flagged."""
-    repairs: list[NumberRepair] = []
-    unverified: list[str] = []
+    numbers) is only kept or flagged.
+    8g: a plain number of one or two digits is never repaired (AMI IS1009b: Map's "60%" for
+    "the rest" became the "40%" said, one edit away), and when two or more candidates are near,
+    those another number of `text` states (kept, or repaired to one candidate) are dropped:
+    "$34,000, up from $134,000" with 354,000 and 134,000 said. A digit edit doesn't beat a
+    factor: at seed 1 pdf-slides' "6,900 candidates" was 69 said (×100), not the $8,900 one
+    edit away, and xling-ja's "$34,000" stays flagged, its "34%" a third candidate."""
 
-    def check(m: re.Match[str]) -> str:
-        body, written = m.group("body"), m.group(0)
+    def check(m: re.Match[str]) -> tuple[bool, float | None, dict[float, Reading]]:
+        """Whether the number is kept as written, the source value it states, its candidates."""
+        body = m.group("body")
         reads = native_readings(readings(body), language)
         scale = SCALE.get(m.group("scale") or "", 1.0)
-        if not reads or any(r.value * scale in sources for r in reads):
-            return written
+        if not reads:
+            return True, None, {}
+        if kept := [r.value * scale for r in reads if r.value * scale in sources]:
+            return True, kept[0], {}
         if " " in body and all(p.isdigit() and float(p) in sources for p in body.split(" ")):
-            return written
+            return True, None, {}
         near_by: dict[float, Reading] = {}
-        if scale == 1.0 and " " not in body:
+        ordinal = m.group("ordinal")
+        if scale == 1.0 and " " not in body and (ordinal or sum(map(str.isdigit, body)) > 2):
             for r in reads:
-                for s in days if m.group("ordinal") and days is not None else sources:
+                for s in days if ordinal and days is not None else sources:
                     if near(r.value, s):
                         near_by.setdefault(s, r)
-        if len(near_by) != 1:
-            unverified.append(written)
-            return written
-        [(value, reading)] = near_by.items()
-        fixed = write_like(value, reading)
-        repairs.append(NumberRepair(original=body, repaired=fixed))
-        return fixed + written[len(body) :]
+        return False, None, near_by
 
-    return WRITTEN.sub(check, text), repairs, unverified
+    checked = [(m, *check(m)) for m in WRITTEN.finditer(text)]
+    stated = [
+        v if v is not None else next(iter(c)) if len(c) == 1 else None for *_, v, c in checked
+    ]
+    repairs: list[NumberRepair] = []
+    unverified: list[str] = []
+    out, end = [], 0
+    for i, (m, kept, _, near_by) in enumerate(checked):
+        body, written = m.group("body"), m.group(0)
+        out.append(text[end : m.start()])
+        end = m.end()
+        if len(near_by) > 1:
+            others = {v for j, v in enumerate(stated) if j != i and v is not None}
+            near_by = {s: r for s, r in near_by.items() if s not in others}
+        if kept:
+            out.append(written)
+        elif len(near_by) != 1:
+            unverified.append(written)
+            out.append(written)
+        else:
+            [(source, reading)] = near_by.items()
+            fixed = write_like(source, reading)
+            repairs.append(NumberRepair(original=body, repaired=fixed))
+            out.append(fixed + written[len(body) :])
+    out.append(text[end:])
+    return "".join(out), repairs, unverified
 
 
 def guard_numbers(

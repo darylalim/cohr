@@ -3,6 +3,7 @@
 
 import logging
 from collections import Counter
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -1272,3 +1273,143 @@ def test_add_said_decisions_in_other_notes_languages_adds_map_decisions_up_to_th
     assert [d.text for d in fixed.sections.decisions] == ["الشعار الجديد", *added]
     # each at its cue: the notes cited no decision in seg 1, so every cue there was lost
     assert [d.citations[0].t for d in fixed.sections.decisions[1:]] == [60.0, 90.0]
+
+
+# --- figures the notes lost (8g) -----------------------------------------------------------
+
+NUMBER_SEGMENTS = [
+    Segment(
+        seg_id=0,
+        t0=0.0,
+        t1=60.0,
+        chunk_ids=[0, 1],
+        transcript_text="Retention has been steady. "
+        "The week 2 return rate is 38%. That's compared with 63% last month.",
+        slide_ids=[],
+    ),
+    Segment(
+        seg_id=1,
+        t0=60.0,
+        t1=120.0,
+        chunk_ids=[2, 3],
+        transcript_text="The approved budget for next quarter is $80,000. "
+        "Candidates in the pipeline went from 55 to 99.",
+        slide_ids=[],
+    ),
+]
+NUMBER_ITEMS = [
+    TranscriptItem(chunk_id=0, t0=0.0, t1=30.0, text="Retention has been steady."),
+    TranscriptItem(
+        chunk_id=1,
+        t0=30.0,
+        t1=60.0,
+        text="The week 2 return rate is 38%. That's compared with 63% last month.",
+    ),
+    TranscriptItem(
+        chunk_id=2, t0=60.0, t1=90.0, text="The approved budget for next quarter is $80,000."
+    ),
+    TranscriptItem(
+        chunk_id=3, t0=90.0, t1=120.0, text="Candidates in the pipeline went from 55 to 99."
+    ),
+]
+
+
+def _number_map(*points: tuple[int, str]) -> dict[int, SegmentNotes]:
+    out = _owner_map()
+    for seg_id, text in points:
+        out[seg_id].key_points.append(text)
+    return out
+
+
+def _number_doc(key_points: list[Claim], language: str = "en") -> NotesDoc:
+    doc = _due_doc([], language)
+    sections = doc.sections.model_copy(update={"key_points": key_points})
+    return doc.model_copy(update={"sections": sections})
+
+
+def _lost(
+    doc: NotesDoc,
+    maps: dict[int, SegmentNotes],
+    refine: reduce.Refine | None = None,
+    slides: Sequence[Slide] = (),
+) -> tuple[NotesDoc, list[str]]:
+    segments = NUMBER_SEGMENTS
+    if slides:
+        segments = [
+            s.model_copy(update={"slide_ids": [sl.slide_id for sl in slides]}) for s in segments
+        ]
+    return reduce.add_lost_numbers(doc, maps, segments, slides, refine or _refine(), "en")
+
+
+def test_add_lost_numbers_adds_a_map_key_point_whose_figure_the_notes_lost() -> None:
+    # long-en f43 (pass 1 dropped it) and f66: Map's key points, in no claim of the notes.
+    refine = reduce.segment_refiner(NUMBER_SEGMENTS, NUMBER_ITEMS, 0.1, "en", "en")
+    budget = Claim(text="Budget approved at $80,000.", citations=SEG1)
+    maps = _number_map(
+        (0, "Retention has been steady."),
+        (0, "Retention is 38% (down from 63% last month)."),
+        (1, "Budget approved at $80,000."),
+        (1, "Candidates in the pipeline rose from 55 to 99."),
+    )
+    fixed, added = _lost(_number_doc([budget]), maps, refine)
+    assert added == [
+        "Retention is 38% (down from 63% last month).",
+        "Candidates in the pipeline rose from 55 to 99.",
+    ]
+    points = fixed.sections.key_points
+    assert [k.text for k in points] == [added[0], budget.text, added[1]]  # in segment order
+    # each cites its segment, with the jump time inside the sentence that says the figure
+    [(c0, t0), (c2, t2)] = [(p.citations[0], p.citations[0].t or 0) for p in points[::2]]
+    assert (c0.kind, c0.id, c2.kind, c2.id) == ("seg", 0, "seg", 1)
+    assert 30 <= t0 < 60 and 90 <= t2 < 120
+
+
+def test_add_lost_numbers_replaces_a_key_point_that_kept_only_some_figures() -> None:
+    # slide-conflict-en f7: Reduce kept "$80,000" and "$77,500" but dropped "(slide: $18,000)".
+    cited = [Citation(kind="seg", id=1, t=75.0)]
+    kept = Claim(text="Quarterly budget approved at $80,000, vs $77,500.", citations=cited)
+    point = "Quarterly budget approved at $80,000 (slide: $18,000), vs $77,500."
+    slides = [_slide(0, "Budget", "| Approved budget | $18,000 |"), _slide(1, "Hiring", "55")]
+    fixed, added = _lost(_number_doc([kept]), _number_map((1, point)), slides=slides)
+    assert added == [point]
+    # the slide that shows the added $18,000 is cited too; the one that doesn't isn't
+    assert fixed.sections.key_points == [
+        Claim(text=point, citations=[*cited, Citation(kind="slide", id=0)])
+    ]
+
+
+def test_add_lost_numbers_reads_the_notes_language() -> None:
+    # clean-ar f16: Map's Arabic key point "4,650 مقارنة بـ 2,600"; Bengali digits folded (D38)
+    point = "عدد تسجيلات التجارب الجديدة لهذا الشهر هو 4,650 مقارنة بـ 2,600."
+    fixed, added = _lost(_number_doc([], "ar"), _number_map((0, point)))
+    assert added == [point] and fixed.sections.key_points[0].citations[0].id == 0
+    stated = Claim(text="নতুন ট্রায়াল সাইনআপ ৪,৬৫০, আগের মাসে ২,৬০০।", citations=SEG0)
+    bn = "নতুন ট্রায়াল সাইনআপ 4,650 (আগের মাসে 2,600)।"
+    doc = _number_doc([stated], "bn")
+    assert _lost(doc, _number_map((0, bn))) == (doc, [])
+
+
+def test_add_lost_numbers_must_not_fire() -> None:
+    stated = Claim(text="Retention is 38%, down from 63%.", citations=SEG0)
+    doc = _number_doc([stated])
+    maps = _number_map(
+        (0, "Retention is 38% (down from 63% last month)."),  # stated already
+        (0, "Retention has been steady for two months."),  # number words aren't figures
+        (0, "Week 2 retention is reported the same way."),  # a figure under 10
+    )
+    assert _lost(doc, maps) == (doc, [])
+    # a number the guard flagged (xling-ja's "$34,000" before 8g) isn't put back
+    flagged = _number_map((1, "Revenue is $34,000, up from $134,000."))
+    flagged[1] = flagged[1].model_copy(update={"unverified_numbers": ["34,000"]})
+    assert _lost(doc, flagged) == (doc, [])
+    # a figure stated in another section counts as stated
+    summary = Claim(text="The budget is $80,000.", citations=SEG1)
+    in_summary = doc.model_copy(
+        update={"sections": doc.sections.model_copy(update={"summary": [summary]})}
+    )
+    budget = _number_map((1, "Approved budget: $80,000."))
+    assert _lost(in_summary, budget) == (in_summary, [])
+    # a raw (non-JSON) segment has no key points to trust
+    raw = _number_map((1, "Approved budget: $80,000."))
+    raw[1] = raw[1].model_copy(update={"raw": "Approved budget: $80,000."})
+    assert _lost(doc, raw) == (doc, [])
