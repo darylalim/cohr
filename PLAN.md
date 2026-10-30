@@ -1409,6 +1409,14 @@ question cites gets its Map ones (one-pass notes, D47). AMI coverage 44.9 → 50
 decisions 30.4 → 47.8%, problems 16.7 → 33.3%, support 80.3 → 80.1%; quick (seeds 0–3), lang
 and long-en notes identical.
 
+**Phase 8i (after v1): Japanese meetings** (post-v1 items 5 and 10, carry-over 5 of item 8,
+8g's xling-ja f7/f9): xling-ja is the lang set's weakest item on every measure (recall 76.9%,
+citation 90.0%, support 65.0% at seed 1). Transcribe wrote 5 of its 18 chunks without
+punctuation, and 4 of those 5 lost their opening words or sentence ("承認済み予算は42500ドル",
+f6, never reached Map); no punctuated chunk lost one. MARIA's −21.8 s citation (#10) sits in
+one of them. Map never wrote f7 and misread f9 ("35万4000" → "$34,000"). No set has Japanese
+notes, so #5 (ビクター is "fkt", Victor "fktr") has never been measured. Kickoff prompt in §21.
+
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
 meeting processes end to end in **≤ 20 min** (`resident` policy; initial target, revisited
@@ -3618,4 +3626,90 @@ long-en's 3 key points) and post-v1 items 5, 8 and 10 stay open unless step 0 sh
 share a cause. Don't bump the version: I'll ask separately. When done: tick the checklist,
 add new decisions to §20 as D-numbers, update §5.6 and §18, add a NOTES.md entry and update
 the post-v1 list, make sure the gate passes, and open a PR (ask before pushing).
+```
+
+### Kickoff prompt for Phase 8i (Japanese meetings)
+```text
+Continue cohr: Phase 8i (Japanese meetings: post-v1 items 5 and 10, carry-over 5 of item 8,
+8g's xling-ja f7/f9). Read CLAUDE.md, then PLAN.md §5.1a–5.2 (chunking, Transcribe), §5.5
+(Map's number guard), §18 (lang set, CER), §19, D1, D3, D35, D39, D43 and D45 in §20, and
+NOTES.md: the 8a, 8g and 8h entries ("Open"), the post-v1 list and the 8i kickoff entry. Work
+on branch phase-8i-japanese from main (v1.9.0 is released: #81, #83).
+xling-ja (lang seed 1, report 20261030-092404-lang.json) is the lang set's weakest item:
+recall 76.9% (10 of 13 exact facts), citation 90.0%, support 65.0%, CER 7.1%. From the kickoff
+check on the stored run (evals/data/runs/xling-ja/, transcript.json from Oct 13, map.json and
+notes.json from Oct 30) and evals/data/gen/xling-ja/truth.json:
+- Transcribe wrote chunks 5, 7, 11, 13 and 15 without punctuation, and 4 of them lost their
+  opening: chunk 5 (145.5–161.2 s) the whole "来四半期の承認済み予算は42500ドルです" line (f6,
+  so Map never saw it), chunk 7 "先月は7700ドルでした", chunk 11 "昨日", chunk 15
+  "先月は2600でした". None of the 13 punctuated chunks lost one. Every chunk starts 0–40 ms
+  before its first line, punctuated or not, so lead time alone doesn't explain it.
+- #10 is the same chunk shape: MARIA's line (316.5 s) is in chunk 11, which has no 。, so the
+  citation lands at the chunk start (294.7 s, −21.8 s).
+- mlx-speech's Cohere decoder already sends <|pnc|> (`punctuation=True` is the default):
+  there's no switch to flip; the model ignores it on these chunks.
+- Unpunctuated chunks (> 40 characters) in the stored runs: none in any generated set (quick,
+  lang, long-en, xling-es), 10–26 per AMI meeting. AMI is spontaneous speech, so those may be
+  backchannels; evals/data/ami/ami_public_manual_1.6.2.zip has the reference words to check
+  whether they lost words too.
+- Map, seg 0 (chunks 0–9, 4.5 min): f7 "クラウドの月額請求は11,800ドルです" is in chunk 6 and
+  in no Map item (8g's never-written numbers). f9 "35万4000ドル" became "$34,000" (flagged,
+  not repaired; 13万4000 was repaired to 134,000 in the same claim). "Quarterly budget
+  allocations for team spending, user testing, and onboarding" is in no source.
+- #5: names.skeleton gives Victor "fktr" and ビクター/ヴィクター "fkt" (Japanese writes a
+  final -r as ー). Omar and Maria are both "mr" in katakana (オマール, マリア); `restore` breaks
+  that tie on spelling, never measured. No set has Japanese notes: xling-ja's script writes
+  owners in Latin ("Victorさん"), and Map kept them Latin.
+- Transcribe's own word errors (法務部 → "ホーム部", so "the Home team"; 再訪率 → 採用率)
+  are like FLEURS ar/nl's: recorded, not in scope.
+Read the run files yourself before building on this (CLAUDE.md).
+0. Proposal before code (ask me). First, without models: reproduce the chunk table above and
+   check AMI's unpunctuated chunks against its reference words (lost openings or not). Then
+   with Transcribe alone (no need to ask: one model, seconds a chunk): decode xling-ja's
+   chunks 5, 7, 11, 13 and 15 again as they are (is the reply the same?) and under each
+   candidate below, and say which brings back the opening and the punctuation. Then propose.
+   Candidates, not choices:
+   - Pre-roll: start every chunk 0.3–0.5 s earlier, or pad it with silence. It changes every
+     transcript in every set (and so every Map, Reduce and Ask key): only with a reason
+     beyond xling-ja.
+   - Retry: a chunk whose reply has no sentence punctuation, in a language that writes it,
+     is decoded again (with pre-roll, or split at its lowest-probability frame as §5.1a
+     splits long runs); keep the retry if it punctuates and holds the first reply's text.
+     Must not fire: the generated sets (no such chunk); AMI's chunks if the reference words
+     show nothing lost.
+   - #10 on its own, if Transcribe still writes a long unpunctuated sentence: place a
+     citation at the anchor inside it (8a's candidate). It runs on every language's path:
+     measure quick and long-en.
+   - Map's f7 and f9: whether 8e's flagged-sentence call (D43) or 8g's `add_lost_numbers`
+     reaches a figure the transcript says with its label and no Map item states, and why the
+     guard repaired 13万4000 but not 35万4000. Must not fire: 8g's must-not-fire cases.
+   - #5: a lang item "clean-ja" (clean-en seed 1, target ja, as clean-hi; check the
+     generator reuses its media, or say what evals/gen needs) and a katakana rule for a final
+     -r/-er in `skeleton` or `restore`. Check the eval reads ja notes' numbers and owners
+     (numbers.source_numbers_in, fts.fold_digits, trigram matching) before trusting its
+     score. Run the new item once with Ask and the judge on (CLAUDE.md).
+   For each: whether it changes Transcript, MapFile or NotesDoc (FORMAT_VERSION, snapshots),
+   a stage's config hash (a Transcribe code change needs `--rerun transcribe`) or Ask keys,
+   and what it does on quick, lang, long-en, AMI and fleurs-ja.
+1. The fixes, with tests: chunk 5's shape (an unpunctuated reply) is retried and the
+   punctuated one kept; a punctuated chunk and an English backchannel chunk are not; ビクター
+   restores to Victor, オマール and マリア to Omar and Maria with both said. Fixture
+   TranscriptItems need distinct chunk_ids (CLAUDE.md).
+2. Measure: copy the stored runs first (no `rm -rf`). lang -c seed=1 --no-ask (with
+   `--rerun transcribe` if Transcribe changed), then xling-ja and clean-ja once with Ask and
+   the judge. quick seed 0 with Ask and the judge if shared code moved; long-en, AMI and
+   fleurs-ja only if the change reaches them (ask first). Report xling-ja recall, citation
+   accuracy, support and CER per chunk, clean-ja owners and recall, and every other set's
+   numbers before and after.
+3. Rewrite the baselines the fix moves on purpose, with the reason in the commit:
+   baseline-lang.json only from a whole lang seed-1 run (it gains clean-ja).
+Rules from CLAUDE.md apply. Ask me before every full or long run, AMI and FLEURS runs, the
+opt-in model tests and new dependencies (none should be needed). quick and lang runs are fine.
+8h's "Open" (ES2004b's drift, IS1009b "corporate image", key points of skipped segments, Map's
+"[]" questions), Map's other never-written numbers (long-en, pdf-slides), the judge on
+slide-conflict notes, long-en's 3 key points, the Japanese slide-conflict check and Ask's
+near-miss (item 8) stay open unless step 0 shows they share a cause. Don't bump the version:
+I'll ask separately. When done: tick the checklist, add new decisions to §20 as D-numbers,
+update §5.2, §5.5 and §18, add a NOTES.md entry and update the post-v1 list, make sure the gate
+passes, and open a PR (ask before pushing).
 ```
