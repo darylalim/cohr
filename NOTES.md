@@ -2715,3 +2715,18 @@ Branch `phase-8f-decisions`. D44.
   evals/data/runs-pre-8f (gitignored, safe to delete).
 
 - 1.7.0 bump: done 2026-10-29 on request (release-1.7.0).
+
+## 2026-10-29 · Phase 8g kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 8g" and a §9 line: missed numbers (post-v1 item 4,
+  widened). Planned as a digit repair (item 4 and 8b's "1 November"), but the stored runs
+  show that work mostly done: 8c's `guard_dates` fixed "1 November" (the notes say 11), and
+  Map's guard repairs 30+ miscopied values. One wrong digit is left (xling-ja f9: "$34,000"
+  is one edit from both 354,000 and 134,000, so it's flagged). User's choice: widen to every
+  missed number fact, the weakest kind on long-en (31/40).
+- Kickoff check on the latest reports (CLAUDE.md lesson): of 17 missed number facts, Map
+  never wrote 8, Reduce lost 6 that are in Map's key points (long-en f43/f66/f79,
+  slide-conflict-en f7, clean-ar/hi f16), 1 is the digit, and xling-ja f6 is ASR. Quick's
+  number misses move with the seed (seeds 0–3), so a map.md change would only move them.
+- AMI IS1009b's one repair is wrong: "the rest" (60%) became "40% regular buttons", one digit
+  edit from the 40 said. The prompt asks step 0 to check AMI's repairs before widening D20.
+- long-en's Map writes exactly 3 key points in 17 of 28 segments (quick/lang 4–8); cause unknown.

@@ -1342,6 +1342,11 @@ Python step after Reduce (`reduce.add_said_decisions`): cue sentences no decisio
 become decisions (English notes), or a segment's Map decisions up to its cue count (other
 notes languages). quick decisions 100% at seeds 0–3 (was 75/81/81/88%); long-en 70 → 95%,
 fact recall 78.8 → 85.0%; lang judge-covered 21 → 24/28; made-up items unchanged; AMI 0 changes.
+**Phase 8g (after v1): missed numbers** (post-v1 item 4, widened): numbers are long-en's weakest
+kind (31/40, 77.5%), and the latest reports miss 17 number facts in all. Map never wrote 8,
+Reduce lost 6 that are in Map's key points, and xling-ja f9 is the one wrong digit left: Map's
+"$34,000" is one edit from both 354,000 and 134,000, so the guard flags it instead of
+repairing. 8c already fixed "1 November". Kickoff prompt in §21.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -3375,6 +3380,90 @@ Rules from CLAUDE.md apply. Ask me before every full or long run, AMI runs, the 
 tests and new dependencies (none should be needed). quick and lang runs are fine. The rest of
 the post-v1 list stays open (items 4, 5, 8 and 10, 8e's "Open") unless step 0 shows it shares
 a cause. Don't bump the version: I'll ask separately. When done: tick the checklist, add new
+decisions to §20 as D-numbers, update §5.5–5.6, add a NOTES.md entry and update the post-v1
+list, make sure the gate passes, and open a PR (ask before pushing).
+```
+
+### Kickoff prompt for Phase 8g (missed numbers)
+```text
+Continue cohr: Phase 8g (missed numbers, post-v1 item 4, widened). Read CLAUDE.md, then PLAN.md
+§5.5–5.6 (Map, its number and date guards, Reduce), §18 (number facts, unsupported numbers),
+§19, D20, D35, D38, D41 and D44 in §20, and NOTES.md: the 8f entry ("Open"), the post-v1 list
+and the 8g kickoff entry. Work on branch phase-8g-numbers from main (v1.7.0 is released: #73,
+#75).
+After 8b–8f, numbers are long-en's weakest kind (31/40, 77.5%), and the latest reports miss 17
+number facts. From the kickoff check on reports 20261029-131543-quick.json,
+20261029-131544-long.json and 20261029-131543-lang.json (scripts/trace_facts.py), and the
+stored runs' map.json:
+- Post-v1 item 4 is mostly done. Map's guard (`mapper.check_numbers`, D20) repairs 30+
+  miscopied values on the stored runs (425,000 → 42,500, 2,790,000 → 279,000; xling-ja
+  13,000 → 134,000), and 8c's `guard_dates` turned long-en's "1 November" into 11 (the notes
+  say "by 11 November"). One wrong digit is left: xling-ja f9. Map wrote "Monthly recurring
+  revenue is $34,000, up from $134,000 last month." for 35万4000 and 13万4000. 34,000 is one
+  edit from both 354,000 and 134,000, so `near_by` holds two values and the guard flags it
+  (unsupported 34000). The claim's other number is 134,000 already: a source value the same
+  claim states is a weak candidate. Must not fire: a claim that really says one value twice.
+- A wrong repair on real speech: AMI IS1009b seg 6 "40% large buttons, 40% regular buttons".
+  The speaker said "forty percent we make large buttons and the rest we make regular"; Map's
+  60 (the rest) was "repaired" to 40, one digit edit away. A fix that widens repairs must
+  check this case, and step 0 should say whether D20's one-edit rule needs a bound for
+  one- and two-digit values (count AMI's repairs and how many are right).
+- Reduce lost 6 that Map wrote as key points (trace: Map key_points×1, notes —): long-en f43
+  (38%, seg 11), f66 (99, seg 18), f79 (85%, seg 24); slide-conflict-en f7 ($18,000; the trace's
+  ASR column says MISS, so read the transcript first); clean-ar and clean-hi f16 (4,650, seg 1;
+  Map wrote it in clean-ar's summary as well). Read pass 1's raw (`two_pass.groups[].raw`) for
+  the long-en three to see which pass dropped them. This looks like 8f's Reduce losses: one
+  Python step after Reduce (`reduce.add_said_decisions` for decisions, `add_lost_tasks` for
+  tasks) re-added them.
+- Map never wrote 8: long-en f8 (660 ms, seg 1), f11 (4,550, seg 2), f16 ($79,000, seg 4),
+  f45 (520 ms, seg 11), f50 ($41,000, seg 13), f70 (374, seg 20); pdf-slides-en f12 ($8,900);
+  xling-ja f7 (11,800, 1万1800). long-en's Map writes exactly 3 key points in 17 of its 28
+  segments (quick and lang segments get 4–8), and the 6 long-en segments with a miss (1, 2, 4,
+  11, 13, 20) wrote 3 each. Whether that
+  is the segments' filler, a habit, or a token limit isn't known.
+- Map's number misses move with the seed: quick misses pdf-slides f12 and slide-conflict f7 at
+  seed 0, pdf-slides f6 and f10 at seed 1, slide-conflict f3 and f17 at seed 2, f17 at seed 3
+  (reports 20261029-123350/123843/124331). By the 8e lesson, a map.md change only moves them;
+  a net catches them.
+- xling-ja f6 ($42,500) is ASR: the topic came out as "師範清" and the value isn't in the
+  transcript. Out of scope.
+- evals/gen plants each number as "The <metric> is <value>. That's compared with <value> last
+  <period>." Real meetings say numbers in many other ways (AMI: prices, percentages, counts,
+  "one thing", "two of them"), so a rule keyed to that sentence fits the generator, and AMI is
+  its must-not-fire evidence (8b and 8f lessons).
+Read the run files yourself before building on this (CLAUDE.md).
+0. Proposal before code (ask me). First, without models: find the stage for each of the 17
+   (pass 1 or pass 2 for long-en), count AMI's said numbers that are in no map.json and no
+   notes, and check the IS1009b repair and AMI's other repairs. Then propose. Candidates, not
+   choices:
+   - Guard: drop a source value the claim already states from `near_by` (xling-ja f9), and
+     whatever bound the AMI repairs argue for. Code only on Map: say whether `--rerun map`
+     is needed or a replay on map.json is enough, and what it does to Ask keys.
+   - Reduce side, like D44: a Map key point with a figure the notes don't state (same value,
+     read with `numbers.notes_numbers` in the notes language, folded per D38) is added to Key
+     points with its citation. Say what it adds on AMI and to made-up items.
+   - Map side, like D43: a segment's said numbers that no Map item states go to one small
+     call (prompt in src/cohr/prompts/, notes language, no example lines that overlap
+     evals/gen/script.py), or a Python net that copies the sentence. Say the cost per
+     segment, the config hash, what `--rerun` reaches, and what keeps it off AMI's filler
+     numbers.
+   - A map.md change (e.g. key point count on long segments): only with seeds 1–3 on every set.
+   For each: whether it changes MapFile (a new field moves every Ask cache key, 8c lesson),
+   its effect on made-up items and unsupported numbers, and its must-not-fire cases.
+1. The fixes, with tests: the misses above reach the notes with their citation and value as
+   said. The must-not-fire cases and an already-stated number add nothing.
+2. Measure: replay first. Apply a Python fix to copies of the stored runs (copy, don't delete)
+   and rebuild with `build_notes` + `restore_owners` on notes.json `raw` where Reduce isn't
+   needed. Then quick at seeds 0–3 --no-ask --no-judge, quick with Ask and the judge, lang
+   -c seed=1 --no-ask (`--rerun` from the stage the fix lives in), and long-en (Ask included;
+   ask first). Report number recall, unsupported and unverified numbers, made-up items, fact
+   recall, citation accuracy and Ask accuracy before and after. For AMI, give the counts and
+   replay the stored runs (an AMI run: ask).
+3. Rewrite the baselines the fix moves on purpose, with the reason in the commit.
+Rules from CLAUDE.md apply. Ask me before every full or long run, AMI runs, the opt-in model
+tests and new dependencies (none should be needed). quick and lang runs are fine. The rest of
+the post-v1 list stays open (items 5, 8 and 10, 8f's "Open") unless step 0 shows it shares a
+cause. Don't bump the version: I'll ask separately. When done: tick the checklist, add new
 decisions to §20 as D-numbers, update §5.5–5.6, add a NOTES.md entry and update the post-v1
 list, make sure the gate passes, and open a PR (ask before pushing).
 ```
