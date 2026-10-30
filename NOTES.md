@@ -2714,3 +2714,4 @@ Branch `phase-8f-decisions`. D44.
 - Seed-1 "before" in the table is 8e's mid-phase report; spare copy of the pre-8f stored runs in
   evals/data/runs-pre-8f (gitignored, safe to delete).
 
+- 1.7.0 bump: done 2026-10-29 on request (release-1.7.0).
