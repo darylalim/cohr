@@ -2876,3 +2876,5 @@ Branch `phase-8h-ami`. 8g's "Open"; D46, D47.
   `- []` bullet in Reduce's input.
 - 8g's Open (Map's 8 never-written numbers, xling-ja f9, the judge on slide-conflict notes,
   long-en's 3 key points) and post-v1 items 5, 8, 10 unchanged.
+
+- 1.9.0 bump: done 2026-10-30 on request (release-1.9.0).

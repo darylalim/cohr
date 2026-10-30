@@ -5,7 +5,7 @@ Local, offline meeting notes for Apple Silicon. A recording plus slides (or a sc
 video) becomes notes in which every claim cites its timestamp `[mm:ss]` or `[slide N]`. All
 models run on MLX; nothing leaves your machine.
 
-Status: v1.8.0. The pipeline, the app and the evals meet the v1 targets (Phase 6e); 1.1 adds
+Status: v1.9.0. The pipeline, the app and the evals meet the v1 targets (Phase 6e); 1.1 adds
 cross-meeting search (Phase 7); 1.2 places citations at their moment when the notes and the
 meeting are in different languages (Phase 8a); 1.3 drops action-item due dates the meeting
 didn't say and moves vague owner-less tasks to Key points (Phase 8b); 1.4 places each
@@ -17,9 +17,11 @@ one small model call and added with that person as owner (Phase 8e); 1.7 adds th
 the notes lost: a sentence like "We agreed to …" that no decision states becomes one, cited at
 that sentence (Phase 8f); 1.8 keeps the figures the notes lost: a number Map wrote that the
 notes dropped is added back with its citation, and a one- or two-digit number is never
-"repaired" to another value said (Phase 8g). Recordings in 14 languages (Transcribe's), notes
-in Command R7B's 23 languages plus "Other (beta)" languages translated by Tiny Aya. See
-`PLAN.md` and `NOTES.md`.
+"repaired" to another value said (Phase 8g); 1.9 keeps what long recordings' notes skipped:
+lines written under a stray heading land in their own sections, repeated lines are kept once,
+and a part of the meeting whose decisions or open questions the notes left out gets them back
+(Phase 8h). Recordings in 14 languages (Transcribe's), notes in Command R7B's 23 languages
+plus "Other (beta)" languages translated by Tiny Aya. See `PLAN.md` and `NOTES.md`.
 
 ## Requirements
 - Apple Silicon Mac, Python 3.13, [uv](https://docs.astral.sh/uv/), `ffmpeg` on `PATH`
