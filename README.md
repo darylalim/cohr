@@ -5,7 +5,7 @@ Local, offline meeting notes for Apple Silicon. A recording plus slides (or a sc
 video) becomes notes in which every claim cites its timestamp `[mm:ss]` or `[slide N]`. All
 models run on MLX; nothing leaves your machine.
 
-Status: v1.9.0. The pipeline, the app and the evals meet the v1 targets (Phase 6e); 1.1 adds
+Status: v1.10.0. The pipeline, the app and the evals meet the v1 targets (Phase 6e); 1.1 adds
 cross-meeting search (Phase 7); 1.2 places citations at their moment when the notes and the
 meeting are in different languages (Phase 8a); 1.3 drops action-item due dates the meeting
 didn't say and moves vague owner-less tasks to Key points (Phase 8b); 1.4 places each
@@ -20,7 +20,10 @@ notes dropped is added back with its citation, and a one- or two-digit number is
 "repaired" to another value said (Phase 8g); 1.9 keeps what long recordings' notes skipped:
 lines written under a stray heading land in their own sections, repeated lines are kept once,
 and a part of the meeting whose decisions or open questions the notes left out gets them back
-(Phase 8h). Recordings in 14 languages (Transcribe's), notes in Command R7B's 23 languages
+(Phase 8h); 1.10 improves Japanese meetings and notes: a line Transcribe dropped at the start
+of an unpunctuated passage is recovered, a citation inside such a passage lands at its moment,
+numbers in Japanese notes are checked against the meeting, and katakana names match their
+owners (ビクター is Victor) (Phase 8i). Recordings in 14 languages (Transcribe's), notes in Command R7B's 23 languages
 plus "Other (beta)" languages translated by Tiny Aya. See `PLAN.md` and `NOTES.md`.
 
 ## Requirements
