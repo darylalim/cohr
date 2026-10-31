@@ -180,6 +180,14 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
   `!` (`--item ami --no-ask --rerun STAGE`), after any other model run ends (one GPU). The
   FLEURS eval calls Transcribe directly, not `asr.run_stage`, so stage-level changes never
   reach it (8i).
+- Ask runs at temperature 0 (`reduce.temperature`): `-c seed=N` reaches it only through Map's
+  documents, so an Ask miss that stays the same at seeds 0–3 is the question or the documents,
+  not sampling. 8j's 5 near-misses were the same at every seed: a prompt edit would only have
+  moved them, so the fix was a check in Python.
+- The Ask eval cache keeps R7B's `raw` reply: a check after the reply (8j's near-miss) reaches
+  cached answers by rebuilding each hit from `raw` through the same code as a live answer
+  (`ask.answer_from`), with no re-ask. First re-parse every cached `raw` and confirm it gives
+  exactly the stored claims, so the check's change is the only change.
 
 ## Where things are (PLAN.md)
 Architecture §3 · Memory §4 · Stages §5 · Layout & tooling §6 · UI, layout, theme §7 ·
