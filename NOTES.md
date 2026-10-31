@@ -2967,3 +2967,5 @@ Branch `phase-8i-japanese`. Post-v1 items 5 and 10, carry-over 5 of item 8, 8g's
 - 8h's Open (ES2004b's drift, IS1009b "corporate image", key points of skipped segments, "[]"
   questions), the judge on slide-conflict notes, long-en's 3 key points, the Japanese
   slide-conflict check and Ask's near-miss (item 8) unchanged.
+
+- 1.10.0 bump: done 2026-10-30 on request (release-1.10.0).
