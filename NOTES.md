@@ -2969,3 +2969,24 @@ Branch `phase-8i-japanese`. Post-v1 items 5 and 10, carry-over 5 of item 8, 8g's
   slide-conflict check and Ask's near-miss (item 8) unchanged.
 
 - 1.10.0 bump: done 2026-10-30 on request (release-1.10.0).
+
+## 2026-10-31 · Phase 8j kickoff prompt (no code)
+- PLAN §21 "Kickoff prompt for Phase 8j" and a §9 line: Ask near-miss (carry-over 7 of
+  item 8). Picked over Map's two never-written Japanese numbers (xling-ja f7, clean-ja f16:
+  2 facts, likely seed-dependent) and ES2004b's reply drift: near-miss is Ask's weakest rate
+  (quick 7/12 at seed 0, unchanged since 8b; clean-ja 2/3; long-en 3/3) against Ask accuracy
+  98.1%, and no Python check reaches Ask's replies yet.
+- Kickoff check on the reports and the Ask cache (CLAUDE.md lesson): "for the marketing team"
+  passes 1 of 5 (quick + clean-ja), "two years ago" and "for next year" 4 of 5; pdf-slides-en
+  fails all three. The 6 misses take three shapes: the qualifier copied onto a meeting number
+  (3, all "marketing team"; R7B grounds "marketing team" in a `<co>` span on a document that
+  never says it), the qualifier dropped (2), related numbers before the negation (1, with
+  "last quarter was $57,000" also wrong: $54,000 was said).
+- No quick or lang script or slide says "marketing", "team", "two years" or "next year";
+  long-en says "marketing" once (a task) and its near-misses name regions it does say: the
+  must-not-fire cases for a check on the question's qualifier.
+- `evals.CachedAsk` returns parsed claims on a hit: a check after `parse_answer` would not run
+  on cached answers, so the eval would show no change. Step 0 decides between re-running the
+  check from `raw` and a code hash in the key.
+- The post-v1 list's "55.6% on full" doesn't match 6e-1's ranking (58%, 7/12); the kickoff
+  quotes both.
