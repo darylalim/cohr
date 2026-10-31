@@ -159,6 +159,27 @@ uv run python -m cohr.schemas --write-snapshots: after a FORMAT_VERSION bump
 - `--update-baseline` writes the whole report as the set's baseline: after an `--item` run it
   would replace baseline-full.json with an AMI-only one and drop the quick gate. Rewrite a
   baseline only from a run of its whole set (8h).
+- Kana and kanji are `\w`: `\b` and `(?<!\w)`/`(?!\w)` never match next to Japanese text, with
+  no error. Until 8i the eval and Map's guard saw no number in Japanese notes ("390件",
+  "450,000ドル") and no owner in "Victorさん" (D51). A new notes language needs every reader
+  it reaches (notes_numbers, unsupported_numbers, _owner_in, WRITTEN) tried on its real notes
+  before its score means anything; clean-ja would have scored every number as missed.
+- When the input changes but the output still fails the same way, the loss is the model's:
+  pre-roll and silence padding gave xling-ja's chunks identical text, and only moved which
+  chunk lost its opening (5 and 7 back, 9 lost). Check the output instead (did the opening
+  survive? D48). Test a retry rule on the decode that actually recovers: chunk 7's had no 。,
+  so "keep a retry if it punctuates" would have thrown it away.
+- A fix to Map's input re-rolls Map's miscopies: once D48 restored xling-ja's openings, f9's
+  "$34,000" (fixed by units) came back as "$345,000". Rerun the item after an input fix
+  before calling the item's numbers done (8i).
+- Trace which path a value takes before fixing it: MARIA's citation took the word path
+  ("maria" scores exactly the 0.1 minimum), not the cross-language anchors 8a planned for (8i).
+- Test fixtures use very slow speech (43 characters over 30 s), so a rule on duration alone
+  fires on all of them: gate a "long sentence" rule on the text's shape too (D49).
+- AMI runs from the full set, which the guard hook blocks in Bash: ask the user to type it with
+  `!` (`--item ami --no-ask --rerun STAGE`), after any other model run ends (one GPU). The
+  FLEURS eval calls Transcribe directly, not `asr.run_stage`, so stage-level changes never
+  reach it (8i).
 
 ## Where things are (PLAN.md)
 Architecture §3 · Memory §4 · Stages §5 · Layout & tooling §6 · UI, layout, theme §7 ·
