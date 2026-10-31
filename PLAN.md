@@ -1466,6 +1466,16 @@ items, quick (seed 0, Ask and judge) identical; AMI coverage 50.6 → 50.6% (ES2
 Reduce reply: decisions 47.8 → 39.1%, abstract 58.1 → 60.5%, problems 33.3 → 41.7%). f7
 (never written by Map) left.
 
+**Phase 8j (after v1): Ask near-miss** (carry-over 7 of item 8): near-miss is Ask's weakest
+rate and the only one no Python check has reached: quick 7/12 at seed 0 (unchanged since 8b),
+clean-ja 2/3 (58% in 6e-1's ranking, 55.6% on `full` in the post-v1 list), against Ask accuracy 98.1%. "For the marketing team"
+passes 1 of 5 times; R7B copies the question's team or period onto a meeting number ("The
+monthly recurring revenue for the marketing team is $273,000"), drops it ("The monthly cloud
+bill is $8,900"), or gives related numbers before saying so. No quick or lang meeting says
+"marketing", "team", "two years" or "next year". Ask has no check after the reply, and the
+eval's Ask cache returns parsed claims, so a new check would not run on cached answers.
+Kickoff prompt in §21.
+
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
 meeting processes end to end in **≤ 20 min** (`resident` policy; initial target, revisited
@@ -3765,4 +3775,86 @@ near-miss (item 8) stay open unless step 0 shows they share a cause. Don't bump 
 I'll ask separately. When done: tick the checklist, add new decisions to §20 as D-numbers,
 update §5.2, §5.5 and §18, add a NOTES.md entry and update the post-v1 list, make sure the gate
 passes, and open a PR (ask before pushing).
+```
+
+### Kickoff prompt for Phase 8j (Ask near-miss)
+```text
+Continue cohr: Phase 8j (Ask near-miss: carry-over 7 of item 8). Read CLAUDE.md, then PLAN.md
+§5.7 (Ask), §18 (Ask row, gate), §19, D16, D22–D24 and D41 in §20, and NOTES.md: the 6a and
+6b entries (near-miss rule, ask.md's rule and example), the 6e-1 carry-overs, the post-v1
+list and the 8j kickoff entry. Work on branch phase-8j-near-miss from main (v1.10.0 is
+released: #85, #87; README #88).
+A near-miss question asks for a number's label with a period or team the meeting never gives
+(evals.NEAR_MISS: "two years ago", "for the marketing team", "for next year"); the answer
+passes if it says so before stating any meeting number (`near_miss_ok`). Near-miss is Ask's
+weakest rate: quick 7/12 at seed 0 (report 20261030-133308-quick.json; the same 7/12 in every
+quick report since 8b), clean-ja 2/3 (20261030-135143-lang.json), long-en 3/3 (6e-1 ranked it at
+58%, the post-v1 list at 55.6% on full). Ask accuracy on the same runs is 98.1%. From the kickoff check on those reports, the
+Ask cache (evals/data/ask/<item>.json, `raw` per answer) and evals/data/gen/*/truth.json:
+- By template (quick + clean-ja, 15 questions): "for the marketing team" 1/5 (only noisy-en
+  passes), "two years ago" 4/5, "for next year" 4/5. pdf-slides-en fails all three.
+- Three shapes among the 6 misses:
+  (a) the question's qualifier copied onto a meeting number (clean-en, slide-conflict-en,
+      pdf-slides-en, all "marketing team"): "The number of candidates in the pipeline for the
+      marketing team is 75." R7B even grounds it: `for the <co>marketing team</co: 0:[5]>`
+      cites a document that never says "marketing".
+  (b) the qualifier dropped, the number given as the answer: pdf-slides-en "The monthly cloud
+      bill is $8,900." (next year), clean-ja "The number of candidates in the pipeline is 75."
+  (c) related numbers first, the negation last: pdf-slides-en "The approved budget for the
+      last quarter was $57,000. The approved budget for the next quarter is $57,000. … two
+      years ago is not mentioned." The first claim is also wrong: the meeting says $57,000
+      for next quarter and $54,000 for last quarter. Older cached replies to the same
+      question say "The approved budget two years ago was $54,000."
+- No quick or lang script or slide says "marketing", "team", "two years" or "next year".
+  long-en says "marketing" once (Omar's task "read marketing emails"), and its near-misses
+  name a region the meeting does say ("for the Central region"): both are must-not-fire cases.
+- ask.md already has the rule and a worked example (6b, D24: 0/12 → 7/12); the misses are R7B
+  ignoring it. `ask.ask` returns R7B's claims as parsed: no Python check after the reply.
+- evals.CachedAsk stores the parsed claims and returns them on a hit, so a check added after
+  `parse_answer` would never run on a cached answer and the eval would show no change. Ask
+  prompts are in the cache key (`ask_cache_key`): any ask*.md edit re-asks every question.
+Read the reports, the cache and the run files yourself before building on this (CLAUDE.md).
+0. Proposal before code (ask me). First, without models: reproduce the table above from the
+   reports and the cache, and check pdf-slides-en's documents (why it fails all three: slide
+   text, ranking, or the same shapes). Then quick at seeds 1, 2 and 3 with Ask and
+   `--no-judge` (copy evals/data/runs first: `-c seed=N` reruns the stored runs in place, 8e):
+   if the misses move with the seed, a prompt change only moves them. Then propose.
+   Candidates, not choices:
+   - A Python net in Ask on the question, not the claim: a period, team or person the
+     question names that no document gives for that label → the answer must open with "not
+     given" (catches a, b and c). What the answer becomes (a fixed not-given sentence in the
+     answer's language, from src/cohr/prompts/, not inline; the related claims kept after it
+     with their own citations; or the claims flagged in the UI) is for step 0. Qualifier
+     words in other languages (the German questions; ja/ar/hi questions in the app) and the
+     slides' own labels count as documents.
+   - Prefill: start R7B's reply (CLAUDE.md: R7B followed `## SUMMARY` when prefilled, 6d-1).
+     It can't know whether to deny, so it needs a yes/no step first (one more R7B call per
+     question: measure the seconds).
+   - An ask.md edit: re-asks every question in every set, and 6b already tried rules and an
+     example. Only with a reason the other two can't cover.
+   - The eval: whether shape (c) should pass when every related claim is right and cited
+     (it's wrong here). Change the rule only on purpose, with D24's thresholds re-checked.
+   For each: the Ask cache (re-run the check on a hit from `raw`, or a code hash in the key;
+   say which and what it re-asks), schemas (`ask.Answer`, FORMAT_VERSION), REDUCE_HASH, and
+   how often it fires on every stored answer that isn't a near-miss (number, action,
+   follow-up, German; quick, lang, long-en): replay it offline on the cache before any run.
+   Must not fire: those answers (quick Ask 98.1%), long-en's regions and "marketing emails".
+1. The fix, with tests: each shape above (a, b, c) is caught; "What is the approved budget?",
+   "What is the cloud bill for the Central region?" (said) and a German number question are
+   not; a cached answer gets the check. Fixture TranscriptItems need distinct chunk_ids.
+2. Measure: copy the stored runs first (no `rm -rf`). quick seeds 0–3 with Ask (judge on at
+   seed 0); lang seed 1 with Ask on the items it reaches (clean-ja, xling-*, conflict-de) and
+   the judge once; long-en only if the change reaches it (ask first). Report near-miss per
+   template and seed, Ask accuracy, citation and the follow-up and German rates before and
+   after, and every answer the net changed that wasn't a near-miss.
+3. Rewrite the baselines the fix moves on purpose, with the reason in the commit:
+   baseline.json only from a whole quick run, baseline-lang.json from a whole lang seed-1 run.
+Rules from CLAUDE.md apply. Ask me before every full or long run, AMI and FLEURS runs, the
+opt-in model tests and new dependencies (none should be needed). quick and lang runs are fine.
+8i's "Open" (xling-ja f7 and clean-ja f16 never written by Map, ES2004b's decisions), 8h's
+"Open", Ask with slide conflicts (the rest of carry-over 7), dense-segment drops and
+eval-only gaps (carry-overs 5–6), the judge on slide-conflict notes and long-en's 3 key points
+stay open unless step 0 shows they share a cause. Don't bump the version: I'll ask separately. When done: tick the checklist, add new
+decisions to §20 as D-numbers (next: D52), update §5.7 and §18, add a NOTES.md entry and
+update the post-v1 list, make sure the gate passes, and open a PR (ask before pushing).
 ```
