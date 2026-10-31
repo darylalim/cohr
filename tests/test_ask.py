@@ -6,8 +6,10 @@ import pytest
 
 from cohr import ask, pipeline, reduce, schemas
 from cohr.ask import Answer, Sources, Turn
-from cohr.config import Config, ReduceConfig
+from cohr.config import Config, ReduceConfig, load_prompt
 from cohr.schemas import (
+    Citation,
+    Claim,
     MapFile,
     Segment,
     SegmentsFile,
@@ -264,6 +266,147 @@ def test_empty_run_and_empty_question_are_refused() -> None:
         ask.ask(lm(), "Anything?", [], empty, Config(), sure("en"))
     with pytest.raises(ask.AskError):
         ask.ask(lm(), "  ", [], sources(), Config(), sure("en"))
+
+
+# --- near-miss: periods and groups the meeting never gives (8j, D52) -----------------------
+
+# Fixture documents say: "Welcome everyone to the Atlas sync. We approved the 14,500 budget
+# today. Beta launch is on 3 November. Tom writes release notes.", Map's due "end of next
+# week" and slide "Q4 Budget".
+SAID = ask.said_text(sources())
+
+
+@pytest.mark.parametrize(
+    ("question", "unsaid"),
+    [
+        ("What was the approved budget two years ago?", ["two years ago"]),
+        ("What is the budget for the marketing team?", ["for the marketing team"]),
+        ("What is the budget for next year?", ["next year"]),
+        ("How much is the budget in 2023?", ["in 2023"]),
+        ("What's the budget in March?", ["in March"]),
+        (
+            "What is the budget for next year for the sales team?",
+            ["next year", "for the sales team"],
+        ),
+        # Must not fire: no qualifier, or one the documents say.
+        ("What is the approved budget?", []),
+        ("What is the budget for Q4?", []),  # the slide's own label
+        ("What is due next week?", []),  # Map's due: "end of next week"
+        ("What is the budget for the team?", []),  # names no group
+        ("What is the budget for the Atlas team?", []),  # "Atlas" is said
+        # Not a value question, or not English: left to R7B and ask.md.
+        ("What does Tom need to do by next year?", []),
+        ("Who owns the budget for the marketing team?", []),
+        ("Wie hoch ist das Budget für nächstes Jahr?", []),
+    ],
+)
+def test_unsaid_qualifiers(question: str, unsaid: list[str]) -> None:
+    assert ask.unsaid_qualifiers(question, SAID) == unsaid
+
+
+def test_qualifiers_are_read_in_any_wording_the_meeting_uses() -> None:
+    said = ask.said_text(
+        Sources(
+            segments=[],
+            notes={},
+            slides=[_slide(0, "Costs", "Cloud bill 2 years ago: 8,200. Third quarter: 9,000.")],
+            items=[],
+        )
+    )
+    assert ask.unsaid_qualifiers("What was the cloud bill two years ago?", said) == []
+    assert ask.unsaid_qualifiers("What is the cloud bill in Q3?", said) == []
+    long_en = ask.fold("Read the marketing emails. The cloud bill for the Central region.")
+    assert ask.unsaid_qualifiers("What is the cloud bill for the Central region?", long_en) == []
+    # A group the meeting names anywhere counts as said: R7B answers it alone (no false "not
+    # given" on a number the meeting does give for that group).
+    q = "What is the cloud bill for the Central region for the marketing team?"
+    assert ask.unsaid_qualifiers(q, long_en) == []
+    assert ask.fold("the previous quarter, a year ago") == "the last quarter, 1 year ago"
+
+
+def _claims(*texts: str) -> list[Claim]:
+    return [Claim(text=t, citations=[Citation(kind="seg", id=0, t=20.0)]) for t in texts]
+
+
+def test_qualifier_copied_onto_a_meeting_number() -> None:  # shape (a)
+    q = "What is the monthly recurring revenue for the marketing team?"
+    out = ask.deny_unsaid(
+        q,
+        _claims("The monthly recurring revenue for the marketing team is $273,000."),
+        ["for the marketing team"],
+    )
+    assert [c.text for c in out] == [
+        "The meeting doesn't give the monthly recurring revenue for the marketing team.",
+        "The monthly recurring revenue is $273,000.",
+    ]
+    assert out[0].citations == []  # nothing to cite: uncited, flagged like any (§5.6)
+    assert out[1].citations == [Citation(kind="seg", id=0, t=20.0)]
+
+
+def test_qualifier_dropped_and_the_number_given() -> None:  # shape (b)
+    claims = _claims("The monthly cloud bill is $8,900.", "Last month it was $8,200.")
+    out = ask.deny_unsaid("What is the monthly cloud bill for next year?", claims, ["next year"])
+    assert [c.text for c in out] == [
+        "The meeting doesn't give the monthly cloud bill for next year.",
+        "The monthly cloud bill is $8,900.",
+        "Last month it was $8,200.",
+    ]
+    assert out[1:] == claims
+
+
+def test_related_numbers_before_the_denial() -> None:  # shape (c)
+    claims = _claims(
+        "The approved budget for next quarter is $57,000.",
+        "The approved budget two years ago is not mentioned in the meeting.",
+    )
+    out = ask.deny_unsaid("What was the approved budget two years ago?", claims, ["two years ago"])
+    assert [c.text for c in out] == [
+        "The meeting doesn't give the approved budget two years ago.",
+        "The approved budget for next quarter is $57,000.",
+    ]
+
+
+def test_an_answer_that_opens_with_the_denial_is_kept() -> None:
+    claims = _claims(
+        "The meeting doesn't give the page load time for next year.",
+        "It says the average page load time is 370 milliseconds.",
+    )
+    q = "What is the page load time for next year?"
+    assert ask.deny_unsaid(q, claims, ["next year"]) == claims
+    assert ask.deny_unsaid(q, claims, []) == claims
+
+
+def test_ask_opens_with_not_given_on_an_unsaid_qualifier() -> None:
+    reply = "<co>The approved budget for the marketing team is 14,500.</co: 0:[0,2]>"
+    q = "What is the approved budget for the marketing team?"
+    answer = ask.ask(lm(reply), q, [], sources(), Config(), sure("en"))
+    assert answer.unsaid == ["for the marketing team"]
+    first, second = answer.claims
+    assert first.text == "The meeting doesn't give the approved budget for the marketing team."
+    assert second.text == "The approved budget is 14,500."
+    assert [(c.kind, c.id) for c in second.citations] == [("seg", 0), ("slide", 0)]
+    assert second.citations[0].t == 20.0  # refined on the reply's own text, as before
+    assert answer.raw == reply  # what R7B wrote is kept as it was
+
+
+@pytest.mark.parametrize(
+    ("language", "config"),
+    [("de", Config()), ("en", Config(source_language="ja"))],
+)
+def test_the_check_is_for_english_questions_on_english_meetings(
+    language: str, config: Config
+) -> None:
+    reply = "<co>The approved budget for the marketing team is 14,500.</co: 0:[0]>"
+    q = "What is the approved budget for the marketing team?"
+    answer = ask.ask(lm(reply), q, [], sources(), config, sure(language))
+    assert answer.unsaid == []
+    assert [c.text for c in answer.claims] == [
+        "The approved budget for the marketing team is 14,500."
+    ]
+
+
+def test_not_given_sentence_is_a_prompt_file() -> None:
+    assert "{subject}" in load_prompt("ask_not_given")
 
 
 # --- run(): the ModelManager and the run's config --------------------------------------------

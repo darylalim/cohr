@@ -637,7 +637,22 @@ under no variant.
 - **Known limits (5b manual check; 6b measured near-miss, §18):** a question in another language than the history can get
   "no information" or a repeat of an earlier answer; a near-miss question ("marketing budget
   next year") can get a related cited fact ("budget for next quarter") instead of "not
-  stated". An Ask eval on the planted facts would measure both (Phase 6).
+  stated". An Ask eval on the planted facts would measure both (Phase 6). Near-miss in
+  English is caught after the reply since 8j (next bullet).
+- **Near-miss (8j, D52):** R7B copied a question's period or team onto a meeting number,
+  dropped it, or gave related numbers before saying so, whatever ask.md said (quick 7/12,
+  the same 5 misses at seeds 0–3: Ask is temperature 0). After the reply, `ask.answer_from`
+  reads a value question's periods ("two years ago", "next year", "in 2023", "Q3", "in
+  March") and groups ("for the X team/region/department") and looks for them in every
+  document (transcript, Map's notes, slides; numbers and "previous/last" folded). One the
+  meeting never says makes the answer open with "The meeting doesn't give <subject>."
+  (`prompts/ask_not_given.md`, uncited) unless R7B already opened with a denial; later claims
+  lose a copied qualifier (citations kept) and a repeated denial is dropped. English
+  questions about English meetings only (`source_language`); other languages keep ask.md's
+  rule. A group named anywhere in the meeting counts as said (long-en's "marketing emails"):
+  R7B answers those alone. Ask's other claims are unchanged, so a wrong related value
+  stays ("last quarter was $57,000", Open in NOTES 8j). The eval's Ask cache rebuilds every
+  hit from R7B's stored reply through the same code, so the check needs no re-asking.
 - **Map's values (8c, D41):** the segment documents carry map.json as Map's guards left it, so
   Ask sees repaired dates and no copied dues (a-f82's "November 1" was "11 November"). A task
   Map missed is only in the transcript; under the 12-document cap its segment may not be sent
@@ -1475,6 +1490,14 @@ bill is $8,900"), or gives related numbers before saying so. No quick or lang me
 "marketing", "team", "two years" or "next year". Ask has no check after the reply, and the
 eval's Ask cache returns parsed claims, so a new check would not run on cached answers.
 Kickoff prompt in §21.
+Done 2026-10-31 (NOTES.md, D52). Step 0: the 5 quick misses are the same at seeds 0–3 (Ask
+is temperature 0: only Map's documents move with the seed), so a prompt change could only
+move them. After the reply, a value question's periods and groups that no document says make
+the answer open with "The meeting doesn't give …"; claims lose a copied qualifier. English
+questions about English meetings. The eval's Ask cache rebuilds hits from R7B's reply, so no
+question was re-asked. quick near-miss 7/12 → 12/12 at every seed 0–3, clean-ja 2/3 → 3/3,
+conflict-de 1/3 → 3/3; every other Ask and notes metric identical. A wrong related value
+("last quarter was $57,000", "next month is $140,000") stays: Ask has no value check.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2128,7 +2151,7 @@ exact checks with no human labels and no LLM judge.
 | Notes: **made-up items** | Decisions/action items in the notes that match no planted fact. An action item with the right task but another owner or due date counts (it states something not said); a real task with no owner stated doesn't (incomplete, not made up) | Exact (count) |
 | Notes: **support rate** | Share of claims whose cited segments support them | LLM judge (secondary) |
 | Output language | Notes are in the target language | `lingua-language-detector` |
-| Ask | Planted-fact questions from templates (`evals.ask_questions`): answer contains the fact *and* cites its segment (±15 s) or slide; plus follow-up, German alone / after history and near-miss rates (rule in NOTES.md, 6a; three near-misses per item from 6b, one per `NEAR_MISS` template) | Exact |
+| Ask | Planted-fact questions from templates (`evals.ask_questions`): answer contains the fact *and* cites its segment (±15 s) or slide; plus follow-up, German alone / after history and near-miss rates (rule in NOTES.md, 6a; three near-misses per item from 6b, one per `NEAR_MISS` template). A cached answer is rebuilt from R7B's stored reply through `ask.answer_from` (8j), so Ask's Python changes reach it without re-asking; the report lists any non-near-miss answer the near-miss check (D52) opened with "not given" | Exact |
 | Notes: **open questions** | Planted open questions (6b, 1–2 per item) found under Open questions (token overlap ≥ 0.6): open-question recall, kept out of fact recall; **made-up open questions** = claims there matching no planted one | Exact |
 | Realism (`full` only) | Coverage of the **AMI** reference decisions/actions | LLM judge |
 | Cost | Seconds per audio hour per stage; peak memory per stage | Measured |
@@ -2356,6 +2379,7 @@ section.
 | D49 | A citation in a long chunk Transcribe wrote as one sentence (§5.6, post-v1 #10) | The sentence's start (the chunk's) | xling-ja f11's span traced (word path, "maria" at exactly the 0.1 minimum); then lang seed 1 | Phase 8i | **Place at the first hit** (user): in a chunk `asr.unpunctuated` calls unpunctuated, over 80 characters and 10 s, both placement paths (`sentence_offset`, `anchor_offset`) go 1 s (by characters) before the first span word or anchor, never before the chunk. f11 −21.8 → −1.4 s, xling-ja citation accuracy 90 → 100%. A one-sentence chunk ("We agreed to keep the onboarding checklist.") starts where it starts; no generated-set chunk qualifies; Search (`index.py`) unchanged |
 | D50 | Map's f9 ("35万4000ドル"): two candidates, then a swapped digit (§5.5) | Flag (8g, D45) | Every flagged number in 77 stored Map files (every set, quick seeds 0–3, AMI) replayed with and without each rule; then lang seed 1 (`--rerun map`) | Phase 8i | **Units, then adjacent swaps** (user): a number written with a unit drops candidates the sources say only with another (money/percent, read in the meeting's language: `numbers.source_units`, `unit_at`); `near` also accepts two adjacent digits swapped. f9's "$34,000" (354,000 vs the "34%" said) and then, once D48 changed Map's input, its "$345,000" both repaired to 354,000; each rule fires on that number only. A number without a unit keeps every candidate (pdf-slides' "6,900 candidates" stays flagged) |
 | D51 | Japanese notes: owners and numbers (post-v1 #5) | Katakana owners matched by consonants; Japanese notes' numbers read as written | Python on the names and the readings; then `clean-ja` (new lang item: clean-en seed 1, Japanese notes) at seed 1 with Ask and the judge | Phase 8i | **Read Japanese as Japanese** (user): `restore` matches a katakana owner ending in ー to a said name with a final r when no name has its own consonants (ビクター → Victor, トミー still Tommy); `notes_numbers` reads Japanese notes with the meeting reader ("390件", "35万4000ドル"; 四半期 is no 4); WRITTEN no longer treats kana and kanji, other than 万億千百十, as glue, so Map's guard checks Japanese notes (clean-ja: 118,000 and 77,000 repaired to 11,800 and 7,700; 450,000 and 590,000 flagged); the eval's owner and unsupported-number checks read "Victorさん" and "450,000ドル". clean-ja: recall 84.6%, actions 100% (every owner restored), numbers 75%, Ask 100% (19 questions). Replayed on 77 stored Map files: only clean-ja and xling-ja change |
+| D52 | Ask near-miss: a period or team the meeting never gives (§5.7) | ask.md's rule and worked example (6b, D24) | Step 0 offline on the reports and the Ask cache (the 6 misses' shapes; a question check replayed on every stored question, 30 free-form AMI and clean-en questions; 119 cached replies re-parsed), quick at seeds 1–3 before; then quick seeds 0–3, clean-ja and conflict-de (lang seed 1) with Ask, long-en replayed from the cache | Phase 8j | **Python after the reply, on the question** (user: open with not given and strip the copied qualifier): a value question's periods and groups that no document says → the answer opens with "The meeting doesn't give <subject>." (`prompts/ask_not_given.md`) unless R7B opened with a denial; later claims lose the copied qualifier (citations kept), a repeated denial is dropped. English questions about English meetings; a group said anywhere counts as said. Fires on 32 of 33 stored near-misses, 0 of 186 other questions. quick near-miss 7/12 → 12/12 at each of seeds 0–3 (5 answers changed per seed, all near-misses), clean-ja 2/3 → 3/3, conflict-de 1/3 → 3/3 (vs its last Ask run, 6e-1), long-en 0 of 24 answers changed; Ask accuracy, citation, follow-up and German unchanged. Not chosen: prefill (D22 lost follow-up citations; the misses don't move with the seed), an ask.md edit (re-asks every question). The eval's Ask cache rebuilds hits from `raw` (119 of 119 re-parse to the stored claims) |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

@@ -2223,7 +2223,8 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
    Map's dates and dues checked; 77.8 → 88.9%). Left over: see 8c's "Open".
 8. Carry-overs 5–7 from 6e-1: ~~Japanese chunk-start drops~~ (Phase 8i, D48: the decoder's
    lost openings on unpunctuated chunks, restored by a probe), dense-segment drops, eval-only
-   gaps, Ask near-miss (55.6% on full).
+   gaps, ~~Ask near-miss~~ (Phase 8j, D52: a check on the question after the reply; quick
+   7/12 → 12/12 at seeds 0–3, clean-ja and conflict-de 3/3). Left over: see 8j's "Open".
 9. ~~The 1.0.0 bump~~: done on request (`uv version --bump major`, pyproject + uv.lock;
    README status), merged as 32576c1. **No release followed:** the §16 `release` job was
    left out in Phase 1 ("Not in Phase 1 (by plan)") and never added, so main's CI ran only
@@ -2990,3 +2991,69 @@ Branch `phase-8i-japanese`. Post-v1 items 5 and 10, carry-over 5 of item 8, 8g's
   check from `raw` and a code hash in the key.
 - The post-v1 list's "55.6% on full" doesn't match 6e-1's ranking (58%, 7/12); the kickoff
   quotes both.
+
+## 2026-10-31 · Phase 8j: Ask near-miss
+Branch `phase-8j-near-miss`. Carry-over 7 of post-v1 item 8; D52.
+- Step 0 (no models): the kickoff's table reproduces from 20261030-133308-quick and
+  -135143-lang. Every quick report since 12 Oct has the same 5 misses at seeds 0, 1, 2 (seed 3
+  once added clean-en "next year"). Ask is temperature 0 (`reduce.temperature`): the seed
+  reaches it only through Map's documents.
+- pdf-slides-en fails all three for document reasons, not ranking (its 10 documents always
+  fit): slide 8 says "Spend plan by team", seg 0's Map notes leave out the cloud bill, and the
+  transcript says "next quarter" beside the budget. Same three shapes as the other items.
+- Correction to the kickoff: long-en's near-misses aren't must-not-fire. They name a region it
+  says plus a qualifier it doesn't ("for the Central region for the marketing team"). Its
+  region-only number questions are the must-not-fire cases.
+- Step 0 (quick seeds 1–3 with Ask, `--no-judge`, runs copied first): 7/12 at every seed, the
+  same 5 questions, R7B's wording varies ("last quarter was $54,000" at seed 2, unrelated MRR
+  and budget claims on pdf-slides-en "next year" at seeds 1 and 3). A prompt change only moves
+  them, as the kickoff's test said.
+- Offline replay of a question check (periods and groups a value question names, looked for
+  in every document): fires on 32 of 33 stored near-misses (not long-en "marketing team":
+  "read the marketing emails" says the word), 0 of 186 number, action, follow-up and German
+  questions, and on 30 free-form AMI and clean-en questions only for qualifiers never said
+  (not "budget for the marketing team" on ES2004b, which is about marketing; not "next
+  quarter", "last week", "a month ago" on clean-en). Re-parsing the 119 cached replies from
+  `raw` gave the stored claims exactly: rebuilding cache hits moves nothing else.
+- D52 (`ask.answer_from`, `deny_unsaid`; user's choice of "open + strip" over open only, a UI
+  flag or prefill): the answer opens with "The meeting doesn't give <subject>."
+  (`prompts/ask_not_given.md`, uncited) unless R7B opened with a denial; later claims lose the
+  copied qualifier, keeping their citations; a repeated denial is dropped. English questions
+  about English meetings only (the check looks for the question's words; a Japanese
+  transcript says 2年前). Only "what is/was …" and "how much/many … is" shapes, so the
+  subject reads as a phrase. `evals.CachedAsk` rebuilds hits from `raw` through the same code;
+  the new prompt isn't sent to R7B, so it stays out of the cache key: nothing re-asked.
+
+| | before | after |
+|---|---|---|
+| quick near-miss, seeds 0 / 1 / 2 / 3 | 7 / 7 / 7 / 7 of 12 | **12 / 12 / 12 / 12** |
+| by template (quick, each seed) marketing team / two years ago / next year | 1 / 3 / 3 of 4 | 4 / 4 / 4 of 4 |
+| quick answers changed per seed | — | 5, all near-misses (the check fired on no other question) |
+| quick Ask accuracy / citation / follow-up / German alone, after history | 98.1 / 100 / 100 / 100, 100% | identical at every seed |
+| quick notes metrics (seed 0 with the judge) recall / citation / support | 98.5 / 100 / 93.8% | identical (only `ask_near_miss` moved in any summary) |
+| clean-ja (lang seed 1) near-miss / Ask | 2/3, 100% | **3/3**, 100% (one answer changed) |
+| conflict-de (lang seed 1, first Ask since 6e-1's full run) near-miss / Ask | 1/3, 92.3% | **3/3**, 92.3% (same miss: the slide-conflict budget) |
+| long-en (replayed from the cache) | near-miss 3/3, Ask 94.4% | 0 of 24 answers changed (2 fire, both already open with a denial) |
+
+- Runs: quick seeds 1–3 before (copied runs, restored with rsync after), quick seed 0 with Ask
+  and the judge and seeds 1–3 `--no-judge` after; lang `-c seed=1 --item clean-ja conflict-de`
+  with Ask and the judge. long-en not run (replayed: nothing changes). baseline.json rewritten
+  from a whole quick seed-0 run (summary: only `ask_near_miss` 58.3 → 100%); baseline-lang.json
+  not (a `--no-ask` baseline: no Ask metrics to move).
+- Cost: no model call; a regex pass over the documents per answer. No schema, FORMAT_VERSION
+  or REDUCE_HASH change; no Ask cache key moved.
+
+### Open
+- Related claims keep R7B's values and periods: pdf-slides-en "last quarter was $57,000"
+  (the meeting said $54,000; seeds 0, 1, 3), conflict-de "MRR for next month is $140,000"
+  (no period said), pdf-slides-en "next year" listing unrelated MRR and budget lines (seeds 1,
+  3). The eval passes them (it scores the denial). Ask has no value check: this joins "Ask with
+  slide conflicts" (the rest of carry-over 7).
+- Non-English questions (German, Japanese, Arabic, Hindi in the app) keep ask.md's rule only;
+  the eval asks near-misses in English, so it doesn't measure them.
+- A group the meeting names anywhere counts as said, so "for the marketing team" on a meeting
+  that mentions marketing is left to R7B (long-en, AMI). Period synonyms beyond
+  previous/past = last and coming = next ("the following year") would fire.
+- 8i's Open (xling-ja f7, clean-ja f16, ES2004b's decisions), 8h's Open, dense-segment drops
+  and eval-only gaps (carry-overs 5–6), the judge on slide-conflict notes and long-en's 3 key
+  points unchanged.

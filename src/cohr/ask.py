@@ -15,7 +15,7 @@ import logging
 import re
 import sqlite3
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -95,6 +95,9 @@ class Answer:
     ranked: list[reduce.Target] | None  # over the cap: the top-ranked documents sent (§5.7)
     dropped_citations: int  # indices outside the documents sent
     raw: str
+    # The question's periods and groups the meeting never gives (D52): the answer opens with
+    # "The meeting doesn't give …" (`deny_unsaid`).
+    unsaid: list[str] = field(default_factory=list)
 
     @property
     def uncited(self) -> int:
@@ -256,6 +259,162 @@ def parse_answer(
     return out, dropped
 
 
+# --- near-miss: a period or group the meeting never gives (pure, 8j, D52) ------------------
+#
+# "What is the budget for the marketing team?" when the meeting gives only the company's
+# budget: R7B copies the qualifier onto the meeting's number or drops it, whatever ask.md
+# says (6b; the same 5 of 12 quick near-misses at seeds 0–3, temperature 0). A value
+# question's periods and groups are read here, and one the documents never say makes the
+# answer open with "The meeting doesn't give …". English questions about English meetings
+# only: the check looks for the question's own words in the documents.
+
+_UNIT = r"(?:year|quarter|month|week|day|sprint|release)s?"
+_COUNT = r"(?:\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a few)"
+_MONTHS = (
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december",
+)  # fmt: skip
+_ORDINALS = {"1": "first", "2": "second", "3": "third", "4": "fourth"}
+_PERIODS = re.compile(
+    rf"\b{_COUNT}\s+{_UNIT}\s+ago\b"
+    rf"|\b(?:next|last|previous|past|coming|this)\s+{_UNIT}\b"
+    r"|\b(?:in|for|during)\s+(?:19|20)\d\d\b"
+    r"|\bQ[1-4]\b"
+    rf"|\b(?:in|for|during)\s+(?:{'|'.join(_MONTHS)})\b",
+    re.I,
+)
+_GROUP = re.compile(
+    r"\b(?:for|in|at)\s+(?:the\s+)?((?:[^\W\d_][\w-]*\s+){1,2}?)"
+    r"(?:team|department|group|division|region|office|country|unit)\b",
+    re.I,
+)
+_GROUP_STOP = {"the", "a", "an", "our", "their", "its", "this", "that", "whole", "entire"}
+# Only these shapes are read: the subject after the verb is what the answer says isn't given.
+_VALUE_QUESTION = re.compile(
+    r"^\s*(?:what(?:'s|’s|\s+(?:is|was|are|were))"
+    r"|how\s+(?:much|many|high|big|long|large|low)\s+(?:is|was|are|were))"
+    r"\s+(?P<subject>.+?)\s*\??\s*$",
+    re.I,
+)
+_NUMBER_WORDS: dict[str, str] = {
+    "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6",
+    "seven": "7", "eight": "8", "nine": "9", "ten": "10", "eleven": "11", "twelve": "12",
+}  # fmt: skip
+_SAME_PERIOD: dict[str, str] = {"previous": "last", "past": "last", "coming": "next"}
+_DENIAL = re.compile(r"\b(?:not|no|never|none|unknown|cannot)\b|n['’]t\b", re.I)
+
+
+@dataclass(frozen=True)
+class Qualifier:
+    phrase: str  # as the question says it: "two years ago", "for the marketing team"
+    said: list[str]  # regexes over fold(documents); the qualifier is said if all match
+
+
+def fold(text: str) -> str:
+    """Casefold, number words to digits ("two years" = "2 years"; "a year" = "1 year") and
+    one word per period ("previous quarter" = "last quarter")."""
+    text = text.casefold()
+    text = re.sub(rf"\b(?:a|an)\s+(?={_UNIT}\b)", "1 ", text)
+    text = re.sub(r"\b(" + "|".join(_NUMBER_WORDS) + r")\b", lambda m: _NUMBER_WORDS[m[1]], text)
+    return re.sub(r"\b(" + "|".join(_SAME_PERIOD) + r")\b", lambda m: _SAME_PERIOD[m[1]], text)
+
+
+def _words(text: str) -> str:
+    """A folded phrase as a regex: whole words, any whitespace between."""
+    return r"(?<!\w)" + r"\s+".join(map(re.escape, text.split())) + r"(?!\w)"
+
+
+def qualifiers(question: str) -> list[Qualifier]:
+    """The periods and groups a value question names ([] for other questions)."""
+    if not _VALUE_QUESTION.match(question):
+        return []
+    out = []
+    for m in _PERIODS.finditer(question):
+        phrase = fold(m[0])
+        if q := re.fullmatch(r"q([1-4])", phrase):  # "Q3" or "third quarter"
+            said = [rf"(?<!\w)q{q[1]}(?!\w)|{_ORDINALS[q[1]]}\s+quarter"]
+        elif re.match(r"(?:in|for|during)\s", phrase):  # a year or a month: the word alone
+            said = [_words(phrase.split(None, 1)[1])]
+        else:
+            said = [_words(phrase)]
+        out.append(Qualifier(m[0], said))
+    for m in _GROUP.finditer(question):
+        names = [w for w in fold(m[1]).split() if w not in _GROUP_STOP]
+        if names:  # "for the team" names no group
+            out.append(Qualifier(m[0], [_words(w) for w in names]))
+    return out
+
+
+def said_text(sources: Sources) -> str:
+    """Every document Ask could send (transcript, Map's notes, slides), folded."""
+    docs, _ = reduce.documents(sources.segments, sources.notes, sources.slides)
+    return fold("\n".join(f"{d['title']}\n{d['snippet']}" for d in docs))
+
+
+def unsaid_qualifiers(question: str, said: str) -> list[str]:
+    """The question's periods and groups that `said` (said_text) never gives."""
+    return [q.phrase for q in qualifiers(question) if not all(re.search(p, said) for p in q.said)]
+
+
+def _without(text: str, phrase: str) -> str:
+    """The claim with a copied qualifier taken out ("revenue for the marketing team is" →
+    "revenue is"), with the preposition before it."""
+    core = re.sub(r"^(?:for|in|at|during)\s+(?:the\s+)?", "", phrase, flags=re.I)
+    pattern = r"\s*(?:\b(?:for|in|at|during|of)\s+(?:the\s+)?)?" + _words(core)
+    return re.sub(r"\s+([.,;:!?])", r"\1", re.sub(pattern, "", text, flags=re.I)).strip()
+
+
+def deny_unsaid(question: str, claims: Sequence[Claim], unsaid: Sequence[str]) -> list[Claim]:
+    """The answer when the question names periods or groups the meeting never gives: it opens
+    with "The meeting doesn't give <subject>." unless it already opens with a denial; a later
+    claim that copies a qualifier onto a number loses it (keeping its citations), and a later
+    denial of it is dropped (the opening says it). Other claims stay as R7B wrote them."""
+    if not unsaid:
+        return list(claims)
+    m = _VALUE_QUESTION.match(question)
+    assert m is not None  # unsaid qualifiers come only from value questions
+    out: list[Claim] = []
+    if not (claims and _DENIAL.search(claims[0].text)):
+        sentence = fill(load_prompt("ask_not_given"), subject=m["subject"]).strip()
+        out.append(Claim(text=sentence, citations=[]))
+    else:
+        out.append(claims[0])
+        claims = claims[1:]
+    for claim in claims:
+        copied = [p for p in unsaid if re.search(_words(fold(p)), fold(claim.text))]
+        if copied and _DENIAL.search(claim.text):
+            continue
+        text = claim.text
+        for phrase in copied:
+            text = _without(text, phrase)
+        out.append(claim if text == claim.text else claim.model_copy(update={"text": text}))
+    return out
+
+
+def answer_from(
+    question: str,
+    reply: str,
+    targets: Sequence[reduce.Target],
+    language: str,
+    sources: Sources,
+    config: Config,
+) -> tuple[list[Claim], int, list[str]]:
+    """Claims, dropped citation count and unsaid qualifiers from R7B's reply: everything Ask
+    does after generating, so a cached reply goes through the same code (evals.CachedAsk)."""
+    refine = reduce.segment_refiner(
+        sources.segments,
+        sources.items,
+        config.reduce.citation_min_score,
+        language,
+        config.source_language,
+    )
+    claims, dropped = parse_answer(reply, targets, refine)
+    unsaid: list[str] = []
+    if language == "en" and config.source_language == "en":
+        unsaid = unsaid_qualifiers(question, said_text(sources))
+    return deny_unsaid(question, claims, unsaid), dropped, unsaid
+
+
 def ask(
     lm: Any,
     question: str,
@@ -278,16 +437,13 @@ def ask(
         temperature=config.reduce.temperature,
         seed=config.seed,
     )
-    refine = reduce.segment_refiner(
-        sources.segments,
-        sources.items,
-        config.reduce.citation_min_score,
-        language,
-        config.source_language,
+    claims, dropped, unsaid = answer_from(
+        question, reply, fitted.targets, language, sources, config
     )
-    claims, dropped = parse_answer(reply, fitted.targets, refine)
     if dropped:
         log.warning("ask: dropped %d citations to unknown documents", dropped)
+    if unsaid:
+        log.info("ask: the meeting never gives %s", ", ".join(repr(p) for p in unsaid))
     log.info(
         "ask: %s, %d claims, %d uncited, %d prompt tokens, %d turns dropped, %s documents",
         language,
@@ -306,6 +462,7 @@ def ask(
         ranked=fitted.targets if fitted.ranked else None,
         dropped_citations=dropped,
         raw=reply,
+        unsaid=unsaid,
     )
 
 
