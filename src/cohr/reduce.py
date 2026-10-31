@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
 from cohr import dues, names, numbers, schemas
+from cohr.asr import unpunctuated
 from cohr.config import language_name, load_prompt
 from cohr.fts import fold_digits
 from cohr.fuse import match_score, overlap, slide_text, tokens
@@ -54,6 +55,11 @@ MIN_TRANSCRIPT_CHARS = 300  # below this per segment, trimming can't make the in
 # gives ~12K-token groups that finish (recall 37.5 → 53.8%, 6c).
 GROUP_FILL = 0.4
 CLAIM_MATCH_MIN = 0.5  # pass-2 span → pass-1 claim token overlap, when the span has no marker
+LONG_SENTENCE_S = 10.0  # 8i: an unpunctuated chunk longer than this is placed at its anchor…
+LONG_SENTENCE_CHARS = 80  # …when it holds several sentences (xling-ja chunks 11 and 13: 151 and
+# 137 characters); one sentence filling a chunk ("We agreed to keep the onboarding checklist.")
+# starts where it starts
+ANCHOR_LEAD_S = 1.0  # …this long before it (by characters, as every placement)
 END_RESPONSE = "<|END_RESPONSE|>"
 # The reply is started with the first marker (6d-1): in German and Arabic notes R7B translated
 # all five markers ("## Zusammenfassung", "## ملخص") whatever the prompt said, so every claim
@@ -303,15 +309,37 @@ def claims(text: str, *, sentences: bool) -> list[RawClaim]:
 # --- citations (pure) ----------------------------------------------------------------------
 
 
-def sentence_offset(span_tokens: set[str], text: str) -> float:
-    """Where in `text` (0–1, by characters) the sentence best matching the span starts."""
-    best_pos, best, pos = 0, 0.0, 0
+def _placed(
+    text: str, m: re.Match[str] | None, pos: int, seconds: float, holds: Callable[[str], bool]
+) -> float:
+    """Where in `text` (0–1, by characters, `pos` of them) the best sentence `m` starts. When
+    Transcribe wrote a chunk of several sentences (over LONG_SENTENCE_CHARS and
+    LONG_SENTENCE_S) without sentence marks (`asr.unpunctuated`, D48's gate): ANCHOR_LEAD_S
+    before the first piece of it that `holds` (a span word, a number, the owner), never before
+    the chunk's start (8i, post-v1 #10: xling-ja chunk 11 is 28 s with no 。, and MARIA's
+    task, said at 316.5 s, was cited at its start, 294.7 s)."""
+    if m is None:
+        return 0.0
+    first = m.start() + len(m.group(0)) - len(m.group(0).lstrip())
+    if not unpunctuated(text) or len(text) <= LONG_SENTENCE_CHARS or seconds <= LONG_SENTENCE_S:
+        return first / pos
+    # The first hit ends where a prefix of the sentence first holds one, and starts where the
+    # shortest piece ending there does ("4650", not its "650"; "MARIA", not "ARIA").
+    end = next((e for e in range(first + 1, m.end() + 1) if holds(text[first:e])), m.end())
+    start = next((b for b in range(end - 1, first, -1) if holds(text[b:end])), first)
+    return max(first, start - round(ANCHOR_LEAD_S * pos / seconds)) / pos
+
+
+def sentence_offset(span_tokens: set[str], text: str, seconds: float = 0.0) -> float:
+    """Where in `text` (0–1, by characters) the sentence best matching the span starts
+    (`_placed`: in a long one, at its first span word)."""
+    best_m, best, pos = None, 0.0, 0
     for m in _SENTENCE.finditer(text):
         score = overlap(span_tokens, set(tokens(m.group(0))))
         if score > best:
-            best_pos, best = m.start() + len(m.group(0)) - len(m.group(0).lstrip()), score
+            best_m, best = m, score
         pos = m.end()
-    return best_pos / max(pos, 1)
+    return _placed(text, best_m, max(pos, 1), seconds, lambda t: bool(span_tokens & set(tokens(t))))
 
 
 class Anchors(NamedTuple):
@@ -338,15 +366,18 @@ def span_anchors(span: str, items: Sequence[TranscriptItem], notes_language: str
     return Anchors(numbers.notes_numbers(fold_digits(span), notes_language), owner)
 
 
-def anchor_offset(anchors: Anchors, text: str, source_language: str) -> float:
-    """Where in `text` (0–1) the sentence with the most anchors starts (ties: earliest)."""
-    best_pos, best, pos = 0, 0, 0
+def anchor_offset(anchors: Anchors, text: str, source_language: str, seconds: float = 0.0) -> float:
+    """Where in `text` (0–1) the sentence with the most anchors starts (ties: earliest;
+    `_placed`: in a long one, at its first anchor)."""
+    best_m, best, pos = None, 0, 0
     for m in _SENTENCE.finditer(text):
         hits = anchors.hits(m.group(0), source_language)
         if hits > best:
-            best_pos, best = m.start() + len(m.group(0)) - len(m.group(0).lstrip()), hits
+            best_m, best = m, hits
         pos = m.end()
-    return best_pos / max(pos, 1)
+    return _placed(
+        text, best_m, max(pos, 1), seconds, lambda t: anchors.hits(t, source_language) > 0
+    )
 
 
 def refine_time(
@@ -368,7 +399,7 @@ def refine_time(
     best = max(scores, default=0.0)
     if best > 0 and best >= min_score:
         best_it = items[scores.index(best)]
-        offset = sentence_offset(span_tokens, best_it.text)
+        offset = sentence_offset(span_tokens, best_it.text, best_it.t1 - best_it.t0)
         return round(best_it.t0 + offset * (best_it.t1 - best_it.t0), 2)
     anchors = span_anchors(span, items, notes_language)
     if not anchors.values and not anchors.owner:
@@ -381,7 +412,7 @@ def refine_time(
     if not hits:
         return seg_t0
     best_it = items[-index]
-    offset = anchor_offset(anchors, best_it.text, source_language)
+    offset = anchor_offset(anchors, best_it.text, source_language, best_it.t1 - best_it.t0)
     return round(best_it.t0 + offset * (best_it.t1 - best_it.t0), 2)
 
 

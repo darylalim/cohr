@@ -289,6 +289,53 @@ def test_guard_does_not_prefer_a_digit_edit_over_a_factor() -> None:
     assert mapper.check_numbers(text, sources, "en")[2] == ["6,900", "86"]
 
 
+def test_guard_drops_candidates_said_with_another_unit() -> None:
+    # 8i, xling-ja f9: "$34,000" for "35万4000ドル"; the "34%" said is the other candidate.
+    said = "月間計上収益は35万4000ドルです。先月は13万4000ドルでした。採用率は34%です。"
+    sources = mapper.source_numbers(said, [], "ja")
+    units = mapper.source_units(said, [], "ja")
+    assert units == {354000.0: {"money"}, 134000.0: {"money"}, 34.0: {"percent"}}
+    text = "Monthly recurring revenue is $34,000, up from $134,000 last month."
+    assert mapper.check_numbers(text, sources, "en", None, units) == (
+        "Monthly recurring revenue is $354,000, up from $134,000 last month.",
+        [NumberRepair(original="34,000", repaired="354,000")],
+        [],
+    )
+    # without the units (as before 8i): flagged
+    assert mapper.check_numbers(text, sources, "en")[2] == ["34,000"]
+    # a number written without a unit keeps every candidate (pdf-slides' "6,900 candidates")
+    said = "69 candidates. The monthly cloud bill is $8,900."
+    sources, units = mapper.source_numbers(said, [], "en"), mapper.source_units(said, [], "en")
+    assert mapper.check_numbers("6,900 candidates", sources, "en", None, units)[2] == ["6,900"]
+    # a candidate said with no unit stays: "354000" said bare is still 354,000 dollars
+    sources = {354000.0, 34.0}
+    units = {34.0: {"percent"}}
+    assert mapper.check_numbers("$34,000", sources, "en", None, units)[0] == "$354,000"
+    # every candidate said with another unit: flagged, not emptied
+    units = {354000.0: {"percent"}, 34.0: {"percent"}}
+    assert mapper.check_numbers("$34,000", sources, "en", None, units)[2] == ["34,000"]
+
+
+def test_guard_reads_numbers_in_japanese_notes() -> None:
+    # 8i, clean-ja: Map wrote Japanese notes on an English meeting; numbers touch kana.
+    said = "The monthly cloud bill is $11,800. Last month it was $7,700. Budget: $42,500."
+    sources, units = mapper.source_numbers(said, [], "en"), mapper.source_units(said, [], "en")
+    text = "月間クラウドコストが118,000ドルで、前月の77,000ドル。承認額は450,000ドル。"
+    fixed, repairs, unverified = mapper.check_numbers(text, sources, "ja", None, units)
+    assert fixed == "月間クラウドコストが11,800ドルで、前月の7,700ドル。承認額は450,000ドル。"
+    assert [(r.original, r.repaired) for r in repairs] == [
+        ("118,000", "11,800"),
+        ("77,000", "7,700"),
+    ]
+    assert unverified == ["450,000"]  # no near candidate: flagged
+    # 万 groups are left alone (not 35 and 4000), as before
+    assert mapper.check_numbers("収益は35万4000ドル", sources, "ja") == (
+        "収益は35万4000ドル",
+        [],
+        [],
+    )
+
+
 def test_guard_never_repairs_a_one_or_two_digit_number() -> None:
     # 8g, AMI IS1009b: "forty percent ... and the rest we make regular" → Map "40% large
     # buttons, 60% regular buttons"; 60 was "repaired" to the 40 said, one edit away.

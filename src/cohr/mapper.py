@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from cohr import dues, names, schemas
+from cohr import dues, names, numbers, schemas
 from cohr.config import language_name, load_prompt
 from cohr.fuse import match_score, slide_text
 from cohr.numbers import (
@@ -41,6 +41,7 @@ from cohr.schemas import (
 )
 
 KEYS = ("summary", "key_points", "decisions", "action_items", "open_questions", "terms")
+Units = dict[float, set[str]]  # a source number → the units it is said with (8i)
 _EMPTY = {"", "none", "null", "n/a", "na", "-", "?", "unknown"}
 _JSON_OBJECT = re.compile(r"\{.*\}", re.S)
 
@@ -149,13 +150,26 @@ def source_numbers(transcript: str, slides: list[str], language: str | None = No
     )
 
 
+def source_units(transcript: str, slides: list[str], language: str | None = None) -> Units:
+    """The units each source number is said or shown with (8i)."""
+    out: Units = {}
+    for text in [transcript, *slides]:
+        for value, kinds in numbers.source_units(text, language).items():
+            out.setdefault(value, set()).update(kinds)
+    return out
+
+
 def source_days(transcript: str, slides: list[str]) -> set[float]:
     """The ordinals said or shown ("the 22nd"): the only repair candidates for a Map ordinal."""
     return set().union(ordinals_in(transcript), *(ordinals_in(s) for s in slides))
 
 
 def check_numbers(
-    text: str, sources: set[float], language: str | None = None, days: set[float] | None = None
+    text: str,
+    sources: set[float],
+    language: str | None = None,
+    days: set[float] | None = None,
+    units: Units | None = None,
 ) -> tuple[str, list[NumberRepair], list[str]]:
     """Keep a number found in the sources; repair it when exactly one source number is near it
     (one digit edit, or a factor of 10/100/1000), in the written style; otherwise keep it as
@@ -170,7 +184,9 @@ def check_numbers(
     those another number of `text` states (kept, or repaired to one candidate) are dropped:
     "$34,000, up from $134,000" with 354,000 and 134,000 said. A digit edit doesn't beat a
     factor: at seed 1 pdf-slides' "6,900 candidates" was 69 said (×100), not the $8,900 one
-    edit away, and xling-ja's "$34,000" stays flagged, its "34%" a third candidate."""
+    edit away. 8i: a number written with a unit ("$34,000") drops the candidates the sources
+    say only with another (xling-ja: the "34%" said, leaving 354,000 dollars); one written
+    without a unit keeps them all (pdf-slides' "6,900 candidates" stays flagged)."""
 
     def check(m: re.Match[str]) -> tuple[bool, float | None, dict[float, Reading]]:
         """Whether the number is kept as written, the source value it states, its candidates."""
@@ -206,6 +222,8 @@ def check_numbers(
         if len(near_by) > 1:
             others = {v for j, v in enumerate(stated) if j != i and v is not None}
             near_by = {s: r for s, r in near_by.items() if s not in others}
+        if len(near_by) > 1 and units and (unit := numbers.unit_at(text, m.start(), m.end())):
+            near_by = {s: r for s, r in near_by.items() if unit in units.get(s, {unit})}
         if kept:
             out.append(written)
         elif len(near_by) != 1:
@@ -225,6 +243,7 @@ def guard_numbers(
     sources: set[float],
     language: str | None = None,
     days: set[float] | None = None,
+    units: Units | None = None,
 ) -> SegmentNotes:
     """Run `check_numbers` on every Map string except `terms`. Raw (non-JSON) segments are
     left alone: their text isn't notes, so there is nothing to keep consistent."""
@@ -234,7 +253,7 @@ def guard_numbers(
     unverified: list[str] = []
 
     def fix(text: str) -> str:
-        fixed, r, u = check_numbers(text, sources, language, days)
+        fixed, r, u = check_numbers(text, sources, language, days, units)
         repairs.extend(r)
         unverified.extend(u)
         return fixed
@@ -474,7 +493,8 @@ def guard_values(
     """The number guard, then dates and dues, against the segment's transcript and slides."""
     sources = source_numbers(transcript, slides, source_language)
     days = source_days(transcript, slides)
-    notes = guard_numbers(notes, sources, notes_language, days)
+    units = source_units(transcript, slides, source_language)
+    notes = guard_numbers(notes, sources, notes_language, days, units)
     return guard_dates(notes, "\n".join([transcript, *slides]), notes_language, source_language)
 
 

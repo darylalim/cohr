@@ -159,20 +159,22 @@ def said_folded(name: str, text: str) -> bool:
 
 def restore(owner: str, texts: Iterable[str]) -> str:
     """The name said in `texts` that a non-Latin, one-word `owner` transliterates to: same
-    consonants, closest spelling (Arabic "ماريا" → Maria, not Omar). The owner as written when
-    it's Latin, said as written, or matches no name, or two names equally."""
+    consonants (a katakana owner ending in ー also with a final r), closest spelling (Arabic
+    "ماريا" → Maria, not Omar). The owner as written when it's Latin, said as written, or
+    matches no name, or two names equally."""
     texts = list(texts)
     if latin(owner) or " " in owner.strip() or any(owner in t for t in texts):
         return owner
     target = skeleton(owner)
     if len(target) < 2:
         return owner
+    names = said_names(texts)
+    matching = [n for n in names if skeleton(n) == target]
+    if not matching and owner.endswith("ー"):
+        # Katakana writes a final -er/-or/-ar as ー: ビクター "fkt" is Victor "fktr" (8i).
+        matching = [n for n in names if skeleton(n) == target + "r"]
     scored = sorted(
-        (
-            (SequenceMatcher(None, plain(owner), plain(name)).ratio(), name)
-            for name in said_names(texts)
-            if skeleton(name) == target
-        ),
+        ((SequenceMatcher(None, plain(owner), plain(name)).ratio(), name) for name in matching),
         reverse=True,
     )
     if not scored or (len(scored) > 1 and scored[1][0] == scored[0][0]):

@@ -284,7 +284,9 @@ def _owner_in(claim: Claim, owner: str) -> bool | None:
     """True/False when the claim states an owner (field or name in the text), None if not."""
     if isinstance(claim, ActionItem) and claim.owner:
         return fold(claim.owner) == fold(owner)
-    return True if re.search(rf"\b{re.escape(fold(owner))}\b", fold(claim.text)) else None
+    # Latin letters around the name, not \b: "Victorさん" (8i, ja notes) has no word break.
+    name = re.escape(fold(owner))
+    return True if re.search(rf"(?<![a-z0-9]){name}(?![a-z0-9])", fold(claim.text)) else None
 
 
 _TEXT_DUE = re.compile(r".*\bby\s+(.+?)[\s.!]*$", re.I | re.S)
@@ -726,6 +728,10 @@ def unsupported_numbers(
     for c in claims:
         fields = [c.text, *((c.owner or "", c.due or "") if isinstance(c, ActionItem) else ())]
         text = " ".join(fields)
+        if language == "ja":  # 8i: "450,000ドル" touches kana, which written readings skip
+            for v in sorted(notes_numbers(text, language) - sources):
+                out.setdefault(v)
+            continue
         if language not in (None, "en"):
             for values in written_values(text, language):
                 if not values & sources:

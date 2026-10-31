@@ -213,6 +213,9 @@ def test_owner_match_ignores_accents_and_case() -> None:
     assert action_fit(item("Prepare the survey (owner: MARIA)"), f, True) == "match"
     assert action_fit(item("Prepare the survey", "Mario", None), f, True) == "none"
     assert evals.fold(" Ómar ") == "omar"
+    # 8i: Japanese notes glue the name to さん (no word break); Mariana is still someone else.
+    assert action_fit(item("Mariaさんが顧客アンケートを準備する"), f, True, "ja") == "match"
+    assert action_fit(item("Marianaさんが顧客アンケートを準備する"), f, True, "ja") == "none"
 
 
 def test_cross_language_numbers_are_read_in_the_notes_language() -> None:
@@ -239,6 +242,9 @@ def test_unsupported_numbers_in_another_language() -> None:
     assert evals.unsupported_numbers(de, transcript, []) == ["3.55", "9.9", "42.5"]  # English read
     ar = [Claim(text="الميزانية 42,500 دولار", citations=[])]  # also 42.5: one reading is enough
     assert evals.unsupported_numbers(ar, transcript, [], "ar") == []
+    # 8i, clean-ja: numbers touching kana, and 万 groups
+    ja = [Claim(text="予算の承認額が450,000ドル、登録は3,550件、予算は4万2500ドル", citations=[])]
+    assert evals.unsupported_numbers(ja, transcript, [], "ja") == ["450000"]
 
 
 def test_citation_tolerance_and_slides() -> None:
@@ -738,6 +744,7 @@ def test_lang_items_reuse_the_quick_scripts() -> None:
     # 6d-1: only the notes language changes, so lang and quick results compare item to item.
     twins = {"conflict-de": "slide-conflict-en", "clean-ar": "clean-en", "clean-sw": "clean-en"}
     twins |= {"clean-hi": "clean-en", "clean-bn": "clean-en"}  # 6d-2, D18
+    twins |= {"clean-ja": "clean-en"}  # 8i
     lang = evals.load_set("lang", ROOT)
     targets = {i.id: (i.language, i.target) for i in lang.items}
     assert targets == {
@@ -746,6 +753,7 @@ def test_lang_items_reuse_the_quick_scripts() -> None:
         "clean-sw": ("en", "sw"),
         "clean-hi": ("en", "hi"),
         "clean-bn": ("en", "bn"),
+        "clean-ja": ("en", "ja"),
         "xling-es": ("es", "en"),
         "xling-ja": ("ja", "en"),
     }
