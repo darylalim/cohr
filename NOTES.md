@@ -3057,3 +3057,5 @@ Branch `phase-8j-near-miss`. Carry-over 7 of post-v1 item 8; D52.
 - 8i's Open (xling-ja f7, clean-ja f16, ES2004b's decisions), 8h's Open, dense-segment drops
   and eval-only gaps (carry-overs 5–6), the judge on slide-conflict notes and long-en's 3 key
   points unchanged.
+
+- 1.11.0 bump: done 2026-10-31 on request (release-1.11.0).

@@ -13,7 +13,7 @@ models run on MLX; nothing leaves your machine.
 - **Checked against the meeting**: numbers, dates, owners and due dates in the notes are
   compared with the transcript and slides; uncited claims are flagged, never given a citation.
 
-Current release: **v1.10.0**. What each release changed:
+Current release: **v1.11.0**. What each release changed:
 [GitHub releases](https://github.com/darylalim/cohr/releases). Design: `PLAN.md`; progress:
 `NOTES.md`.
 
