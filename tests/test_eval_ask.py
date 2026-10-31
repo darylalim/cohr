@@ -1,6 +1,7 @@
 """Ask eval (PLAN §18 Ask row, Phase 6a): template questions, scoring, the answer cache, and
 the end-to-end path through ask.run with a rule-based fake R7B. No models."""
 
+import json
 import re
 from pathlib import Path
 
@@ -332,6 +333,74 @@ def test_ask_item_end_to_end_and_cached(tmp_path: Path) -> None:
     other.open(evals.ask_cache(tmp_path, "t"))
     evals.ask_item(item_report_for("t"), truth(), run_dir, other)
     assert other.calls == 9
+
+
+class CopyingR7B(RuleR7B):
+    """Near-misses answered with the question's qualifier copied onto a meeting number."""
+
+    NEAR_MISS = "<co>The approved budget for the marketing team is 14,500.</co: 0:[2]>"
+
+
+def test_a_cached_answer_gets_the_near_miss_check(tmp_path: Path) -> None:
+    """Cached answers are rebuilt from R7B's reply, so the check (D52) reaches answers cached
+    before it, and a change to it needs no re-asking (8j)."""
+    run_dir = ask_run(tmp_path)
+    asker = evals.ask_session(fake_manager(Config(), tmp_path, reduce=CopyingR7B()))
+    path = evals.ask_cache(tmp_path, "t")
+    asker.open(path)
+    rep = evals.ask_item(item_report_for("t"), truth(), run_dir, asker)
+    asker.save()
+    misses = [r for r in rep.ask if r.kind == "near_miss"]
+    assert [r.unsaid for r in misses] == [
+        ["two years ago"],
+        ["for the marketing team"],
+        ["next year"],
+    ]
+    assert all(r.correct and r.answer.startswith("The meeting doesn't give") for r in misses)
+    assert all(r.unsaid == [] for r in rep.ask if r.kind != "near_miss")
+
+    # Entries written before the check stored R7B's claims as parsed: a hit rebuilds them.
+    entries = json.loads(path.read_text(encoding="utf-8"))
+    for entry in entries.values():
+        entry["claims"] = [{"text": "stale", "citations": []}]
+    path.write_text(json.dumps(entries), encoding="utf-8")
+
+    def no_model(*_a: object) -> Answer:
+        raise AssertionError("the model was asked")
+
+    cached = evals.CachedAsk(no_model)
+    cached.open(path)
+    again = evals.ask_item(item_report_for("t"), truth(), run_dir, cached)
+    assert again == rep and cached.calls == 0
+
+
+def test_report_lists_the_check_firing_on_other_questions() -> None:
+    result = evals.AskResult(
+        id="n-n1",
+        kind="number",
+        question="What is the budget for next year?",
+        fact="n1",
+        answer="The meeting doesn't give the budget for next year.",
+        citations=[],
+        language="en",
+        stated=False,
+        citation_ok=None,
+        correct=False,
+        unsaid=["next year"],
+    )
+    rep = item_report_for("t").model_copy(update={"ask": [result]})
+    report = evals.Report(
+        created_at=evals.EPOCH,
+        set="quick",
+        git_sha=None,
+        models={},
+        prompts={},
+        items=[rep],
+        summary=evals.summarize([rep]),
+        stages={},
+    )
+    md = evals.render_markdown(report)
+    assert "- ask number answer opened with not given (next year): What is the budget" in md
 
 
 def test_ask_without_models_and_no_cache_is_a_clear_error(tmp_path: Path) -> None:

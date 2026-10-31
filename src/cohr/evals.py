@@ -48,6 +48,7 @@ from cohr import (
     ingest,
     judge,
     pipeline,
+    reduce,
     render,
     schemas,
     storage,
@@ -1226,6 +1227,7 @@ class AskResult(_Model):
     citation_ok: bool | None  # a claim stating it cites right (None: not stated / near-miss)
     t_error: float | None = None
     correct: bool
+    unsaid: list[str] = []  # periods and groups Ask found the meeting never gives (D52)
 
 
 def _cite_label(c: Any) -> str:
@@ -1288,6 +1290,7 @@ def score_answer(
         citation_ok=ok,
         t_error=None if err is None else round(err, 2),
         correct=stated if q.kind == "near_miss" else bool(stated and ok),
+        unsaid=answer.unsaid,
     )
 
 
@@ -1356,16 +1359,32 @@ def _answer_entry(a: ask.Answer) -> dict[str, Any]:
     }
 
 
-def _answer_from(question: str, entry: Mapping[str, Any]) -> ask.Answer:
+def _answer_from(
+    question: str, entry: Mapping[str, Any], config: Config, sources: ask.Sources
+) -> ask.Answer:
+    """A cached answer, rebuilt from R7B's stored reply through Ask's own code after
+    generation (`ask.answer_from`: citations, refinement, the near-miss check), so a change to
+    that code reaches cached answers without re-asking (8j). The documents sent are the
+    ranked ones, or all of them (the sources are in the cache key)."""
+    ranked = [(t[0], t[1]) for t in r] if (r := entry.get("ranked")) is not None else None
+    targets = (
+        ranked
+        if ranked is not None
+        else reduce.documents(sources.segments, sources.notes, sources.slides)[1]
+    )
+    claims, dropped, unsaid = ask.answer_from(
+        question, entry["raw"], targets, entry["language"], sources, config
+    )
     return ask.Answer(
         question=question,
-        claims=[Claim.model_validate(c) for c in entry["claims"]],
+        claims=claims,
         language=entry["language"],
         prompt_tokens=entry["prompt_tokens"],
         turns_dropped=entry["turns_dropped"],
-        ranked=[tuple(t) for t in r] if (r := entry.get("ranked")) is not None else None,
-        dropped_citations=entry["dropped_citations"],
+        ranked=ranked,
+        dropped_citations=dropped,
         raw=entry["raw"],
+        unsaid=unsaid,
     )
 
 
@@ -1403,7 +1422,7 @@ class CachedAsk:
         key = ask_cache_key(question, history, config, sources_hash(sources))
         if (entry := self._entries.get(key)) is not None:
             try:
-                answer = _answer_from(question, entry)
+                answer = _answer_from(question, entry, config, sources)
             except (KeyError, ValueError):
                 pass
             else:
@@ -2124,6 +2143,11 @@ def render_markdown(report: Report) -> str:
             f"- ask {r.kind} {_ask_verdict(r)}: {r.question} → {r.answer or '(empty)'}"
             + (f" [{', '.join(r.citations)}]" if r.citations else "")
             for r in asked_wrong
+        ]
+        lines += [  # the near-miss check fired where the eval planted none (must not, D52)
+            f"- ask {r.kind} answer opened with not given ({', '.join(r.unsaid)}): {r.question}"
+            for r in it.ask
+            if r.unsaid and r.kind != "near_miss"
         ]
     for m in report.ami:
         missed = [s for s in m.sentences if s.covered is False and s.part != "abstract"]
