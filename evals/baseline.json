@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-30T08:02:55.518186-10:00",
+  "created_at": "2026-10-31T07:29:26.409033-10:00",
   "set": "quick",
-  "git_sha": "1f6d7aa-dirty",
+  "git_sha": "b7d579a-dirty",
   "overrides": {},
   "models": {
     "vad": "mlx-community/silero-vad-v6@2ebf4a5",
@@ -72,7 +72,7 @@
         "ask_followup": 1.0,
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
-        "ask_near_miss": 0.6667,
+        "ask_near_miss": 1.0,
         "cited_claims": 20,
         "support_rate": 1.0,
         "support_partial": 0,
@@ -528,7 +528,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.21,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f4",
@@ -544,7 +545,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.33,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f6",
@@ -560,7 +562,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.92,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f7",
@@ -576,7 +579,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 1.99,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f9",
@@ -592,7 +596,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.45,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f10",
@@ -608,7 +613,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.22,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f13",
@@ -624,7 +630,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.03,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f16",
@@ -640,7 +647,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.84,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f3",
@@ -655,7 +663,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.84,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f5",
@@ -670,7 +679,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.35,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f8",
@@ -685,7 +695,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.74,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f11",
@@ -700,7 +711,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.87,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f17",
@@ -715,7 +727,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.58,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "followup",
@@ -730,7 +743,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.84,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "de-alone",
@@ -746,7 +760,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.21,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "de-history",
@@ -762,7 +777,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.33,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "near-miss-1",
@@ -778,23 +794,29 @@
           "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": true
+          "correct": true,
+          "unsaid": [
+            "two years ago"
+          ]
         },
         {
           "id": "near-miss-2",
           "kind": "near_miss",
           "question": "What is the number of candidates in the pipeline for the marketing team?",
           "fact": "f13",
-          "answer": "The number of candidates in the pipeline for the marketing team is 75.",
+          "answer": "The meeting doesn't give the number of candidates in the pipeline for the marketing team. The number of candidates in the pipeline is 75.",
           "citations": [
             "seg 0 @262.75",
             "slide 6"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true,
+          "unsaid": [
+            "for the marketing team"
+          ]
         },
         {
           "id": "near-miss-3",
@@ -810,7 +832,10 @@
           "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": true
+          "correct": true,
+          "unsaid": [
+            "next year"
+          ]
         }
       ],
       "stages": {
@@ -827,15 +852,15 @@
           "reused": true
         },
         "transcribe": {
-          "seconds": 11.54,
-          "s_per_audio_hour": 116.1,
+          "seconds": 11.33,
+          "s_per_audio_hour": 113.9,
           "peak_mem_gb": 5.63,
           "reused": true
         },
         "vision": {
-          "seconds": 34.3,
-          "s_per_audio_hour": 345.0,
-          "peak_mem_gb": 4.46,
+          "seconds": 34.41,
+          "s_per_audio_hour": 346.1,
+          "peak_mem_gb": 8.59,
           "reused": true
         },
         "fuse": {
@@ -845,15 +870,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 14.83,
-          "s_per_audio_hour": 149.2,
-          "peak_mem_gb": 7.54,
+          "seconds": 15.0,
+          "s_per_audio_hour": 150.9,
+          "peak_mem_gb": 11.67,
           "reused": true
         },
         "reduce": {
-          "seconds": 34.16,
-          "s_per_audio_hour": 343.6,
-          "peak_mem_gb": 12.62,
+          "seconds": 35.29,
+          "s_per_audio_hour": 355.0,
+          "peak_mem_gb": 16.76,
           "reused": true
         },
         "translate": {
@@ -1375,7 +1400,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.02,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f5",
@@ -1391,7 +1417,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.14,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f6",
@@ -1407,7 +1434,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.68,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f9",
@@ -1423,7 +1451,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.34,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f11",
@@ -1439,7 +1468,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.54,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f12",
@@ -1455,7 +1485,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.82,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f13",
@@ -1472,7 +1503,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 1.95,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f16",
@@ -1488,7 +1520,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.24,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f7",
@@ -1503,7 +1536,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.02,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f10",
@@ -1518,7 +1552,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 1.33,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f14",
@@ -1533,7 +1568,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.01,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f17",
@@ -1548,7 +1584,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 1.55,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f18",
@@ -1563,7 +1600,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.84,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "followup",
@@ -1579,7 +1617,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.02,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "de-alone",
@@ -1595,7 +1634,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.02,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "de-history",
@@ -1611,7 +1651,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.14,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "near-miss-1",
@@ -1627,7 +1668,10 @@
           "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": true
+          "correct": true,
+          "unsaid": [
+            "two years ago"
+          ]
         },
         {
           "id": "near-miss-2",
@@ -1644,7 +1688,10 @@
           "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": true
+          "correct": true,
+          "unsaid": [
+            "for the marketing team"
+          ]
         },
         {
           "id": "near-miss-3",
@@ -1660,7 +1707,10 @@
           "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": true
+          "correct": true,
+          "unsaid": [
+            "next year"
+          ]
         }
       ],
       "stages": {
@@ -1677,15 +1727,15 @@
           "reused": true
         },
         "transcribe": {
-          "seconds": 10.07,
-          "s_per_audio_hour": 100.5,
+          "seconds": 12.89,
+          "s_per_audio_hour": 128.6,
           "peak_mem_gb": 16.82,
           "reused": true
         },
         "vision": {
-          "seconds": 31.64,
-          "s_per_audio_hour": 315.8,
-          "peak_mem_gb": 12.53,
+          "seconds": 37.57,
+          "s_per_audio_hour": 375.0,
+          "peak_mem_gb": 16.82,
           "reused": true
         },
         "fuse": {
@@ -1695,15 +1745,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 13.49,
-          "s_per_audio_hour": 134.7,
-          "peak_mem_gb": 12.06,
+          "seconds": 13.67,
+          "s_per_audio_hour": 136.4,
+          "peak_mem_gb": 16.19,
           "reused": true
         },
         "reduce": {
-          "seconds": 23.96,
-          "s_per_audio_hour": 239.1,
-          "peak_mem_gb": 12.62,
+          "seconds": 24.32,
+          "s_per_audio_hour": 242.7,
+          "peak_mem_gb": 16.76,
           "reused": true
         },
         "translate": {
@@ -1769,7 +1819,7 @@
         "ask_followup": 1.0,
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
-        "ask_near_miss": 0.0,
+        "ask_near_miss": 1.0,
         "cited_claims": 18,
         "support_rate": 1.0,
         "support_partial": 0,
@@ -2222,7 +2272,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.18,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f4",
@@ -2238,7 +2289,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.46,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f6",
@@ -2256,7 +2308,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.96,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f8",
@@ -2272,7 +2325,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.35,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f10",
@@ -2288,7 +2342,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -1.21,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f12",
@@ -2304,7 +2359,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.36,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f15",
@@ -2320,7 +2376,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.03,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f18",
@@ -2336,7 +2393,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.04,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f2",
@@ -2351,7 +2409,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.65,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f3",
@@ -2366,7 +2425,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.35,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f5",
@@ -2381,7 +2441,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 1.09,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f14",
@@ -2396,7 +2457,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.35,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f16",
@@ -2411,7 +2473,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.02,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "followup",
@@ -2426,7 +2489,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.65,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "de-alone",
@@ -2442,7 +2506,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.18,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "de-history",
@@ -2458,50 +2523,55 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.46,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "near-miss-1",
           "kind": "near_miss",
           "question": "What was the approved budget two years ago?",
           "fact": "f18",
-          "answer": "The approved budget for the last quarter was $57,000. The approved budget for the next quarter is $57,000. The approved budget two years ago is not mentioned in the meeting.",
+          "answer": "The meeting doesn't give the approved budget two years ago. The approved budget for the last quarter was $57,000. The approved budget for the next quarter is $57,000.",
           "citations": [
-            "seg 1 @321.03",
-            "slide 7",
             "seg 1 @321.03",
             "slide 7",
             "seg 1 @321.03",
             "slide 7"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true,
+          "unsaid": [
+            "two years ago"
+          ]
         },
         {
           "id": "near-miss-2",
           "kind": "near_miss",
           "question": "What is the monthly recurring revenue for the marketing team?",
           "fact": "f15",
-          "answer": "The monthly recurring revenue for the marketing team is $273,000.",
+          "answer": "The meeting doesn't give the monthly recurring revenue for the marketing team. The monthly recurring revenue is $273,000.",
           "citations": [
             "seg 1 @271.94",
             "slide 6"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true,
+          "unsaid": [
+            "for the marketing team"
+          ]
         },
         {
           "id": "near-miss-3",
           "kind": "near_miss",
           "question": "What is the monthly cloud bill for next year?",
           "fact": "f12",
-          "answer": "The monthly cloud bill is $8,900. The monthly cloud bill last month was $8,200.",
+          "answer": "The meeting doesn't give the monthly cloud bill for next year. The monthly cloud bill is $8,900. The monthly cloud bill last month was $8,200.",
           "citations": [
             "seg 0 @228.98",
             "slide 5",
@@ -2509,10 +2579,13 @@
             "slide 5"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true,
+          "unsaid": [
+            "next year"
+          ]
         }
       ],
       "stages": {
@@ -2529,15 +2602,15 @@
           "reused": true
         },
         "transcribe": {
-          "seconds": 10.95,
-          "s_per_audio_hour": 110.3,
+          "seconds": 10.56,
+          "s_per_audio_hour": 106.4,
           "peak_mem_gb": 16.83,
           "reused": true
         },
         "vision": {
-          "seconds": 31.77,
-          "s_per_audio_hour": 320.2,
-          "peak_mem_gb": 12.53,
+          "seconds": 35.44,
+          "s_per_audio_hour": 357.2,
+          "peak_mem_gb": 16.66,
           "reused": true
         },
         "fuse": {
@@ -2547,15 +2620,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 10.6,
-          "s_per_audio_hour": 106.8,
-          "peak_mem_gb": 12.06,
+          "seconds": 10.68,
+          "s_per_audio_hour": 107.7,
+          "peak_mem_gb": 16.19,
           "reused": true
         },
         "reduce": {
-          "seconds": 28.86,
-          "s_per_audio_hour": 290.8,
-          "peak_mem_gb": 12.62,
+          "seconds": 29.34,
+          "s_per_audio_hour": 295.7,
+          "peak_mem_gb": 16.76,
           "reused": true
         },
         "translate": {
@@ -2620,7 +2693,7 @@
         "ask_followup": 1.0,
         "ask_xlang_alone": 1.0,
         "ask_xlang_history": 1.0,
-        "ask_near_miss": 0.6667,
+        "ask_near_miss": 1.0,
         "cited_claims": 23,
         "support_rate": 0.8696,
         "support_partial": 0,
@@ -3118,7 +3191,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.39,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f3",
@@ -3134,7 +3208,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.4,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f7",
@@ -3150,7 +3225,8 @@
           "stated": false,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": false,
+          "unsaid": []
         },
         {
           "id": "n-f9",
@@ -3166,7 +3242,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.42,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f11",
@@ -3182,7 +3259,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.48,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f13",
@@ -3198,7 +3276,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.52,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f15",
@@ -3216,7 +3295,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.32,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "n-f17",
@@ -3232,7 +3312,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.39,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f5",
@@ -3247,7 +3328,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 1.44,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f6",
@@ -3262,7 +3344,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.06,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f8",
@@ -3277,7 +3360,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.02,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f12",
@@ -3292,7 +3376,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.24,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "a-f16",
@@ -3307,7 +3392,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.94,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "followup",
@@ -3322,7 +3408,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 1.44,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "de-alone",
@@ -3338,7 +3425,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": 0.39,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "de-history",
@@ -3354,7 +3442,8 @@
           "stated": true,
           "citation_ok": true,
           "t_error": -0.4,
-          "correct": true
+          "correct": true,
+          "unsaid": []
         },
         {
           "id": "near-miss-1",
@@ -3370,23 +3459,29 @@
           "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": true
+          "correct": true,
+          "unsaid": [
+            "two years ago"
+          ]
         },
         {
           "id": "near-miss-2",
           "kind": "near_miss",
           "question": "What is the number of candidates in the pipeline for the marketing team?",
           "fact": "f15",
-          "answer": "The number of candidates in the pipeline for the marketing team is 85.",
+          "answer": "The meeting doesn't give the number of candidates in the pipeline for the marketing team. The number of candidates in the pipeline is 85.",
           "citations": [
             "seg 0 @268.79",
             "slide 6"
           ],
           "language": "en",
-          "stated": false,
+          "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": false
+          "correct": true,
+          "unsaid": [
+            "for the marketing team"
+          ]
         },
         {
           "id": "near-miss-3",
@@ -3402,7 +3497,10 @@
           "stated": true,
           "citation_ok": null,
           "t_error": null,
-          "correct": true
+          "correct": true,
+          "unsaid": [
+            "next year"
+          ]
         }
       ],
       "stages": {
@@ -3419,15 +3517,15 @@
           "reused": true
         },
         "transcribe": {
-          "seconds": 10.18,
-          "s_per_audio_hour": 104.7,
+          "seconds": 12.65,
+          "s_per_audio_hour": 130.1,
           "peak_mem_gb": 16.83,
           "reused": true
         },
         "vision": {
-          "seconds": 31.65,
-          "s_per_audio_hour": 325.5,
-          "peak_mem_gb": 12.53,
+          "seconds": 38.28,
+          "s_per_audio_hour": 393.6,
+          "peak_mem_gb": 16.66,
           "reused": true
         },
         "fuse": {
@@ -3437,15 +3535,15 @@
           "reused": true
         },
         "map": {
-          "seconds": 11.98,
-          "s_per_audio_hour": 123.2,
-          "peak_mem_gb": 12.06,
+          "seconds": 12.12,
+          "s_per_audio_hour": 124.6,
+          "peak_mem_gb": 16.19,
           "reused": true
         },
         "reduce": {
-          "seconds": 22.75,
-          "s_per_audio_hour": 233.9,
-          "peak_mem_gb": 12.62,
+          "seconds": 22.97,
+          "s_per_audio_hour": 236.2,
+          "peak_mem_gb": 16.76,
           "reused": true
         },
         "translate": {
@@ -3508,7 +3606,7 @@
     "ask_followup": 1.0,
     "ask_xlang_alone": 1.0,
     "ask_xlang_history": 1.0,
-    "ask_near_miss": 0.5833,
+    "ask_near_miss": 1.0,
     "audio_s": 1425.9
   },
   "stages": {
@@ -3521,24 +3619,24 @@
       "peak_mem_gb": 15.43
     },
     "transcribe": {
-      "s_per_audio_hour": 107.9,
+      "s_per_audio_hour": 119.7,
       "peak_mem_gb": 16.83
     },
     "vision": {
-      "s_per_audio_hour": 326.6,
-      "peak_mem_gb": 12.53
+      "s_per_audio_hour": 367.9,
+      "peak_mem_gb": 16.82
     },
     "fuse": {
       "s_per_audio_hour": 0.0,
       "peak_mem_gb": 0.0
     },
     "map": {
-      "s_per_audio_hour": 128.5,
-      "peak_mem_gb": 12.06
+      "s_per_audio_hour": 129.9,
+      "peak_mem_gb": 16.19
     },
     "reduce": {
-      "s_per_audio_hour": 277.0,
-      "peak_mem_gb": 12.62
+      "s_per_audio_hour": 282.6,
+      "peak_mem_gb": 16.76
     },
     "translate": {
       "s_per_audio_hour": 0.0,
@@ -3549,7 +3647,7 @@
       "peak_mem_gb": 0.0
     },
     "total": {
-      "s_per_audio_hour": 875.4,
+      "s_per_audio_hour": 935.5,
       "peak_mem_gb": 16.83
     }
   },
@@ -3639,8 +3737,8 @@
     "loaded": false,
     "calls": 0,
     "cached": 76,
-    "seconds": 0.03,
-    "s_per_audio_hour": 0.1,
+    "seconds": 0.09,
+    "s_per_audio_hour": 0.2,
     "peak_mem_gb": null
   },
   "gate_items": null,
