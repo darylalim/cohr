@@ -41,6 +41,13 @@ items:
     slides: video
     gaps: [silence]
 
+  - id: clean-ja  # clean-en, Japanese notes (R7B): katakana owners (ビクター = Victor, 8i)
+    seed: 1
+    target: ja
+    media: video
+    slides: video
+    gaps: [silence]
+
   - id: xling-es  # clean-en's plan spoken in Spanish (es_ES + es_MX voices), English notes
     seed: 1
     language: es

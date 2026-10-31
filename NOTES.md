@@ -2215,21 +2215,22 @@ full release gate and the 1.0.0 bump only when asked. D31 confirmed by the user 
 4. ~~**Map miscopies digits in ja meetings**~~ (D35): widened in Phase 8g to every missed
    number (D45: short numbers never repaired, figures Reduce lost re-added; long-en 77.5 →
    85.0%). xling-ja f9 stays flagged. Left over: see 8g's "Open".
-5. **Japanese ビクター** isn't matched to Victor (no final r); Japanese owners in Japanese
-   notes aren't in any set.
+5. ~~**Japanese ビクター**~~: done in Phase 8i (D51: a final ー restores to -r; new lang item
+   `clean-ja`, every owner restored; Japanese notes' numbers read by the eval and the guard).
 6. ~~**Map's ownerless "End of next week" dues**~~: dropped from the notes in Phase 8b
    (D40: 34 unsaid, 4 placeholders; 1 of AMI's 39 left), and from map.json in Phase 8c (D41).
 7. ~~**Ask on the regenerated long-en**~~: done in Phase 8c (D41, best-span placement and
    Map's dates and dues checked; 77.8 → 88.9%). Left over: see 8c's "Open".
-8. Carry-overs 5–7 from 6e-1: Japanese chunk-start and dense-segment drops, eval-only gaps,
-   Ask near-miss (55.6% on full).
+8. Carry-overs 5–7 from 6e-1: ~~Japanese chunk-start drops~~ (Phase 8i, D48: the decoder's
+   lost openings on unpunctuated chunks, restored by a probe), dense-segment drops, eval-only
+   gaps, Ask near-miss (55.6% on full).
 9. ~~The 1.0.0 bump~~: done on request (`uv version --bump major`, pyproject + uv.lock;
    README status), merged as 32576c1. **No release followed:** the §16 `release` job was
    left out in Phase 1 ("Not in Phase 1 (by plan)") and never added, so main's CI ran only
    `check` and the repo had no tags. Added on `ci-release-job` (user's choice over a hand
    release); its merge to main tags v1.0.0 and attaches the wheel and sdist.
-10. **Japanese chunks without punctuation** (8a): a citation on the right chunk lands at its
-    start when Transcribe wrote no 。 before the moment (xling-ja MARIA, −21.8 s).
+10. ~~**Japanese chunks without punctuation**~~ (8a): done in Phase 8i (D49: placed at the
+    first hit inside the chunk; xling-ja MARIA −21.8 → −1.4 s).
 11. ~~**Missed decisions**~~: done in Phase 8f (D44, cue sentences → decisions after Reduce;
     quick 100% at seeds 0–3, long-en 70 → 95%, lang 21 → 24/28). Left over: see 8f's "Open".
 12. ~~**AMI coverage**~~ (8g's "Open"): done in Phase 8h (D46 unknown headings and repeats,
@@ -2898,3 +2899,71 @@ Branch `phase-8h-ami`. 8g's "Open"; D46, D47.
 - #5 confirmed in Python: Victor "fktr", ビクター "fkt"; Omar and Maria share "mr" in katakana.
   No set has Japanese notes; a clean-ja lang item (clean-en seed 1, target ja) would plant
   all five owners.
+
+## 2026-10-30 · Phase 8i: Japanese meetings
+Branch `phase-8i-japanese`. Post-v1 items 5 and 10, carry-over 5 of item 8, 8g's f7/f9; D48–D51.
+- Step 0 (no models): the kickoff's chunk table reproduces from the stored run. Chunks 5, 7, 11,
+  13, 15 have no sentence mark inside; 5, 7, 15 lost their whole first line, 11 lost "昨日".
+  AMI against its reference words: unpunctuated chunks (87 in 5 meetings) find 84% of their
+  opening words, punctuated ones 82%, word recall the same: there it's spontaneous speech.
+- Step 0 (Transcribe): greedy decoding is deterministic (the 5 chunks decode to the stored
+  replies). Pre-roll and silence padding give identical text (leading silence is what
+  matters) and act as a coin flip: they restored chunks 5 and 7 but took control chunk 9's
+  opening (0.78 → 0.11) and 1, 6, 9's punctuation; chunk 15's "先月は2600でした" came back
+  under no variant, a split at a pause included. Decoding the chunk's first span alone
+  found each lost line (coverage in the reply 0.08–0.33; every kept opening ≥ 0.81).
+- D48 (`asr.py`): a reply over 40 characters with no sentence mark before its end gets that
+  probe; under 60% of the span at the reply's head → its text goes in front (minus words the
+  reply opens with). Fires: xling-ja chunks 5, 7, 15; no generated-set chunk qualifies; AMI 7
+  (5 real lost speech, e.g. "That brings us to the chip"; a "Yeah." and "b uh tha" noise).
+- D49 (`reduce._placed`): MARIA's span took the word path ("maria" scores exactly the 0.1
+  minimum), not the anchors 8a planned for. Both paths now place 1 s before the first hit in
+  an unpunctuated chunk over 80 characters and 10 s. The character floor keeps the test
+  fixtures' one-sentence 30 s chunks at their start.
+- D50 (guard): units ($/ドル vs %) settle f9's two candidates; after D48, Map's new input made
+  it "$345,000", so adjacent swaps are near too. 77 stored Map files replayed per rule: f9 only.
+- D51 (Japanese notes): clean-ja (new) showed the eval and the guard saw no number in Japanese
+  notes ("390件" read as nothing, "4,650件" as 4, 万 never) and 四半期 read as 4.
+  `notes_numbers` uses the meeting reader for ja; WRITTEN lets kana and kanji (not 万億千百十)
+  touch a number; `restore` maps a final ー to -r (R7B wrote ローラー, ヴィクトール, マリア: all
+  restored); the eval's owner match works on "Victorさん".
+
+| | before | after |
+|---|---|---|
+| xling-ja recall / citation / support | 76.9 / 90.0 / 65.0% | **92.3 / 100 / 94.7%** |
+| xling-ja numbers, CER, f11 time | 62.5%, 7.1%, −21.8 s | **87.5%, 5.2%, −1.4 s** (f7 left) |
+| clean-ja (new) recall / actions / numbers | — | 84.6 / 100 / 75% (f6 450,000 flagged, f16 never written) |
+| clean-ja Ask, near-miss | — | 100% (19), 66.7% |
+| lang seed 1 recall / citation / support / judge recall | 95.6 / 98.9 / 77.1 / 83.3% | 96.2 / 100 / 81.5 / 85.4% (other 6 items identical) |
+| quick seed 0 with Ask and the judge | 98.5%, Ask 98.1% | identical (`--rerun transcribe`) |
+| AMI coverage | 50.6% | 50.6% |
+| AMI abstract / decisions / actions / problems | 58.1 / 47.8 / 45.5 / 33.3% | 60.5 / 39.1 / 45.5 / 41.7% |
+| AMI per meeting ES2004b / ES2004d / IS1009b / IS1009c / TS3003c | 53.3 / 28.6 / 56.2 / 63.2 / 55.6% | 46.7 / 28.6 / 62.5 / 63.2 / 55.6% |
+| AMI support | 80.1% | 78.8% |
+
+- AMI, sentence by sentence: Map changed only in the 6 segments holding a restored chunk.
+  ES2004b's 2 changed segments gave R7B a new reply (5 of 9 decisions reworded, "Focus on one
+  product design" gone): −2 decisions, +2 abstract, −1 abstract. IS1009b dumped under an
+  unknown heading again (D46 filed it): +1 problem. ES2004d ±1 (noise).
+- Runs: lang `-c seed=1 --no-ask --rerun transcribe`, then `--rerun map` after D50/D51 (stored
+  runs copied first), xling-ja + clean-ja with Ask and the judge, quick seed 0 `--rerun
+  transcribe` with Ask and the judge, AMI `--item ami --no-ask --rerun transcribe` (asked; run
+  by the user: the guard hook blocks the set name). long-en and FLEURS not run: no long-en
+  chunk is unpunctuated and the guard replay leaves it unchanged; FLEURS calls the model
+  directly, not `run_stage`. baseline-lang.json rewritten from the whole seed-1 run (gains
+  clean-ja); baseline-full.json not (an `--item` run).
+- Cost: one extra decode of 1–8 s per probed chunk (~0.3 s; xling-ja Transcribe 117.6 →
+  116.0 s/h, noise). No schema, prompt or REDUCE_HASH change; Ask keys move only where the
+  transcript or notes did (xling-ja, clean-ja, AMI).
+
+### Open
+- xling-ja f7 (11,800) and clean-ja f16 (4,650): Map never wrote them (8g's never-written
+  numbers). clean-ja f6: Map's "450,000" is a swap and ×10 at once, flagged.
+- ES2004b's decisions after its new Reduce reply (reply drift from 2 changed Map segments).
+- AMI's 2 noise restorations ("Yeah.", "b uh tha"): harmless so far; a minimum-content rule
+  would need AMI's reference words to tune.
+- `names.said_names` finds no name in a Japanese transcript ("VICTORさん" is one word): only
+  matters for a Japanese meeting with Japanese notes (no set has one).
+- 8h's Open (ES2004b's drift, IS1009b "corporate image", key points of skipped segments, "[]"
+  questions), the judge on slide-conflict notes, long-en's 3 key points, the Japanese
+  slide-conflict check and Ask's near-miss (item 8) unchanged.

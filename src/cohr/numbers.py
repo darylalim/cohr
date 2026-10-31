@@ -150,9 +150,11 @@ _KANJI_DIGITS |= {"六": 6, "七": 7, "八": 8, "九": 9}
 _KANJI_UNITS = {"十": 10, "百": 100, "千": 1_000}
 _KANJI_SCALES = {"万": 10_000, "億": 100_000_000}
 # A number in Japanese text: Arabic digits (with "," grouping) and kanji numerals, mixed as
-# Transcribe writes them ("35万4000", "4万2500", "四万二千五百"). 万/億 alone are no number.
+# Transcribe writes them ("35万4000", "4万2500", "四万二千五百"). 万/億 alone are no number,
+# nor the 四 of 四半期 ("quarter": 8i, clean-ja's "四半期予算" read as 4, "第3四半期" as 4).
 _JA_NUMBER = re.compile(
     r"(?:\d[\d,]*|[〇零一二三四五六七八九十百千])(?:\d[\d,]*|[〇零一二三四五六七八九十百千万億])*"
+    r"(?!半期)"
 )
 
 
@@ -212,6 +214,41 @@ def source_numbers_in(text: str, language: str | None) -> set[float]:
     return numbers_in(text).union(*written_values(text, language))
 
 
+# --- units (8i) ----------------------------------------------------------------------------
+
+# What a number counts, from the words or signs next to it: "$34,000", "354000ドル", "34%",
+# "34 percent". Only the kinds a repair could confuse (xling-ja "$34,000": 354,000 dollars or
+# the 34% said).
+_UNIT_BEFORE = re.compile(r"(?:[$€£¥]|US\$)\s?$")
+_UNIT_AFTER = {
+    "money": re.compile(
+        r"^\s?(?:(?:dollars?|euros?|pounds?|yen|USD|EUR|d[oó]lares)\b|ドル|ユーロ|円)", re.I
+    ),
+    "percent": re.compile(r"^\s?(?:%|％|パーセント|(?:percent|per cent|por ciento)\b)", re.I),
+}
+_PLAIN = re.compile(r"(?<![\d.])\d+(?:\.\d+)?(?!\d)")  # kana and kanji touch numbers
+
+
+def unit_at(text: str, start: int, end: int) -> str | None:
+    """The unit of the number at text[start:end]: "money", "percent", or None."""
+    if _UNIT_BEFORE.search(text[max(0, start - 4) : start]):
+        return "money"
+    after = text[end : end + 12]
+    return next((kind for kind, rx in _UNIT_AFTER.items() if rx.search(after)), None)
+
+
+def source_units(text: str, language: str | None) -> dict[float, set[str]]:
+    """The units each number of the meeting's own text is said with, read as
+    `source_numbers_in` reads it ("35万4000ドル" → {354000: {"money"}})."""
+    reader = SOURCE_READERS.get(language or "") or digits
+    plain = reader(text).replace(",", "")
+    out: dict[float, set[str]] = {}
+    for m in _PLAIN.finditer(plain):
+        if unit := unit_at(plain, m.start(), m.end()):
+            out.setdefault(float(m.group(0)), set()).add(unit)
+    return out
+
+
 # --- numbers as written (Map number guard, §5.5) -------------------------------------------
 
 NBSP, NNBSP = "\u00a0", "\u202f"
@@ -232,10 +269,14 @@ _SEPARATORS = (
 )
 # A number written with digits: not glued to a letter or digit on either side ("Q3", "R7B" and
 # "3D" are names, not numbers), optionally with an ordinal or a scale suffix. A plain space
-# groups thousands only as "42 500" (1–3 digits, then groups of exactly 3).
+# groups thousands only as "42 500" (1–3 digits, then groups of exactly 3). Kana and kanji
+# have no spaces to keep off, so they don't glue ("450,000ドル", "390件": 8i, clean-ja's Map
+# guard read neither), except the numeral kanji: "35万4000" isn't 35 and 4000.
+_GLUE = r"(?:[^\W\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]|[万億千百十])"
 WRITTEN = re.compile(
-    r"(?<![\w.,])(?P<body>\d{1,3}(?: \d{3})+(?:[.,]\d+)?|\d(?:[\d,.\u00a0\u202f]*\d)?)"
-    r"(?:(?P<ordinal>st|nd|rd|th)|\s?(?P<scale>k|K|thousand|million))?(?!\w)"
+    rf"(?<![.,])(?<!{_GLUE})"
+    r"(?P<body>\d{1,3}(?: \d{3})+(?:[.,]\d+)?|\d(?:[\d,.\u00a0\u202f]*\d)?)"
+    rf"(?:(?P<ordinal>st|nd|rd|th)|\s?(?P<scale>k|K|thousand|million))?(?!{_GLUE})"
 )
 SCALE = {"k": 1e3, "K": 1e3, "thousand": 1e3, "million": 1e6}
 FACTORS = (10, 100, 1000)
@@ -312,9 +353,13 @@ def written_values(text: str, language: str | None) -> list[set[float]]:
 def notes_numbers(text: str, language: str | None) -> set[float]:
     """The numbers in notes written in `language` (eval, 6d-1). English: `numbers_in`, number
     words included. Other languages: digits read the way the language writes them, so German
-    "42.500" is 42500, not 42.5 (their number words aren't read, as in the guard)."""
+    "42.500" is 42500, not 42.5 (their number words aren't read, as in the guard). Japanese:
+    as a Japanese meeting is read (8i: notes write "390件" and "35万4000ドル", which the
+    written readings never saw: a digit touching kana is no number to them)."""
     if language in (None, "en"):
         return numbers_in(text)
+    if language == "ja":
+        return source_numbers_in(text, language)
     return set().union(*written_values(text, language))
 
 
@@ -328,11 +373,20 @@ def one_edit(a: str, b: str) -> bool:
     return any(long[:i] + long[i + 1 :] == short for i in range(len(long)))
 
 
+def swapped(a: str, b: str) -> bool:
+    """Two adjacent characters swapped: "345000" for "354000" (8i, xling-ja f9)."""
+    if len(a) != len(b):
+        return False
+    d = [i for i, (x, y) in enumerate(zip(a, b, strict=True)) if x != y]
+    return len(d) == 2 and d[1] == d[0] + 1 and a[d[0]] == b[d[1]] and a[d[1]] == b[d[0]]
+
+
 def near(value: float, source: float) -> bool:
-    """`source` is one digit edit or a factor of 10, 100 or 1000 away from `value`."""
+    """`source` is one digit edit, two adjacent digits swapped, or a factor of 10, 100 or 1000
+    away from `value`."""
     if value == source:
         return False
-    if one_edit(_fmt(value), _fmt(source)):
+    if one_edit(_fmt(value), _fmt(source)) or swapped(_fmt(value), _fmt(source)):
         return True
     return any(math.isclose(value * f, source) or math.isclose(source * f, value) for f in FACTORS)
 

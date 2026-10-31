@@ -274,6 +274,25 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   left out for auto-detection, and find the maximum input length.
 - Supported languages: ar de el en es fr it ja ko nl pl pt vi zh.
 
+**Lost openings (8i, D48).** Decoding is greedy and deterministic, but on some chunks the model
+writes no sentence punctuation and skips the chunk's first line: xling-ja chunks 5, 7 and 15 lost
+"来四半期の承認済み予算は42500ドルです", "先月は7700ドルでした" and "先月は2600でした" (f6 never
+reached Map). Every chunk that lost one had no 。 inside; none of the punctuated ones did. A reply
+over 40 characters with no sentence mark before its last character (`asr.unpunctuated`) gets a
+second, short decode: the chunk's first span, from its first loud frame through ≥ 1 s of speech
+to the first ≥ 0.4 s pause (energy against the file's noise floor, as the silence fallback),
+when that pause is more than 1 s before the chunk's end. When under 60% of that span's
+characters (ja/zh) or words (in order) are at the head of the reply, the span's text goes in front of
+the reply (minus any words the reply opens with). One log line per restored opening; no schema
+change. Measured on the stored runs: xling-ja 3 of 18 chunks restored (exactly the three
+lost lines); every generated set 0 (none has an unpunctuated chunk); AMI 7 of 87 unpunctuated
+chunks (5 real lost speech by AMI's reference words, e.g. "That brings us to the chip"; 2
+noise, a "Yeah." and a stammer). AMI's unpunctuated chunks lose no more words than its
+punctuated ones (opening words found 84% vs 82%): there, no punctuation is just spontaneous
+speech. Pre-roll and silence padding were rejected: they restored chunks 5 and 7 but took
+chunk 9's opening and the punctuation of chunks 1, 6 and 9, and chunk 15's line came back
+under no variant.
+
 ### 5.3 Describe slides (mlx-vlm, Micro Vision)
 - Temperature 0, max ~1024 tokens, one image per call.
 - The prompt asks for JSON only:
@@ -338,7 +357,21 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
     states would be repaired to the other candidate (not seen in the runs). A digit edit
     doesn't beat a factor: tried in 8g, it repaired pdf-slides' "6,900 candidates" (69 said,
     ×100) to the $8,900 cloud bill at seed 1, so xling-ja f9 ("34%" is a third candidate for
-    "$34,000") stays flagged.
+    "$34,000") stayed flagged.
+    8i (D50): a number written with a unit drops the candidates the sources say only with
+    another (`numbers.unit_at`, `source_units`: money — $ € £ ¥, dollars, ドル, 円, dólares —
+    or percent — %, percent, パーセント, por ciento; read in the meeting's language, so
+    "35万4000ドル" is 354000 dollars). xling-ja's "$34,000" loses the "34%" said and is
+    repaired to 354,000. A number written without a unit keeps every candidate (pdf-slides'
+    "6,900 candidates" stays flagged), as does a candidate said bare, and when every candidate
+    has another unit the number is flagged as before. Two adjacent digits swapped are near too
+    ("$345,000" for 354,000: once D48 restored xling-ja's openings, Map wrote f9 this way).
+    Replayed on 77 stored Map files (every set, quick at seeds 0–3, AMI): each rule changes f9
+    only.
+    8i (D51): Japanese notes are checked too. A number touching kana or kanji is a number
+    ("450,000ドル", "390件"), except next to 万億千百十 ("35万4000" is left unchecked, not read
+    as 35 and 4000): before, the guard saw no number in Japanese notes at all (clean-ja: Map's
+    118,000 and 77,000 now repaired to 11,800 and 7,700; 450,000 and 590,000 flagged).
   - Otherwise (no candidate, or more than one): **kept and flagged**, never dropped and never
     guessed. The segment's `unverified_numbers` lists them (`MapFile` v3, §19) and the run log
     warns. An invented year such as `2024` in `2024-11-24` lands here.
@@ -550,6 +583,11 @@ Neither runtime auto-detects the language (D3); the decoder prompt always carrie
   Tom's consonants). No anchor in any chunk: the segment's `t0`, never a guess. With the
   chunk's `t0` alone, `t` was a median 12.5 s early (chunks run up to 30 s) and only 61% of
   citations landed within ±15 s; with the sentence offset, 98% (D19, 4b-1).
+  A chunk Transcribe wrote with no sentence mark (`asr.unpunctuated`, D48's test) over 80
+  characters and 10 s is one "sentence", so both paths placed `t` at the chunk start: xling-ja
+  MARIA's task, said at 316.5 s, was cited at 294.7 s. There `t` goes 1 s (by characters)
+  before the first span word or anchor instead, never before the chunk (8i, D49: −21.8 →
+  −1.4 s).
   Slide citations need no refinement. Two-pass citations (§4) are refined after marker resolution,
   against the resolved segments.
 - **Rendering**, two modes from the same `notes.json`:
@@ -1416,6 +1454,17 @@ punctuation, and 4 of those 5 lost their opening words or sentence ("承認済�
 f6, never reached Map); no punctuated chunk lost one. MARIA's −21.8 s citation (#10) sits in
 one of them. Map never wrote f7 and misread f9 ("35万4000" → "$34,000"). No set has Japanese
 notes, so #5 (ビクター is "fkt", Victor "fktr") has never been measured. Kickoff prompt in §21.
+Done 2026-10-30 (NOTES.md, D48–D51). Step 0: the lost openings are the decoder's, not the
+chunk start (pre-roll moved them around), and AMI's unpunctuated chunks lose nothing extra.
+Transcribe decodes an unpunctuated reply's first span alone and restores a lost opening
+(D48: xling-ja's three lines, AMI 7 chunks, no generated set); a citation inside such a chunk
+goes to its first hit (D49, f11 −21.8 → −1.4 s); Map's guard uses units and adjacent swaps
+(D50, f9) and reads Japanese notes (D51), and katakana owners ending in ー restore to -r
+names. New lang item `clean-ja`. xling-ja recall 76.9 → 92.3%, citation 90 → 100%, support
+65.0 → 94.7%, CER 7.1 → 5.2%; clean-ja recall 84.6%, owners 100%, Ask 100%; the other lang
+items, quick (seed 0, Ask and judge) identical; AMI coverage 50.6 → 50.6% (ES2004b's new
+Reduce reply: decisions 47.8 → 39.1%, abstract 58.1 → 60.5%, problems 33.3 → 41.7%). f7
+(never written by Map) left.
 
 **Definition of done:** a 30–60 min real recording plus slides produces cited notes in a chosen
 target language. All citations resolve. The §18 quick set meets its v1 targets. A 60 min
@@ -2113,7 +2162,7 @@ script's text can't work when the notes are in another language. For these items
 | Set | Contents | Time | When |
 |---|---|---|---|
 | `quick` | `clean-en`, `noisy-en`, `pdf-slides-en`, `slide-conflict-en` | ~5 min | After prompt or model changes; before every commit to `reduce.py`/`mapper.py` prompts |
-| `lang` | `conflict-de`, `clean-ar`, `clean-hi` (R7B in de/ar/hi), `clean-sw`, `clean-bn` ("Other (beta)", translated), `xling-es`, `xling-ja` (Spanish and Japanese meetings, English notes; 6d-2) | ~20 min | After Reduce, Map, number-reading or translate changes (6d-1, 6d-2); report-only baseline `evals/baseline-lang.json`, `-c seed=1 --no-ask` |
+| `lang` | `conflict-de`, `clean-ar`, `clean-hi`, `clean-ja` (R7B in de/ar/hi/ja; `clean-ja` 8i: katakana owners, Japanese notes' numbers), `clean-sw`, `clean-bn` ("Other (beta)", translated), `xling-es`, `xling-ja` (Spanish and Japanese meetings, English notes; 6d-2) | ~20 min | After Reduce, Map, number-reading or translate changes (6d-1, 6d-2); report-only baseline `evals/baseline-lang.json`, `-c seed=1 --no-ask` |
 | `long` | `long-en` | ~1 h (generation, ~40 min pipeline, Ask) | After two-pass Reduce or Ask ranking changes; report-only baseline `evals/baseline-long.json` |
 | `full` | The `quick` and `lang` items + 14-language FLEURS sample (20 clips each, Transcribe only) + 5 AMI meetings (3.05 h of audio, English notes); `long-en` stays in `long` (6e-1, user) | ~1 h (estimate: synthetic ~20 min, FLEURS ~4, AMI ~26 + judge ~9) | Before every version bump (§16), followed by `long` |
 
@@ -2293,6 +2342,10 @@ section.
 | D45 | Missed numbers: one wrong digit, a wrong repair, figures Reduce lost (§5.5–5.6) | As Map and Reduce wrote them; D20's repair rule | Step 0 trace of the 17 misses (pass-1 replies read), every stored repair counted, AMI's said numbers in no Map item or notes; offline replay of the stored notes.json; then quick seeds 0–3, quick with Ask and the judge, lang seed 1 (`--rerun map`), long-en and AMI | Phase 8g | **Guard bound + Python after Reduce** (user, over a Map-side net and a map.md change): a plain number of one or two digits is never repaired (AMI IS1009b "60%" → 40, the only wrong one of 41 stored repairs; the other short ones are days), and a candidate another number of the claim states is dropped. A digit edit preferred over a factor would have fixed xling-ja f9 but repaired pdf-slides' "6,900 candidates" (69 said) to the $8,900 cloud bill at seed 1: dropped, f9 stays flagged. `reduce.add_lost_numbers`: a Map key point with a figure (digits, ≥ 10, notes language, D38 folding) no claim states is added citing its segment, or replaces the key point citing it that kept some of its figures, and cites the segment's slides that show an added figure; flagged numbers skipped. No prompt or MapFile change. long-en numbers 77.5 → 85.0%, fact recall 85.0 → 88.8%; quick numbers 93.8 → 96.9% (seed 0), 100% at seed 3, seed 1 unchanged; lang 91.1 → 94.6%, unsupported 1 → 1; made-up items, Ask and citation accuracy unchanged; quick judge 95.1 → 93.8% (it reads "(slide: $18,000)" as contradicting $80,000). AMI: 6 key points added, all figures said; IS1009b "60%" kept and flagged (unsupported 0 → 1: "the rest" has no digit). Rejected: a sentence net for numbers Map never wrote (copies evals/gen's "That's compared with" sentences and AMI fragments; can't reach xling-ja), a map.md change (misses move with the seed) |
 | D46 | Reduce replies with an unknown heading or repeated lines (§5.6) | Unknown-heading text to Summary; repeats kept | Step 0: both AMI states scored from the judge cache, raw replies read, Map items matched to the dumped lines; offline replay of every stored notes.json (main's code reproduced each); then quick seeds 0–3, quick with Ask and the judge, lang seed 1 and AMI (`--rerun reduce`) | Phase 8h | **Parser** (user): a list item under an unknown heading goes to the section of the cited segments' Map item it matches best (≥ 0.6, key points first on a tie), else Summary; prose under it stays Summary. A claim repeated in its section with the same citations is kept once. IS1009b's dump: 20 key points, 2 decisions, 32 lines → 22 (Map's items word for word, every match 0.86–1.00); TS3003c: 10 repeated decisions dropped. Fires on no other stored run. No NotesDoc, prompt or REDUCE_HASH change. Rejected: continuing the section before the heading (8g's candidate: the dump holds key points and decisions both, so all would have become open questions) |
 | D47 | Segments a section skipped (§5.6) | As Reduce wrote them | Same runs as D46; long-en's lost-item candidates checked against its planted facts | Phase 8h | **Python after Reduce, one-pass notes only** (user, over also filling key points and the `[due: ?]` input change): `reduce.add_skipped_segments`, after D44: a segment no decision cites gets its Map decisions the notes don't state (`_lost_map_decisions`: not the segment's tasks or open questions), one no open question cites gets its Map open questions the notes don't ask; each cites its segment, in segment order; a key point stating only the decision moves to Decisions; items with no letter or digit (Map's "[]") skipped. AMI coverage 44.9 → 50.6% (40 → 45 of 89: IS1009b teletext, whole-house and budget, TS3003c's battery once its repeats went, ES2004b Video Plus, ES2004d's noise sentence back; IS1009b's plastic-cases sentence flipped away), decisions 30.4 → 47.8%, problems 16.7 → 33.3%, support 80.3 → 80.1%; quick seeds 0–3, lang seed 1 and long-en notes identical (it never fired). Rejected: key points too (abstract held at 58–60%; the fills read as padding), two-pass notes (long-en's Map wrote the planted question "sponsor the local hackathon" as a decision), restoring the old input (the Oct 28 reply also dropped a segment; it would move every set's Reduce input) |
+| D48 | Chunks Transcribe wrote without punctuation and lost their opening (§5.2) | As decoded | Step 0: xling-ja's chunk table against truth.json; AMI's unpunctuated chunks against its reference words; chunks 5, 7, 11, 13, 15 and three controls decoded again under each candidate; the probe replayed with the stage's code on every stored run; then lang seed 1 (`--rerun transcribe`), quick seed 0 with Ask and the judge, AMI (`--item ami --no-ask --rerun transcribe`) | Phase 8i | **Opening probe** (user, over pre-roll/padding and a punctuation retry): a reply over 40 characters with no sentence mark before its end gets one more decode of the chunk's first span (≥ 1 s of speech to the first ≥ 0.4 s pause, more than 1 s before the end); under 60% of it at the reply's head → its text goes in front. xling-ja chunks 5, 7, 15 restored (f6 back), CER 7.1 → 5.2%; generated sets: no chunk qualifies (transcripts byte-identical, quick seed 0 identical with Ask and the judge); AMI 7 of 87 unpunctuated chunks (5 real lost speech by the reference words, 2 noise). AMI's unpunctuated chunks lose no more words than its punctuated ones (84% vs 82% of opening words). FLEURS doesn't go through `run_stage`. No schema change. Rejected: pre-roll or silence padding (a coin flip: restored 5 and 7, took chunk 9's opening and 1, 6, 9's punctuation; 15 never), keeping a retry only if punctuated (chunk 7's restoring decode has no 。) |
+| D49 | A citation in a long chunk Transcribe wrote as one sentence (§5.6, post-v1 #10) | The sentence's start (the chunk's) | xling-ja f11's span traced (word path, "maria" at exactly the 0.1 minimum); then lang seed 1 | Phase 8i | **Place at the first hit** (user): in a chunk `asr.unpunctuated` calls unpunctuated, over 80 characters and 10 s, both placement paths (`sentence_offset`, `anchor_offset`) go 1 s (by characters) before the first span word or anchor, never before the chunk. f11 −21.8 → −1.4 s, xling-ja citation accuracy 90 → 100%. A one-sentence chunk ("We agreed to keep the onboarding checklist.") starts where it starts; no generated-set chunk qualifies; Search (`index.py`) unchanged |
+| D50 | Map's f9 ("35万4000ドル"): two candidates, then a swapped digit (§5.5) | Flag (8g, D45) | Every flagged number in 77 stored Map files (every set, quick seeds 0–3, AMI) replayed with and without each rule; then lang seed 1 (`--rerun map`) | Phase 8i | **Units, then adjacent swaps** (user): a number written with a unit drops candidates the sources say only with another (money/percent, read in the meeting's language: `numbers.source_units`, `unit_at`); `near` also accepts two adjacent digits swapped. f9's "$34,000" (354,000 vs the "34%" said) and then, once D48 changed Map's input, its "$345,000" both repaired to 354,000; each rule fires on that number only. A number without a unit keeps every candidate (pdf-slides' "6,900 candidates" stays flagged) |
+| D51 | Japanese notes: owners and numbers (post-v1 #5) | Katakana owners matched by consonants; Japanese notes' numbers read as written | Python on the names and the readings; then `clean-ja` (new lang item: clean-en seed 1, Japanese notes) at seed 1 with Ask and the judge | Phase 8i | **Read Japanese as Japanese** (user): `restore` matches a katakana owner ending in ー to a said name with a final r when no name has its own consonants (ビクター → Victor, トミー still Tommy); `notes_numbers` reads Japanese notes with the meeting reader ("390件", "35万4000ドル"; 四半期 is no 4); WRITTEN no longer treats kana and kanji, other than 万億千百十, as glue, so Map's guard checks Japanese notes (clean-ja: 118,000 and 77,000 repaired to 11,800 and 7,700; 450,000 and 590,000 flagged); the eval's owner and unsupported-number checks read "Victorさん" and "450,000ドル". clean-ja: recall 84.6%, actions 100% (every owner restored), numbers 75%, Ask 100% (19 questions). Replayed on 77 stored Map files: only clean-ja and xling-ja change |
 
 Decided already (kept for reference): Python 3.13 (§6), public repo (§17), Apache-2.0 (§11),
 VAD on by default (§5.1a), files-only v1 (§12), "Paper & Ink" theme (§7).

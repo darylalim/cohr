@@ -13,6 +13,8 @@ from cohr.numbers import (
     ordinals_in,
     readings,
     source_numbers_in,
+    source_units,
+    unit_at,
     write_like,
     written_values,
 )
@@ -42,13 +44,24 @@ def test_readings_record_the_written_style() -> None:
 
 @pytest.mark.parametrize(
     ("value", "source"),
-    [(420500, 42500), (570000, 57000), (3360, 336), (2, 22), (1180, 11800), (59600, 59500)],
+    [
+        (420500, 42500),
+        (570000, 57000),
+        (3360, 336),
+        (2, 22),
+        (1180, 11800),
+        (59600, 59500),
+        (345000, 354000),  # 8i: two adjacent digits swapped (xling-ja f9)
+    ],
 )
 def test_near_one_digit_edit_or_factor(value: float, source: float) -> None:
     assert near(value, source)
 
 
-@pytest.mark.parametrize(("value", "source"), [(43600, 42500), (42500, 42500), (2024, 2002)])
+@pytest.mark.parametrize(
+    ("value", "source"),
+    [(43600, 42500), (42500, 42500), (2024, 2002), (453000, 354000), (4365, 3456)],
+)
 def test_not_near(value: float, source: float) -> None:
     assert not near(value, source)
 
@@ -106,6 +119,10 @@ def test_notes_numbers_read_the_notes_language() -> None:
     # English notes are read as before (number words too): the German reading must not fire.
     assert notes_numbers("3.55 points, up from 3,550, forty two", "en") == {3.55, 3550, 42}
     assert notes_numbers("3.55 points", None) == {3.55}
+    # 8i: Japanese notes, digits touching kana and 万 groups, as a Japanese meeting is read
+    ja = "未対応チケットは390件、月間経常収益は35万4000ドル、新規登録は4,650件です。"
+    assert notes_numbers(ja, "ja") == {390, 354000, 4650}
+    assert notes_numbers("四半期予算は第3四半期に4万2500ドル", "ja") == {3, 42500}
     # A language not in DECIMAL_MARK keeps both readings (ar writes Western digits, "42,500").
     assert notes_numbers("الميزانية 42,500 دولار", "ar") == {42500, 42.5}
     assert written_values("42,500 دولار و 34%", "ar") == [{42500, 42.5}, {34}]
@@ -146,3 +163,28 @@ def test_source_numbers_in_english_and_other_languages() -> None:
     assert source_numbers_in(text, "en") == source_numbers_in(text, None) == numbers_in(text)
     # German digits get their own reading as well as the English one
     assert {42500.0, 42.5} <= source_numbers_in("Budget 42.500 €", "de")
+
+
+def test_units() -> None:
+    # 8i: the units a number is said with, read as the meeting's language reads it.
+    assert source_units("The bill is $34,000 and 34% of users, 950 ms.", "en") == {
+        34000.0: {"money"},
+        34.0: {"percent"},
+    }
+    assert source_units("twelve dollars, fifty percent", "en") == {
+        12.0: {"money"},
+        50.0: {"percent"},
+    }
+    assert source_units("収益は35万4000ドル、採用率は34%です。", "ja") == {
+        354000.0: {"money"},
+        34.0: {"percent"},
+    }
+    assert source_units("354.000 dólares y 34 por ciento", "es") == {
+        354000.0: {"money"},
+        34.0: {"percent"},
+    }
+    text = "revenue is $34,000 (34 %), 5 euros"
+    assert unit_at(text, 12, 18) == "money"
+    assert unit_at(text, 20, 22) == "percent"
+    assert unit_at(text, 27, 28) == "money"
+    assert unit_at("75 candidates", 0, 2) is None

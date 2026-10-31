@@ -1576,3 +1576,28 @@ def test_add_skipped_segments_must_not_fire() -> None:
     raw[0] = raw[0].model_copy(update={"raw": "Keep the onboarding checklist."})
     empty = _decision_doc([])
     assert _skipped(empty, raw) == (empty, [])
+
+
+def test_refine_time_places_at_the_anchor_inside_a_long_unpunctuated_sentence() -> None:
+    # xling-ja chunk 11 (8i, post-v1 #10): 28 s with no 。; MARIA's task near its end.
+    text = (
+        "リテンションの数字をくわしく見ましたが傾向はだいたい予想どおりでしたお客さんと話した時"
+        "リテンションの話が何度か出ましたがほとんどは軽く触れただけでした今週何人かから"
+        "リテンションについて聞かれたのでここで取り上げられてよかったです"
+        "MARIAさん来週の終わりまでに顧客アンケートを準備することはできますか?"
+    )
+    chunk = TranscriptItem(chunk_id=11, t0=294.72, t1=322.97, text=text)
+    span = "[owner: Maria] [due: end of next week] Prepare the customer survey."
+    t = reduce.refine_time(span, [chunk], 294.72, 0.1, "en", "ja")
+    maria = _at(chunk, "MARIA")
+    assert maria - 1.5 < t < maria  # about 1 s before the name, not the chunk start
+    # A short sentence still starts at its start (JA_CHUNKS: 20 s chunks, ~10 s sentences).
+    claim = "Trial registration numbers are higher this month (4,650)."
+    assert reduce.refine_time(claim, JA_CHUNKS, 0.0, 0.1, "en", "ja") == _at(JA_CHUNKS[1], "今月の")
+
+
+def test_anchor_offset_never_goes_before_its_sentence() -> None:
+    anchors = reduce.Anchors({4650.0}, None)
+    text = "では始めます。4650です" + "あ" * 200
+    # the anchor opens a long sentence: its start, not a lead before it
+    assert reduce.anchor_offset(anchors, text, "ja", 60.0) == text.index("4650") / len(text)

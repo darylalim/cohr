@@ -44,8 +44,8 @@ SAID = [
         *[
             (o, n)
             for o, n in zip(
-                ["ローラ", "オマール", "マリア", "トム"],
-                ["Laura", "Omar", "Maria", "Tom"],
+                ["ローラ", "オマール", "マリア", "トム", "ビクター", "ヴィクター"],
+                ["Laura", "Omar", "Maria", "Tom", "Victor", "Victor"],
                 strict=True,
             )
         ],
@@ -67,6 +67,14 @@ def test_restore_finds_the_name_said(owner: str, said: str) -> None:
 )
 def test_restore_keeps_the_owner_as_written(owner: str) -> None:
     assert names.restore(owner, SAID) == owner
+
+
+def test_restore_final_r_only_without_an_exact_match() -> None:
+    """8i: katakana writes a final -er/-or as ー (ビクター "fkt", Victor "fktr"). A name with
+    the owner's own consonants still wins: トミー is Tommy, not Tom-r."""
+    assert names.restore("ピーター", ["Peter will help."]) == "Peter"
+    assert names.restore("トミー", ["Tommy and Timor will help."]) == "Tommy"
+    assert names.restore("マリア", ["Mariar will help."]) == "マリア"  # no ー, no final r
 
 
 def test_restore_keeps_an_owner_said_in_its_own_script() -> None:
